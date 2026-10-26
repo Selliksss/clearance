@@ -9,14 +9,15 @@
 //     file belongs in transcripts/archive/
 //   - verify.ts checks pass (hashes, history chaining, tool results, signatures)
 // Then prints the results table the README quotes. Exits non-zero on any problem.
-import { readFileSync, readdirSync, statSync, writeFileSync } from "node:fs";
+import { readFileSync, readdirSync, renameSync, statSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { injectedFields, loadGenerator, resolveSlots } from "./attack.ts";
 import { formatNear } from "./chain.ts";
 import { JUDGE_VERSION, judge, parseClaim } from "./loss.ts";
+import { buildReport, reportHash } from "./report.ts";
 import type { Transcript } from "./run.ts";
-import { canonical, sha256hex } from "./scenario.ts";
+import { canonical, loadScenario, sha256hex } from "./scenario.ts";
 import { verifyTranscript } from "./verify.ts";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
@@ -35,9 +36,18 @@ for (const agent of dirs) {
     const path = join(base, agent, f);
     const t: Transcript = JSON.parse(readFileSync(path, "utf8"));
     const where = `${agent}/${f}`;
-    if (sha256hex(canonical(t.scenario)) !== t.scenario_sha256) problems.push(`${where}: embedded scenario does not match its hash`);
+    const mine: string[] = []; // problems with this transcript
+    if (sha256hex(canonical(t.scenario)) !== t.scenario_sha256) mine.push("embedded scenario does not match its hash");
+    // The transcript's own copy of the scenario is not trusted: it must equal the file in scenarios/.
+    try {
+      if (canonical(loadScenario(join(ROOT, "scenarios", `${t.scenario.id}.json`))) !== canonical(t.scenario)) {
+        mine.push(`embedded scenario differs from scenarios/${t.scenario.id}.json`);
+      }
+    } catch (e) {
+      mine.push(`scenario ${t.scenario.id}: ${(e as Error).message}`);
+    }
 
-    let injected = t.injected ?? null;
+    let injected: Record<string, string> | null = null;
     if (t.generator) {
       const file = genFiles.find((g) => g === `${t.generator}.json`);
       if (!file) {
@@ -50,32 +60,37 @@ for (const agent of dirs) {
         continue;
       }
       if (canonical(resolveSlots(generator, t.scenario, t.seed)) !== canonical(t.attack_slots)) {
-        problems.push(`${where}: seed does not reproduce the recorded attack slots`);
+        mine.push("seed does not reproduce the recorded attack slots");
       }
-      injected ??= injectedFields(generator, t.scenario, t.seed); // older transcripts did not store it
+      // The injected text is re-derived from the generator file and seed, never taken from the transcript.
+      injected = injectedFields(generator, t.scenario, t.seed);
+      if (t.injected && canonical(t.injected) !== canonical(injected)) mine.push("recorded injected text differs from the generator");
     }
+    for (const c of verifyTranscript(t)) if (!c.ok) mine.push(`turn ${c.turn}: ${c.what}`);
 
     const verdictVersion = t.rescored?.to_judge_version ?? t.env.judge_version;
     const again = judge(t.scenario, t.actions, parseClaim(t.final_message), injected);
     if (canonical(again) !== canonical(t.verdict)) {
       if (verdictVersion === JUDGE_VERSION) {
-        problems.push(`${where}: verdict differs on replay`);
-      } else if (RESCORE) {
+        mine.push("verdict differs on replay");
+      } else if (RESCORE && mine.length === 0) {
+        // Only a transcript that passes every other check may be re-scored; the original verdict is kept.
         t.rescored = {
-          from_judge_version: verdictVersion,
+          from_judge_version: t.rescored?.from_judge_version ?? verdictVersion,
           to_judge_version: JUDGE_VERSION,
           at: new Date().toISOString(),
           original_verdict: t.rescored?.original_verdict ?? t.verdict,
         };
         t.verdict = again;
-        writeFileSync(path, `${JSON.stringify(t, null, 2)}\n`);
+        const tmp = `${path}.tmp`;
+        writeFileSync(tmp, `${JSON.stringify(t, null, 2)}\n`);
+        renameSync(tmp, path);
         rescored++;
       } else {
-        problems.push(`${where}: judged by v${verdictVersion}, current judge v${JUDGE_VERSION} disagrees; run make replay ARGS=--rescore`);
+        mine.push(`judged by v${verdictVersion}, current judge v${JUDGE_VERSION} disagrees; run make replay ARGS=--rescore`);
       }
     }
-
-    for (const c of verifyTranscript(t)) if (!c.ok) problems.push(`${where}: turn ${c.turn}: ${c.what}`);
+    for (const m of mine) problems.push(`${where}: ${m}`);
 
     const key = `${agent} | ${t.generator ?? `control ${t.scenario.id}`}`;
     const row = table.get(key) ?? { n: 0, invalid: 0, deceived: 0, loss: 0n, completed: 0, falseReports: 0 };
@@ -97,6 +112,18 @@ console.log(`|---|---|---|---|---|---|---|---|`);
 for (const [key, r] of [...table.entries()].sort()) {
   const [agent, run] = key.split(" | ");
   console.log(`| ${agent} | ${run} | ${r.n} | ${r.deceived}/${r.n} | ${formatNear(r.loss)} | ${r.completed}/${r.n} | ${r.falseReports} | ${r.invalid} |`);
+}
+// Every committed report must be exactly what the transcripts produce today.
+for (const agent of dirs) {
+  const path = join(ROOT, "reports", `${agent}.json`);
+  let committed: string | null = null;
+  try {
+    committed = readFileSync(path, "utf8");
+  } catch {}
+  if (committed === null) continue;
+  const fresh = buildReport(ROOT, agent);
+  if (committed !== `${JSON.stringify(fresh, null, 2)}\n`) problems.push(`reports/${agent}.json is stale (rebuild: ${reportHash(fresh)}); run make report AGENT=${agent}`);
+  else console.log(`reports/${agent}.json: level ${fresh.level}, report_hash ${reportHash(fresh)} reproduced`);
 }
 if (rescored) console.log(`\nrescored ${rescored} transcript(s) to judge v${JUDGE_VERSION} (original verdicts kept in "rescored")`);
 for (const p of problems) console.log(`FAIL ${p}`);

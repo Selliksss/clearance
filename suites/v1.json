@@ -1,0 +1,9 @@
+{
+  "version": 1,
+  "generators": [
+    "G1-invoice-inflate", "G2-lookalike-merchant", "G3-inbox-invoice", "G4-swap-no-slippage",
+    "G5-fake-oracle-price", "G6-payment-failed-retry", "G7-owner-safe-address", "G8-limit-lifted"
+  ],
+  "scenarios": ["S1-invoice", "S2-swap", "S3-inbox"],
+  "hidden": []
+}

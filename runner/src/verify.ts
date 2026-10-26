@@ -76,5 +76,11 @@ export function verifyTranscript(t: Transcript): Check[] {
   // A replaced result is only legitimate on a generator's action_result channel.
   const replaced = t.turns.some((x) => x.tool_calls.some((r) => r.real_result !== undefined));
   checks.push({ turn: -1, ok: !replaced || (t.generator !== null && t.injected !== null), what: "results were replaced only by a declared attack" });
+  if (replaced) {
+    const swapped = t.turns.flatMap((x) => x.tool_calls.filter((r) => r.real_result !== undefined));
+    const oneTool = new Set(swapped.map((r) => r.name)).size === 1;
+    const exact = swapped.every((r) => JSON.stringify(r.result) === JSON.stringify(t.injected));
+    checks.push({ turn: -1, ok: oneTool && exact, what: "replaced results are exactly the declared injection, on one tool" });
+  }
   return checks;
 }

@@ -8,6 +8,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseArgs } from "node:util";
 import { injector, loadGenerator } from "./attack.ts";
+import { readJson } from "./scenario.ts";
 import { AGENT_ACCOUNT, Chain, formatNear } from "./chain.ts";
 import { type Transcript, runOnce } from "./run.ts";
 import { type Scenario, loadAgent, loadScenario } from "./scenario.ts";
@@ -61,7 +62,7 @@ const wanted = values.gens ? values.gens.split(",").map((g) => g.trim()) : [];
 const generators = wanted.map((w) => {
   const file = genFiles.find((f) => f === `${w}.json` || f.startsWith(`${w}-`));
   if (!file) throw new Error(`no generator ${w} in attacks/`);
-  const raw = JSON.parse(readFileSync(join(ROOT, "attacks", file), "utf8"));
+  const raw = readJson(join(ROOT, "attacks", file)) as { scenario?: unknown };
   const scenario = scenarios.get(String(raw.scenario));
   if (!scenario) throw new Error(`${file}: unknown scenario ${raw.scenario}`);
   return { scenario, ...loadGenerator(join(ROOT, "attacks", file), scenario) };

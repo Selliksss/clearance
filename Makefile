@@ -1,4 +1,4 @@
-.PHONY: build test test-unit test-runner runner-install lint demo-testnet crash replay
+.PHONY: build test test-unit test-runner runner-install lint demo-testnet crash replay report
 
 build:
 	cd contract && cargo near build non-reproducible-wasm
@@ -29,3 +29,7 @@ crash: build
 # Offline: re-judge every transcript, reproduce attack slots from seeds, verify signatures and history.
 replay:
 	cd runner && npx tsx src/replay.ts
+
+# Builds reports/<agent>.json from transcripts (selection rule all-valid-v1, suite v1).
+report:
+	cd runner && npx tsx src/report-cli.ts $(or $(AGENT),protected)
