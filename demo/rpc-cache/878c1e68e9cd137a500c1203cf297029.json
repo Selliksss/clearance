@@ -1,0 +1,218 @@
+{
+ "method": "tx",
+ "params": {
+  "tx_hash": "BSprJN48N1gVAGsupGHQ44dAgC7idELd1h1taE5SPrsJ",
+  "sender_account_id": "lt-dopusk-agent-protected.testnet",
+  "wait_until": "FINAL"
+ },
+ "result": {
+  "final_execution_status": "FINAL",
+  "receipts_outcome": [
+   {
+    "block_hash": "HdEo5iXPfW99ejDV1mscNDr5eMYeyuZHaJyWUYu5Mzhe",
+    "id": "Dvgsd2ygTuCyp5WDDJBADHVfmnCXf2irYqsiK6GSSgRj",
+    "outcome": {
+     "executor_id": "clearance-dev.testnet",
+     "gas_burnt": 1471053749355,
+     "logs": [],
+     "metadata": {
+      "contracts": [
+       {
+        "local": "4tE5KkAUoudMxkRLpD2BW3nJzRNLiLUs5rHubGoXRwVF"
+       }
+      ],
+      "gas_profile": [
+       {
+        "cost": "BASE",
+        "cost_category": "WASM_HOST_COST",
+        "gas_used": "4765825998"
+       },
+       {
+        "cost": "CONTRACT_LOADING_BASE",
+        "cost_category": "WASM_HOST_COST",
+        "gas_used": "35445963"
+       },
+       {
+        "cost": "CONTRACT_LOADING_BYTES",
+        "cost_category": "WASM_HOST_COST",
+        "gas_used": "262748846950"
+       },
+       {
+        "cost": "READ_MEMORY_BASE",
+        "cost_category": "WASM_HOST_COST",
+        "gas_used": "13049316000"
+       },
+       {
+        "cost": "READ_MEMORY_BYTE",
+        "cost_category": "WASM_HOST_COST",
+        "gas_used": "532186620"
+       },
+       {
+        "cost": "READ_REGISTER_BASE",
+        "cost_category": "WASM_HOST_COST",
+        "gas_used": "12585825930"
+       },
+       {
+        "cost": "READ_REGISTER_BYTE",
+        "cost_category": "WASM_HOST_COST",
+        "gas_used": "100730364"
+       },
+       {
+        "cost": "SHA256_BASE",
+        "cost_category": "WASM_HOST_COST",
+        "gas_used": "4540970250"
+       },
+       {
+        "cost": "SHA256_BYTE",
+        "cost_category": "WASM_HOST_COST",
+        "gas_used": "241173510"
+       },
+       {
+        "cost": "STORAGE_READ_BASE",
+        "cost_category": "WASM_HOST_COST",
+        "gas_used": "169070537247"
+       },
+       {
+        "cost": "STORAGE_READ_KEY_BYTE",
+        "cost_category": "WASM_HOST_COST",
+        "gas_used": "3404778630"
+       },
+       {
+        "cost": "STORAGE_READ_VALUE_BYTE",
+        "cost_category": "WASM_HOST_COST",
+        "gas_used": "4859129464"
+       },
+       {
+        "cost": "UTF8_DECODING_BASE",
+        "cost_category": "WASM_HOST_COST",
+        "gas_used": "3111779061"
+       },
+       {
+        "cost": "UTF8_DECODING_BYTE",
+        "cost_category": "WASM_HOST_COST",
+        "gas_used": "5831609580"
+       },
+       {
+        "cost": "WASM_INSTRUCTION",
+        "cost_category": "WASM_HOST_COST",
+        "gas_used": "60384531108"
+       },
+       {
+        "cost": "WRITE_MEMORY_BASE",
+        "cost_category": "WASM_HOST_COST",
+        "gas_used": "16822769166"
+       },
+       {
+        "cost": "WRITE_MEMORY_BYTE",
+        "cost_category": "WASM_HOST_COST",
+        "gas_used": "2827275336"
+       },
+       {
+        "cost": "WRITE_REGISTER_BASE",
+        "cost_category": "WASM_HOST_COST",
+        "gas_used": "14327612430"
+       },
+       {
+        "cost": "WRITE_REGISTER_BYTE",
+        "cost_category": "WASM_HOST_COST",
+        "gas_used": "3539256084"
+       }
+      ],
+      "version": 4
+     },
+     "receipt_ids": [
+      "4BtZrnFPpmYJbS8pxGDc3wHmg2bDKiHRmmAtyY8VUgjC"
+     ],
+     "status": {
+      "Failure": {
+       "ActionError": {
+        "index": 0,
+        "kind": {
+         "FunctionCallError": {
+          "ExecutionError": "Smart contract panicked: no valid certificate"
+         }
+        }
+       }
+      }
+     },
+     "tokens_burnt": "147105374935500000000"
+    },
+    "proof": []
+   },
+   {
+    "block_hash": "HJWBSzKRJyZwwvtJHELsxoRfn2zT7x6hCk28b7peWa9u",
+    "id": "4BtZrnFPpmYJbS8pxGDc3wHmg2bDKiHRmmAtyY8VUgjC",
+    "outcome": {
+     "executor_id": "lt-dopusk-agent-protected.testnet",
+     "gas_burnt": 223182562500,
+     "logs": [],
+     "metadata": {
+      "contracts": [
+       null
+      ],
+      "gas_profile": [],
+      "version": 4
+     },
+     "receipt_ids": [],
+     "status": {
+      "SuccessValue": ""
+     },
+     "tokens_burnt": "0"
+    },
+    "proof": []
+   }
+  ],
+  "status": {
+   "Failure": {
+    "ActionError": {
+     "index": 0,
+     "kind": {
+      "FunctionCallError": {
+       "ExecutionError": "Smart contract panicked: no valid certificate"
+      }
+     }
+    }
+   }
+  },
+  "transaction": {
+   "actions": [
+    {
+     "FunctionCall": {
+      "args": "eyJhbW91bnQiOiIxMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwIiwicmVjZWl2ZXIiOiJzaG9wLmNsZWFyYW5jZS1kZXYudGVzdG5ldCIsInZhdWx0X2lkIjo0fQ==",
+      "deposit": "0",
+      "gas": 50000000000000,
+      "method_name": "spend"
+     }
+    }
+   ],
+   "hash": "BSprJN48N1gVAGsupGHQ44dAgC7idELd1h1taE5SPrsJ",
+   "nonce": 274449579000043,
+   "priority_fee": 0,
+   "public_key": "ed25519:7R86zE8TzWSCRhHSFuBGkGx1cGqzdnVYtGMQnbNsVoa7",
+   "receiver_id": "clearance-dev.testnet",
+   "signature": "ed25519:MuSKMLKtTq49VfhkP4gFzPHPYn4n8Mq2BJY5ucaWweumN5gJzbB6obsLCqPanxWMYrYBYGtSgsKzyE8gWkTZx1K",
+   "signer_id": "lt-dopusk-agent-protected.testnet"
+  },
+  "transaction_outcome": {
+   "block_hash": "5FTiL763eEaiZKxcdhCK8Gdj1ECrXAmj3eRNnXkc8Ljx",
+   "id": "BSprJN48N1gVAGsupGHQ44dAgC7idELd1h1taE5SPrsJ",
+   "outcome": {
+    "executor_id": "lt-dopusk-agent-protected.testnet",
+    "gas_burnt": 312637136640,
+    "logs": [],
+    "metadata": {
+     "gas_profile": null,
+     "version": 1
+    },
+    "receipt_ids": [
+     "Dvgsd2ygTuCyp5WDDJBADHVfmnCXf2irYqsiK6GSSgRj"
+    ],
+    "status": {
+     "SuccessReceiptId": "Dvgsd2ygTuCyp5WDDJBADHVfmnCXf2irYqsiK6GSSgRj"
+    },
+    "tokens_burnt": "31263713664000000000"
+   },
+   "proof": []
+  }
+ }
+}

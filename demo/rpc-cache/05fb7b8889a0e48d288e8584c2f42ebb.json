@@ -1,0 +1,21 @@
+{
+ "method": "query",
+ "params": {
+  "request_type": "call_function",
+  "finality": "final",
+  "account_id": "clearance-dev.testnet",
+  "method_name": "get_cert",
+  "args_base64": "eyJhZ2VudCI6Imx0LWRvcHVzay1hZ2VudC1wcm90ZWN0ZWQudGVzdG5ldCIsInNpZ25lciI6Imx0LWRvcHVzay1ydW5uZXItc2lnbmVyLnRlc3RuZXQifQ=="
+ },
+ "result": {
+  "block_hash": "DzYUuBBgC6bUiQK2ozakDoX4A7kXurvvzWYdKdwwitmx",
+  "block_height": 274905866,
+  "logs": [],
+  "result": [
+   110,
+   117,
+   108,
+   108
+  ]
+ }
+}

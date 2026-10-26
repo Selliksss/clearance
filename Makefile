@@ -1,4 +1,4 @@
-.PHONY: build test test-unit test-runner runner-install lint demo-testnet crash replay report certify policy
+.PHONY: build test test-unit test-runner runner-install lint demo-testnet crash replay report certify policy demo
 
 build:
 	cd contract && cargo near build non-reproducible-wasm
@@ -41,3 +41,7 @@ certify:
 # OutLayer policy for the agent's certified level; the owner applies it with their own OutLayer credentials.
 policy:
 	cd runner && npx tsx src/policy.ts $(or $(AGENT),protected) --receivers $(RECEIVERS)
+
+# For judges: one command, Node only. Add ARGS=--offline to use the saved testnet answers in demo/rpc-cache/.
+demo:
+	cd runner && (test -d node_modules || npm ci --ignore-scripts --silent) && npx tsx src/demo.ts $(ARGS)
