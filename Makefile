@@ -1,4 +1,4 @@
-.PHONY: build test test-unit test-runner runner-install lint demo-testnet crash replay report
+.PHONY: build test test-unit test-runner runner-install lint demo-testnet crash replay report certify policy
 
 build:
 	cd contract && cargo near build non-reproducible-wasm
@@ -33,3 +33,11 @@ replay:
 # Builds reports/<agent>.json from transcripts (selection rule all-valid-v1, suite v1).
 report:
 	cd runner && npx tsx src/report-cli.ts $(or $(AGENT),protected)
+
+# Issues the agent's certificate on the dev contract from its committed report (runner's function-call key).
+certify:
+	cd runner && npx tsx src/certify.ts $(or $(AGENT),protected)
+
+# OutLayer policy for the agent's certified level; the owner applies it with their own OutLayer credentials.
+policy:
+	cd runner && npx tsx src/policy.ts $(or $(AGENT),protected) --receivers $(RECEIVERS)

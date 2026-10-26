@@ -1,0 +1,252 @@
+{
+  "$comment": "Pinned from out-layer/api-spec openapi.json (OutLayer Agent Custody API). Only the schemas a wallet policy uses.",
+  "source": "https://raw.githubusercontent.com/out-layer/api-spec/main/openapi.json",
+  "source_version": "0.1.0-alpha.4",
+  "source_sha256": "d4a948b242cdd818033adc8f667309bfc85e49a163e1f12a7f433cb0e5200a93",
+  "schemas": {
+    "AddressList": {
+      "type": "object",
+      "required": [
+        "mode",
+        "list"
+      ],
+      "properties": {
+        "mode": {
+          "type": "string",
+          "enum": [
+            "whitelist",
+            "blacklist"
+          ]
+        },
+        "list": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "Capabilities": {
+      "type": "object",
+      "description": "Default-DENY opt-ins for the non-Built primitives, stored alongside\n`rules` / `approval` in the encrypted policy. Every capability defaults to\nDENY under a policy **except** `sign_message` (default-allow). A wallet\nwith no policy at all is unrestricted.\n",
+      "properties": {
+        "raw_sign": {
+          "$ref": "#/components/schemas/RawSignCapability"
+        },
+        "confidential": {
+          "$ref": "#/components/schemas/Capability"
+        },
+        "swap": {
+          "$ref": "#/components/schemas/Capability"
+        },
+        "cross_chain_withdraw": {
+          "$ref": "#/components/schemas/Capability"
+        },
+        "limit_order": {
+          "$ref": "#/components/schemas/Capability"
+        },
+        "payment_check": {
+          "$ref": "#/components/schemas/Capability"
+        },
+        "sign_message": {
+          "$ref": "#/components/schemas/SignMessageCapability"
+        },
+        "evm_sign": {
+          "$ref": "#/components/schemas/EvmSignCapability"
+        },
+        "solana_sign": {
+          "$ref": "#/components/schemas/SolanaSignCapability"
+        }
+      }
+    },
+    "Capability": {
+      "type": "object",
+      "description": "A single non-Built primitive toggle. All capabilities default to DENY except `sign_message`. `requires_approval` opts that primitive into multisig specifically.",
+      "properties": {
+        "allowed": {
+          "type": "boolean"
+        },
+        "requires_approval": {
+          "type": "boolean"
+        }
+      }
+    },
+    "EvmSignCapability": {
+      "type": "object",
+      "description": "`evm_sign` \u2014 EVM signing (EIP-712 typed-data / EIP-191 personal_sign / raw tx). **Default-DENY under a policy** (like the other fund-moving capabilities) \u2014 set `allowed: true` to permit. A wallet with no policy is unrestricted. CAVEAT (why it must be opt-in): an EIP-712 signature is itself fund-moving (EIP-3009 `TransferWithAuthorization` \u2248 transfer, EIP-2612 `Permit` \u2248 approve), so this grants full authority over the EVM address's float (bounded to what you bridge there \u2014 the NEAR-intents balance is never exposed to any EVM signature). `raw_tx` (default false) is a SEPARATE kill-switch for arbitrary raw transactions; it does NOT contain typed-data drains.",
+      "properties": {
+        "allowed": {
+          "type": "boolean",
+          "description": "Master on/off for EVM signing. Default false (opt in with true)."
+        },
+        "raw_tx": {
+          "type": "boolean",
+          "description": "Permit signing arbitrary raw EVM transactions. Default false."
+        }
+      }
+    },
+    "PolicyLimits": {
+      "type": "object",
+      "description": "Per-period spending limits. The amount fields are maps of\n`token_id \u2192 amount` (use `\"*\"` as the key to match all tokens).\n`per_transaction` is STATELESS (enforced on every signature inside the\nTEE); `hourly` / `daily` / `monthly` and `hourly_tx_count` are STATEFUL\nvelocity limits (checked against coordinator-supplied usage; best-effort\nunder concurrency).\n",
+      "properties": {
+        "per_transaction": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "hourly": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "daily": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "monthly": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "hourly_tx_count": {
+          "type": "integer",
+          "description": "Max number of transactions per rolling hour (transaction-count rate limit; equivalent to `rate_limit.max_per_hour`)."
+        }
+      }
+    },
+    "PolicyRules": {
+      "type": "object",
+      "properties": {
+        "transaction_types": {
+          "type": "array",
+          "description": "Allowed op types (allowlist). Omit to allow all. `cross_chain_withdraw` must be listed explicitly to permit bridging out (it is NOT covered by `withdraw`). The deposit family gates as `call`.",
+          "items": {
+            "$ref": "#/components/schemas/RequestType"
+          }
+        },
+        "allowed_tokens": {
+          "type": "array",
+          "description": "Token allowlist (defuse asset ids, or `\"*\"` for any). Omit or use `[\"*\"]` to allow all tokens.",
+          "items": {
+            "type": "string"
+          }
+        },
+        "addresses": {
+          "$ref": "#/components/schemas/AddressList"
+        },
+        "limits": {
+          "$ref": "#/components/schemas/PolicyLimits"
+        },
+        "time_restrictions": {
+          "$ref": "#/components/schemas/TimeRestrictions"
+        },
+        "rate_limit": {
+          "$ref": "#/components/schemas/RateLimit"
+        }
+      }
+    },
+    "RateLimit": {
+      "type": "object",
+      "properties": {
+        "max_per_hour": {
+          "type": "integer"
+        }
+      }
+    },
+    "RawSignCapability": {
+      "type": "object",
+      "description": "`raw_sign` \u2014 sign arbitrary raw bytes. `chains` is an optional allowlist; when absent, ALL chains (including `near`, which can sign a NEAR tx/intent outside the structured policy \u2014 enable with care).",
+      "properties": {
+        "allowed": {
+          "type": "boolean"
+        },
+        "requires_approval": {
+          "type": "boolean"
+        },
+        "chains": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "RequestType": {
+      "type": "string",
+      "description": "Tracked async request / policy transaction type. `withdraw` is a\nsame-chain intents withdrawal; `cross_chain_withdraw` is a separate type\nfor 1Click bridge-out (a policy must list it explicitly \u2014 it is NOT\nfolded into `withdraw`). `confidential` covers every confidential-shard\nop (shield / unshield / withdraw / transfer / swap). The deposit family\n(`intents/deposit`, `storage-deposit`, cross-chain deposit) all gate as\n`call`. `limit_order` is a rested 1Click order and, like\n`cross_chain_withdraw`, its own type: permitting swaps or cross-chain\nexits does not permit it.\n",
+      "enum": [
+        "call",
+        "transfer",
+        "withdraw",
+        "cross_chain_withdraw",
+        "limit_order",
+        "deposit",
+        "swap",
+        "confidential"
+      ]
+    },
+    "SignMessageCapability": {
+      "type": "object",
+      "description": "`sign_message` \u2014 generic non-fund NEP-413 (e.g. dApp login). Defaults ALLOWED. `allowed_recipients` is a default-DENY allowlist of verifier recipients (NOT a blocklist); `intents.near` / `intents.far` are always excluded. This is NOT OutLayer auth (that is `authSign`).",
+      "properties": {
+        "allowed": {
+          "type": "boolean"
+        },
+        "requires_approval": {
+          "type": "boolean"
+        },
+        "allowed_recipients": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "SolanaSignCapability": {
+      "type": "object",
+      "description": "`solana_sign` \u2014 Solana signing (off-chain messages / transaction messages). **Default-DENY under a policy** (same model as `evm_sign`) \u2014 set `allowed: true` to permit. A wallet with no policy is unrestricted. CAVEAT: a signed Solana transaction message is itself fund-moving, so `raw_tx` grants full authority over the Solana address's float (bounded to what you send there \u2014 the NEAR-intents balance is never exposed to any Solana signature). The base flag covers message signing only; the service rejects \"message\" bytes that parse as a valid transaction message, so the message endpoint cannot bypass `raw_tx`.",
+      "properties": {
+        "allowed": {
+          "type": "boolean",
+          "description": "Master on/off for Solana signing. Default false (opt in with true)."
+        },
+        "raw_tx": {
+          "type": "boolean",
+          "description": "Permit signing Solana transaction messages. Default false."
+        }
+      }
+    },
+    "TimeRestrictions": {
+      "type": "object",
+      "properties": {
+        "timezone": {
+          "type": "string",
+          "description": "IANA timezone name, e.g. `UTC` or `Europe/Berlin`."
+        },
+        "allowed_hours": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 23
+          }
+        },
+        "allowed_days": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 6
+          },
+          "description": "0 = Sunday, 6 = Saturday."
+        }
+      }
+    }
+  }
+}
