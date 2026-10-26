@@ -1,0 +1,90 @@
+{
+  "network": "testnet",
+  "contract": "clearance-dev.testnet",
+  "vault_id": 2,
+  "steps": [
+    {
+      "step": "owner prepays storage for the runner",
+      "tx": "H8tdty3juCYLaTSm5xsvyKoMtexYsnC5LufqJacV9Lwq",
+      "expect": "success",
+      "pass": true
+    },
+    {
+      "step": "stranger prepays its own storage",
+      "tx": "9XyUWuepqUeW5nqMmQbNaytFZu9vpSR5oaHmSPkJxr3Z",
+      "expect": "success",
+      "pass": true
+    },
+    {
+      "step": "owner creates a vault: cap 5 NEAR, receiver shop, trusts only the runner",
+      "tx": "C345AMbMeSGuFPsgS6hRPBx9iSastxPe8E6oiX7Fes1q",
+      "expect": "success",
+      "pass": true
+    },
+    {
+      "step": "untrusted signer issues a certificate",
+      "tx": "87eQJ7Cd4jxetjSWgqHvuoFAuQ9X9UNwzkHuEhXMJjms",
+      "expect": "success",
+      "pass": true
+    },
+    {
+      "step": "spend with only an untrusted certificate",
+      "tx": "8KuFBLNYt4nKGcA38KbEgLbWS3XYyEt5PDaytvhKVHCs",
+      "expect": "failure",
+      "error": "no valid certificate",
+      "pass": true
+    },
+    {
+      "step": "agent certifies itself",
+      "tx": "9FkTpEPTLEyn7spPzAn26E4xa1Em8MGgjiBhyCVbikkd",
+      "expect": "failure",
+      "error": "agent cannot certify itself",
+      "pass": true
+    },
+    {
+      "step": "runner certifies level 2 with its function-call key",
+      "tx": "AC8SKo6aaL2JLptz63K2YW8Z2xMvSoXJJdQVJCcBbReK",
+      "expect": "success",
+      "pass": true
+    },
+    {
+      "step": "protected agent pays the shop 2 NEAR",
+      "tx": "3xksLrLLDqb9rdNopzLgg6tBFyKcSbXNcNEyCQBc8iWC",
+      "expect": "success",
+      "pass": true
+    },
+    {
+      "step": "6 NEAR more exceeds min(owner 5, level 10)",
+      "tx": "ES9Een3tvm6RZ13Quu8QHRG1FAGMVrhrtQMVALEE4a8U",
+      "expect": "failure",
+      "error": "over window cap",
+      "pass": true
+    },
+    {
+      "step": "payment to an account outside the receiver list",
+      "tx": "B7dajBjXAu5SHRDirR3BzrqtbJzYFNeEs1WVfcoBPKQc",
+      "expect": "failure",
+      "error": "receiver not allowed",
+      "pass": true
+    },
+    {
+      "step": "runner revokes with its function-call key",
+      "tx": "HBFzwemPDoDk8Zc4Qt2NKfLa8SxS6pyipEGBjLQdRHfv",
+      "expect": "success",
+      "pass": true
+    },
+    {
+      "step": "spend after revoke",
+      "tx": "CYjQ2ehmSMN3nJvBZpCPSwBcMKTr3UCKvrBFcreWCZYL",
+      "expect": "failure",
+      "error": "no valid certificate",
+      "pass": true
+    },
+    {
+      "step": "owner withdraws 0.3 NEAR",
+      "tx": "2Aa8yNczmQKzeMxBw3kJkM2RW4qWvqNzG1XxqFnvuhjf",
+      "expect": "success",
+      "pass": true
+    }
+  ]
+}
