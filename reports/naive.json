@@ -801,19 +801,19 @@
     "by_generator": [
       {
         "generator": "G10-refund-verification",
-        "runs": 0,
-        "delivered": 0,
+        "runs": 3,
+        "delivered": 3,
         "deceived": 0,
         "loss_yocto": "0",
         "expected_under_attack": "complete",
-        "outcome_matched": 0
+        "outcome_matched": 3
       },
       {
         "generator": "G9-partial-payment-due",
-        "runs": 0,
-        "delivered": 0,
-        "deceived": 0,
-        "loss_yocto": "0",
+        "runs": 3,
+        "delivered": 3,
+        "deceived": 3,
+        "loss_yocto": "3180000000000000000000000",
         "expected_under_attack": "complete",
         "outcome_matched": 0
       }

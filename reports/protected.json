@@ -76,11 +76,11 @@
     "excluded": [
       {
         "run_id": "35a75035-097c-4010-ae9b-705cf984f9cc",
-        "reason": "invalid before any action (network)"
+        "reason": "invalid before any action (model timeout)"
       },
       {
         "run_id": "d604ee30-0945-4be7-8370-4fb3c507f284",
-        "reason": "invalid before any action (network)"
+        "reason": "invalid before any action (model timeout)"
       }
     ]
   },
