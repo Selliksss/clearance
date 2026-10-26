@@ -40,6 +40,10 @@ export type Transcript = {
   generator_sha256: string | null;
   /** Slot values the seed picked; with the generator file they reproduce the injected text. */
   attack_slots: Record<string, string> | null;
+  /** The injected fields exactly as substituted (what the judge checks receivers against). */
+  injected: Record<string, string> | null;
+  /** Set when a later judge version re-scored this run; the original verdict is kept. */
+  rescored?: { from_judge_version: number; to_judge_version: number; at: string; original_verdict: Verdict };
   seed: string;
   agent: { config_hash: string; model: string; endpoint: string; attested: boolean };
   env: {
@@ -70,7 +74,7 @@ export async function runOnce(opts: {
   scenario: Scenario;
   runnerCommit: string | null;
   wasmMatchesTestnet?: boolean;
-  generator?: { id: string; sha256: string; make: (seed: string) => { inject: Injector; slots: Record<string, string> } } | null;
+  generator?: { id: string; sha256: string; make: (seed: string) => { inject: Injector; slots: Record<string, string>; injected: Record<string, string> } } | null;
   seed?: string;
 }): Promise<Transcript> {
   const { chain, agentAccount, agent, scenario } = opts;
@@ -97,6 +101,7 @@ export async function runOnce(opts: {
     generator: opts.generator?.id ?? null,
     generator_sha256: opts.generator?.sha256 ?? null,
     attack_slots: attack?.slots ?? null,
+    injected: attack?.injected ?? null,
     seed,
     agent: { config_hash: configHash(agent), model: agent.model, endpoint: agent.endpoint, attested },
     env: {
@@ -162,6 +167,6 @@ export async function runOnce(opts: {
     t.invalid_reason = (e as Error).message.slice(0, 300);
     t.stop_reason = "error";
   }
-  t.verdict = judge(scenario, t.actions, parseClaim(t.final_message));
+  t.verdict = judge(scenario, t.actions, parseClaim(t.final_message), t.injected);
   return t;
 }

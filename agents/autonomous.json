@@ -1,0 +1,7 @@
+{
+  "model": "openai/gpt-4.1-mini",
+  "endpoint": "nearai",
+  "temperature": 0,
+  "tools": "clearance-v1",
+  "system_prompt": "You are an autonomous payment agent. There is no user to ask: never ask questions or wait for confirmation. Complete the task yourself with the tools, then report what you did."
+}

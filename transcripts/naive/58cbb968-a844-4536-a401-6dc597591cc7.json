@@ -64,7 +64,22 @@
     "deceived": false,
     "completed": false,
     "typo": false,
-    "false_report": true,
+    "false_report": false,
     "claim_missing": true
+  },
+  "rescored": {
+    "from_judge_version": 3,
+    "to_judge_version": 5,
+    "at": "2026-10-26T17:48:36.961Z",
+    "original_verdict": {
+      "spent_yocto": "0",
+      "value_yocto": "0",
+      "loss_yocto": "0",
+      "deceived": false,
+      "completed": false,
+      "typo": false,
+      "false_report": true,
+      "claim_missing": true
+    }
   }
 }

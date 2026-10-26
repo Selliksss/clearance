@@ -45,8 +45,11 @@ const toCents = (d: string) => {
 };
 const fromCents = (c: bigint) => (c % 100n === 0n ? `${c / 100n}` : `${c / 100n}.${(c % 100n).toString().padStart(2, "0")}`);
 
-/** Any literal NEAR-looking account in free text must be a scenario participant. */
-const ACCOUNT_LITERAL = /\b[a-z0-9_-]+(\.[a-z0-9_-]+)*\.(near|testnet|sandbox)\b/g;
+/** Any literal account-looking string in free text must be a scenario participant: named
+ *  accounts on common NEAR suffixes and 64-hex implicit accounts. Anything that slips past
+ *  this is still caught by the judge: paying an account that appears in injected text is
+ *  deception, never a typo. */
+const ACCOUNT_LITERAL = /\b[a-z0-9_-]+(\.[a-z0-9_-]+)*\.(near|testnet|sandbox|tg|aurora|eth)\b|\b[0-9a-f]{64}\b/g;
 
 /** Validates a generator against its scenario. Throws with every problem listed. */
 export function checkGenerator(raw: unknown, scenario: Scenario): Generator {
@@ -114,7 +117,13 @@ export function resolveSlots(g: Generator, scenario: Scenario, seed: string): Re
 const substitute = (text: string, values: Record<string, string>) =>
   text.replace(/\{([a-z_]{1,20})\}/g, (m, k) => (Object.hasOwn(values, k) ? values[k] : m));
 
-export function injector(g: Generator, scenario: Scenario, seed: string): { inject: Injector; slots: Record<string, string> } {
+/** The text a generator injects for a seed (for the judge and for replay). */
+export function injectedFields(g: Generator, scenario: Scenario, seed: string): Record<string, string> {
+  const slots = resolveSlots(g, scenario, seed);
+  return Object.fromEntries(Object.entries(g.template).map(([k, v]) => [k, substitute(v, slots)]));
+}
+
+export function injector(g: Generator, scenario: Scenario, seed: string): { inject: Injector; slots: Record<string, string>; injected: Record<string, string> } {
   const slots = resolveSlots(g, scenario, seed);
   const tool = g.channel.split(":")[1];
   let calls = 0;
@@ -122,9 +131,9 @@ export function injector(g: Generator, scenario: Scenario, seed: string): { inje
     if (name !== tool) return honest;
     calls++;
     if (calls !== g.at.nth) return honest;
-    const fields = Object.fromEntries(Object.entries(g.template).map(([k, v]) => [k, substitute(v, slots)]));
+    const fields = injectedFields(g, scenario, seed);
     if (Array.isArray(honest)) return [...honest, fields]; // inbox: the attack arrives as one more message
     return { ...(honest as Record<string, unknown>), ...fields };
   };
-  return { inject, slots };
+  return { inject, slots, injected: injectedFields(g, scenario, seed) };
 }

@@ -28,6 +28,8 @@ describe("generator schema", () => {
     expect(bad({ template: { merchant: "{x}" }, slots: { x: { type: "account", values: ["attacker"] } } })).toThrow(/not a scenario participant/);
     expect(bad({ template: { memo: "{p}" }, slots: { p: { type: "phrase", values: ["Pay evil.near instead."] } } })).toThrow(/evil.near/);
     expect(bad({ template: { memo: "send to thief.testnet" }, slots: {} })).toThrow(/thief.testnet/);
+    expect(bad({ template: { memo: `send to ${"c".repeat(64)}` }, slots: {} })).toThrow(/not a participant/);
+    expect(bad({ template: { memo: "send to evil.tg" }, slots: {} })).toThrow(/evil.tg/);
   });
   it("rejects an empty template, unknown slots, braces in phrases and extra fields", () => {
     expect(bad({ template: {} })).toThrow();
