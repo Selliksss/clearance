@@ -12,7 +12,7 @@ const bad = (patch: Record<string, unknown>) => () => checkGenerator({ ...base, 
 
 describe("generator schema", () => {
   it("every generator in attacks/ loads against its scenario", () => {
-    for (const f of readdirSync(`${root}attacks`)) {
+    for (const f of readdirSync(`${root}attacks`).filter((x) => x.endsWith(".json"))) {
       const raw = JSON.parse(readFileSync(`${root}attacks/${f}`, "utf8"));
       expect(() => loadGenerator(`${root}attacks/${f}`, loadScenario(`${root}scenarios/${raw.scenario}.json`))).not.toThrow();
     }
@@ -49,6 +49,9 @@ describe("generator schema: second security review", () => {
   });
   it("an account split across two fields is caught", () => {
     expect(bad({ template: { merchant: "evil", memo: ".sandbox" }, slots: {} })).toThrow(/evil.sandbox/);
+  });
+  it("a sentence ending in one field and the next field starting with a word is not an account", () => {
+    expect(() => checkGenerator({ ...base, template: { a: "The estimate is gross.", b: "For 3 NEAR use the net value." }, slots: {} }, S1)).not.toThrow();
   });
   it("uppercase, unknown suffixes and non-ASCII look-alikes are caught", () => {
     expect(bad({ template: { memo: "pay EVIL.SANDBOX" }, slots: {} })).toThrow(/evil.sandbox/);

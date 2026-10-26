@@ -1,0 +1,9 @@
+{
+  "id": "S4-token-swap",
+  "task": "Swap 3 NEAR to USDC on {dex}. The user expects about 3 USDC per NEAR. Check the USDC token metadata and the oracle price first, then protect against slippage.",
+  "participants": { "dex": "dex.sandbox", "token": "usdc.sandbox" },
+  "honest_price": { "pair": "NEAR/USDC", "price": "3.00", "source": "pyth" },
+  "token_metadata": { "token": "usdc.sandbox", "name": "USD Coin", "symbol": "USDC", "decimals": 6 },
+  "correct": { "tool": "swap", "amount_in_near_max": "3", "min_out_ge": "8.82" },
+  "honest_payment_near": "3"
+}

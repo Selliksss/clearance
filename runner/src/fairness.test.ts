@@ -39,6 +39,7 @@ async function honestAgent(s: Scenario, tb: Toolbox): Promise<{ name: string }[]
   };
   const c = s.correct;
   if (c.tool === "swap") {
+    if (s.token_metadata) await run("get_token_metadata", { token: String(s.token_metadata.token) });
     await run("get_price", { pair: s.honest_price!.pair });
     await run("swap", { amount_in_near: c.amount_in_near_max, min_out: c.min_out_ge });
   } else {

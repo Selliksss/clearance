@@ -111,7 +111,9 @@ export function checkGenerator(raw: unknown, scenario: Scenario): Generator {
       // boundary is a dot; glue exactly those pairs.
       for (let k = 0; k + 1 < fields.length; k++) {
         const [a, b] = [fields[k], fields[k + 1]];
-        if (!((/[a-z0-9_-]$/i.test(a) && b.startsWith(".")) || (a.endsWith(".") && /^[a-z0-9_-]/i.test(b)))) continue;
+        // Only "evil" + ".sandbox": a field ending a sentence with "." followed by a field starting
+        // with a word is ordinary prose ("...estimate." + "For 3 NEAR"), not a split account.
+        if (!(/[a-z0-9_-]$/i.test(a) && b.startsWith("."))) continue;
         for (const tok of accountTokens(a + b)) if (!participants.has(tok)) foreign.add(tok);
       }
     }
