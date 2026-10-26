@@ -464,6 +464,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "clearance"
+version = "0.1.0"
+dependencies = [
+ "cargo-near-build",
+ "near-api",
+ "near-sandbox",
+ "near-sdk",
+ "proptest",
+ "testresult",
+ "tokio",
+]
+
+[[package]]
 name = "cmake"
 version = "0.1.58"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -946,19 +959,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d4b8a88685455ed29a21542a33abd9cb6510b6b129abadabdcef0f4c55bc8f61"
 dependencies = [
  "litrs",
-]
-
-[[package]]
-name = "dopusk"
-version = "0.1.0"
-dependencies = [
- "cargo-near-build",
- "near-api",
- "near-sandbox",
- "near-sdk",
- "proptest",
- "testresult",
- "tokio",
 ]
 
 [[package]]

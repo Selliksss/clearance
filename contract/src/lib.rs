@@ -1,4 +1,4 @@
-// Dopusk: agent vaults whose spending is capped by the agent's crash-test level.
+// Clearance: agent vaults whose spending is capped by the agent's crash-test level.
 // An agent spends from its vault only while every trusted signer (policy All) or
 // at least one (policy Any) holds a live certificate for it; the cap is
 // min(owner cap, level cap) over a rolling 24-bucket window.
@@ -111,7 +111,8 @@ fn storage_cost(bytes: u64) -> u128 {
 }
 
 fn emit(event: &str, data: Value) {
-    let log = json!({ "standard": "dopusk", "version": "1.0.0", "event": event, "data": [data] });
+    let log =
+        json!({ "standard": "clearance", "version": "1.0.0", "event": event, "data": [data] });
     env::log_str(&format!("EVENT_JSON:{log}"));
 }
 

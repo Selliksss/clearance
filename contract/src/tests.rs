@@ -30,7 +30,7 @@ fn hash(c: char) -> String {
 
 fn ctx(who: &AccountId, deposit: u128) -> VMContextBuilder {
     let mut b = VMContextBuilder::new();
-    b.current_account_id(acc("dopusk.near"))
+    b.current_account_id(acc("clearance.near"))
         .predecessor_account_id(who.clone())
         .signer_account_id(who.clone())
         .attached_deposit(NearToken::from_yoctonear(deposit))
@@ -608,7 +608,7 @@ fn revoke_stops_spending() {
 
 fn callback_env(result: PromiseResult) {
     testing_env!(
-        ctx(&acc("dopusk.near"), 0).build(),
+        ctx(&acc("clearance.near"), 0).build(),
         test_vm_config(),
         RuntimeFeesConfig::test(),
         Default::default(),

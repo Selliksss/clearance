@@ -1,4 +1,4 @@
-# Dopusk
+# Clearance
 
 Crash-test for AI agents that hold money: measure how easily an agent is tricked into paying the wrong party, record the result as an on-chain certificate on NEAR, and cap the agent's spending by that result.
 

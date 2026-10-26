@@ -1,4 +1,4 @@
-# Dopusk — rules for coding agents
+# Clearance — rules for coding agents
 
 Source of truth for behaviour: the spec (kept outside the repo for now; ask before changing any data schema). Write code that matches the surrounding style.
 
