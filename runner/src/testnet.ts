@@ -40,6 +40,13 @@ export async function accessKey(account: string, publicKey: string): Promise<any
   return j.result;
 }
 
+/** The wasm deployed on `account`, so CI can run on the exact bytes instead of a rebuild. */
+export async function deployedCode(account: string): Promise<Uint8Array> {
+  const j = await rpc("query", { request_type: "view_code", finality: "final", account_id: account });
+  if (!j.result?.code_base64) throw new Error(`view_code ${account} failed`);
+  return Buffer.from(j.result.code_base64, "base64");
+}
+
 export async function codeHash(account: string): Promise<string> {
   const j = await rpc("query", { request_type: "view_account", finality: "final", account_id: account });
   if (!j.result) throw new Error(`view_account ${account} failed`);

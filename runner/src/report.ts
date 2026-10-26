@@ -270,11 +270,11 @@ function assembleReport(agentName: string, agent: AgentConfig, suite: Suite, sel
   };
 }
 
-export function buildReport(root: string, agentName: string, suiteName: string | number = 1) {
+export function buildReport(root: string, agentName: string, suiteName: string | number = 1, opts: { dir?: string } = {}) {
   const agent = loadAgent(join(root, "agents", `${agentName}.json`));
   const suite = loadSuite(root, suiteName);
-  const dir = join(root, "transcripts", agentName);
-  const files = readdirSync(dir).filter((f) => f.endsWith(".json")).sort()
+  const dir = opts.dir ?? join(root, "transcripts", agentName);
+  const files = readdirSync(dir).filter((f) => f.endsWith(".json") && f !== "manifest.json").sort()
     .map((f) => ({ file: f, t: JSON.parse(readFileSync(join(dir, f), "utf8")) as Transcript }));
   let holdout: { suite: Suite; sel: Selection } | null = null;
   if (existsSync(join(root, "suites", `${typeof suiteName === "number" ? `v${suiteName}` : suiteName}-holdout.json`))) {
@@ -322,4 +322,41 @@ export function blindControls(root: string, agentName: string) {
     const rs = rows.filter((r) => r.scenario === id);
     return { scenario: id, runs: rs.length, completed: rs.filter((r) => r.completed).length };
   });
+}
+
+export type CiManifest = {
+  format: 1; ci_run_id: string; sha: string; agent: string; mode: "smoke" | "full"; seeds: number;
+  slots: { kind: "attack" | "control"; id: string; i: number; status: "pending" | "written" | "setup_failed"; run_id?: string; category?: string }[];
+};
+
+/** A report for one CI run: every planned slot must be a written transcript, and nothing else may be in
+ *  the directory. A missing or extra run forces level 0, so a CI run cannot be trimmed after the fact. */
+export function ciReport(root: string, agentName: string, dir: string) {
+  const manifest = JSON.parse(readFileSync(join(dir, "manifest.json"), "utf8")) as CiManifest;
+  if (manifest.agent !== agentName) throw new Error(`manifest is for ${manifest.agent}, not ${agentName}`);
+  const report = buildReport(root, agentName, 1, { dir });
+  const written = new Set(manifest.slots.filter((x) => x.status === "written").map((x) => x.run_id));
+  const files = readdirSync(dir).filter((f) => f.endsWith(".json") && f !== "manifest.json").map((f) => f.slice(0, -5));
+  const missing = manifest.slots.filter((x) => x.status !== "written").map((x) => `${x.kind}:${x.id}#${x.i}:${x.status}${x.category ? `(${x.category})` : ""}`);
+  const extra = files.filter((id) => !written.has(id));
+  const unwritten = [...written].filter((id) => !files.includes(id!));
+  const insufficient = [...report.insufficient];
+  let level = report.level;
+  if (manifest.mode !== "full") {
+    insufficient.push("smoke run: never certifies");
+    level = 0;
+  }
+  if (missing.length || extra.length || unwritten.length) {
+    insufficient.push(`ci run incomplete: ${missing.length} missing, ${extra.length} extra, ${unwritten.length} unwritten`);
+    level = 0;
+  }
+  return {
+    ...report,
+    insufficient,
+    level,
+    ci: {
+      rule: "ci-all-v1", run_id: manifest.ci_run_id, sha: manifest.sha, mode: manifest.mode, seeds: manifest.seeds,
+      planned: manifest.slots.length, written: written.size, missing, extra, unwritten,
+    },
+  };
 }

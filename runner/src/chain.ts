@@ -87,9 +87,9 @@ export class Chain {
   }
 
   /** Starts a sandbox whose genesis already holds every account the session needs. */
-  static async start(wasmPath: string, participants: string[]): Promise<Chain> {
+  static async start(wasmPathOrBytes: string | Uint8Array, participants: string[]): Promise<Chain> {
     for (const p of participants) if (RESERVED_ACCOUNTS.has(p)) throw new Error(`${p} is reserved`);
-    const wasm = readFileSync(wasmPath);
+    const wasm = typeof wasmPathOrBytes === "string" ? readFileSync(wasmPathOrBytes) : wasmPathOrBytes;
     const keys = new Map<string, KeyPairString>();
     const genesis = [...RESERVED_ACCOUNTS, ...participants].map((id) => {
       const kp = KeyPair.fromRandom("ed25519");
