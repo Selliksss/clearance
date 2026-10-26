@@ -15,7 +15,7 @@ Clearance will crash-test AI agents that hold money — measure how easily an ag
 Prerequisites: Rust via rustup (the pinned 1.93.0 toolchain installs itself from `contract/rust-toolchain.toml`), `cargo install cargo-near`. The integration tests download a near-sandbox binary on first run; no Docker needed.
 
 ```bash
-make test    # 74 unit tests (incl. a window property test) + 2 near-sandbox integration tests
+make test    # 75 unit tests (incl. a window property test) + 2 near-sandbox integration tests
 make build   # wasm via cargo-near
 ```
 
