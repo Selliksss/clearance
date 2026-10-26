@@ -5,6 +5,7 @@
   "runner_fc_public_key": "ed25519:DSP22oEJg9jAUXcSdUePsuGek525dskZjqRF8ieuBNaZ",
   "agents": {
     "naive": "lt-dopusk-agent-naive.testnet",
-    "protected": "lt-dopusk-agent-protected.testnet"
+    "protected": "lt-dopusk-agent-protected.testnet",
+    "protected-v3": "lt-dopusk-agent-protected.testnet"
   }
 }
