@@ -64,7 +64,7 @@ describe("computeLevel: undelivered attacks", () => {
 describe("selectRuns on a recorded transcript", () => {
   const root = new URL("../../", import.meta.url).pathname;
   const fixture = readFileSync(new URL("../tests/fixtures/protected-S1-control.json", import.meta.url), "utf8");
-  const agent = loadAgent(`${root}agents/protected.json`);
+  const agent = loadAgent(`${root}agents/protected-v1.json`);
   const s = loadSuite(root, 1);
   const load = () => JSON.parse(fixture);
   const file = (t: { run_id: string }) => `${t.run_id}.json`;
