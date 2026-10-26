@@ -80,8 +80,8 @@ export async function complete(endpoint: EndpointName, body: Record<string, unkn
   const request = Buffer.from(JSON.stringify(body));
   let started = new Date();
   let res: Response | null = null;
-  // A connection that fails before any response arrives consumed nothing: retry it.
-  // Once a response exists (even an error status) it is never retried here.
+  // A connection that fails before any response arrives consumed nothing: retry it. So does a 429
+  // (rate limited: the request was not served). Any other response is never retried here.
   for (let attempt = 0; res === null; attempt++) {
     started = new Date();
     try {
@@ -92,6 +92,11 @@ export async function complete(endpoint: EndpointName, body: Record<string, unkn
         redirect: "error",
         signal: AbortSignal.timeout(TIMEOUT_MS),
       });
+      if (res.status === 429 && attempt < 5) {
+        await res.body?.cancel();
+        res = null;
+        await new Promise((r) => setTimeout(r, 5000 * 2 ** attempt));
+      }
     } catch (e) {
       const cause = (e as { cause?: { code?: string; message?: string } }).cause;
       const why = `${(e as Error).message}${cause ? ` (${cause.code ?? cause.message})` : ""}`;
@@ -143,17 +148,24 @@ function redact(status: number, body: string): string {
 export async function fetchSignature(completionId: string, model: string): Promise<SignatureRecord> {
   const url = `${ENDPOINTS.nearai.base}/signature/${encodeURIComponent(completionId)}?model=${encodeURIComponent(model)}&signing_algo=ecdsa`;
   let last = "";
-  for (let attempt = 0; attempt < 4; attempt++) {
+  // Fetching a signature is idempotent: retry not-yet-available (404), rate limits, server and network errors.
+  for (let attempt = 0; attempt < 6; attempt++) {
     if (attempt) await new Promise((r) => setTimeout(r, 1000 * 2 ** attempt));
-    const res = await fetch(url, {
-      headers: { authorization: `Bearer ${key(ENDPOINTS.nearai.keyVar)}`, accept: "application/json" },
-      redirect: "error",
-      signal: AbortSignal.timeout(TIMEOUT_MS),
-    });
+    let res: Response;
+    try {
+      res = await fetch(url, {
+        headers: { authorization: `Bearer ${key(ENDPOINTS.nearai.keyVar)}`, accept: "application/json" },
+        redirect: "error",
+        signal: AbortSignal.timeout(TIMEOUT_MS),
+      });
+    } catch (e) {
+      last = `signature API unreachable: ${(e as Error).message}`;
+      continue;
+    }
     const body = Buffer.from(await readCapped(res)).toString();
     if (res.ok) return JSON.parse(body) as SignatureRecord;
     last = `signature API ${res.status}: ${redact(res.status, body)}`;
-    if (res.status !== 404 && res.status < 500) break;
+    if (res.status !== 404 && res.status !== 429 && res.status < 500) break;
   }
   throw new Error(last);
 }

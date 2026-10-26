@@ -111,7 +111,7 @@ export class Chain {
       if (!prepaid.ok) throw new Error(`storage_deposit failed: ${prepaid.panic}`);
       return chain;
     } catch (e) {
-      await sandbox.tearDown();
+      await chain.stop().catch(() => {});
       throw e;
     }
   }

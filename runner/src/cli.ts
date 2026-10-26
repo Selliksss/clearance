@@ -1,6 +1,8 @@
 // Usage:
 //   tsx src/cli.ts crash --agent naive [--gens G1,G2] [--control] [--seeds 3] [--scenario S1-invoice]
-//   tsx src/cli.ts crash --agent protected-v3 --ci --run-id <id> [--smoke] [--seeds 5]
+//   tsx src/cli.ts crash --agent protected-v3 --ci --run-id <id> [--smoke] [--seeds 5] [--concurrency 4]
+// --concurrency N starts N sandboxes and runs one slot at a time on each: a run records every
+// participant's balance, so two runs must never share a chain.
 // Attack runs: each generator × seeds. Control runs (--control): each scenario × seeds, no injection.
 // Writes transcripts/<agent>/<run_id>.json (invalid runs included, marked) and prints a table.
 //
@@ -18,7 +20,7 @@ import { parseArgs } from "node:util";
 import { injector, loadGenerator } from "./attack.ts";
 import { AGENT_ACCOUNT, Chain, formatNear } from "./chain.ts";
 import { invalidCategory } from "./integrity.ts";
-import { type Transcript, runOnce } from "./run.ts";
+import { RUN_BUDGET_MS, type Transcript, runOnce } from "./run.ts";
 import { type Scenario, loadAgent, loadScenario, readJson } from "./scenario.ts";
 import { deployedCode } from "./testnet.ts";
 
@@ -48,6 +50,7 @@ const { positionals, values } = parseArgs({
     scenario: { type: "string" },
     control: { type: "boolean", default: false },
     seeds: { type: "string" },
+    concurrency: { type: "string" },
     "allow-dirty": { type: "boolean", default: false },
     ci: { type: "boolean", default: false },
     smoke: { type: "boolean", default: false },
@@ -71,6 +74,8 @@ if (CI && !/^\d{1,20}$/.test(ciRunId)) {
 }
 const seeds = Number(values.seeds ?? (CI && !values.smoke ? "5" : "1"));
 if (!Number.isInteger(seeds) || seeds < 1 || seeds > 30) throw new Error("--seeds must be 1..30");
+const concurrency = Number(values.concurrency ?? "1");
+if (!Number.isInteger(concurrency) || concurrency < 1 || concurrency > 8) throw new Error("--concurrency must be 1..8");
 
 const agentName = values.agent;
 const agent = loadAgent(join(ROOT, "agents", `${agentName}.json`));
@@ -121,17 +126,11 @@ if (CI) {
   wasm = code;
 }
 const participants = [...new Set([...scenarios.values()].flatMap((s) => Object.values(s.participants)))];
-const chain = await Chain.start(wasm, participants);
-const wasmMatchesTestnet = testnetCodeHash !== null && base58(Buffer.from(chain.wasmSha256, "hex")) === testnetCodeHash;
+const wasmBytes = typeof wasm === "string" ? readFileSync(wasm) : wasm;
+const wasmMatchesTestnet = testnetCodeHash !== null && base58(createHash("sha256").update(wasmBytes).digest()) === testnetCodeHash;
 if (!wasmMatchesTestnet) console.warn(`warning: local wasm differs from the testnet code hash ${testnetCodeHash}`);
-let stopping = false;
-const stop = async () => {
-  if (stopping) return;
-  stopping = true;
-  await chain.stop();
-};
-for (const sig of ["SIGINT", "SIGTERM"] as const) process.on(sig, () => void stop().then(() => process.exit(130)));
 
+// The manifest is written before any sandbox starts: if nothing runs, every slot stays "pending".
 const outDir = CI ? join(ROOT, "transcripts-ci", ciRunId, agentName) : join(ROOT, "transcripts", agentName);
 mkdirSync(outDir, { recursive: true });
 const rows: Transcript[] = [];
@@ -146,6 +145,33 @@ const manifest = {
 };
 const saveManifest = () => CI && writeFileSync(join(outDir, "manifest.json"), `${JSON.stringify(manifest, null, 2)}\n`);
 saveManifest();
+if (manifest.slots.length === 0) {
+  console.error("nothing to run: no generator or scenario matched");
+  process.exit(2);
+}
+
+// After a signal no worker takes another slot; stop() is shared, so every caller waits for the same teardown.
+const chains: Chain[] = [];
+let aborted = false;
+let stopping: Promise<void> | null = null;
+const stop = () => (stopping ??= Promise.all(chains.map((c) => c.stop())).then(() => {}));
+for (const sig of ["SIGINT", "SIGTERM"] as const) {
+  process.on(sig, () => {
+    aborted = true;
+    void stop().then(() => process.exit(130));
+  });
+}
+const workers = Math.min(concurrency, manifest.slots.length);
+const started = await Promise.allSettled(Array.from({ length: workers }, () => Chain.start(wasm, participants)));
+for (const r of started) if (r.status === "fulfilled") chains.push(r.value);
+if (aborted) {
+  // A signal during start-up stopped no chain yet: stop the ones that came up, then exit.
+  await Promise.all(chains.map((c) => c.stop()));
+  process.exit(130);
+}
+if (chains.length === 0) throw (started[0] as PromiseRejectedResult).reason;
+// Slots do not depend on which sandbox runs them, so fewer sandboxes only make the run slower.
+if (chains.length < workers) console.warn(`warning: ${workers - chains.length} of ${workers} sandboxes failed to start`);
 
 function line(t: Transcript): string {
   const v = t.verdict;
@@ -156,38 +182,70 @@ function line(t: Transcript): string {
     `completed=${String(v.completed).padEnd(5)} false_report=${String(v.false_report).padEnd(5)} typo=${v.typo}${status}  ${t.run_id}`;
 }
 
-async function record(slot: Slot, p: Promise<Transcript>): Promise<void> {
+const WATCHDOG = Symbol("watchdog");
+/** Runs one slot; returns false if the sandbox must not be used again (the run hung past its budget). */
+async function record(slot: Slot, run: Promise<Transcript>): Promise<boolean> {
+  run.catch(() => {});
+  let timer: NodeJS.Timeout | undefined;
+  const hung = new Promise<typeof WATCHDOG>((r) => { timer = setTimeout(() => r(WATCHDOG), RUN_BUDGET_MS + 5 * 60_000); });
+  let t: Transcript | typeof WATCHDOG;
   try {
-    const t = await p;
-    writeFileSync(join(outDir, `${t.run_id}.json`), `${JSON.stringify(t, null, 2)}\n`);
-    rows.push(t);
-    slot.status = "written";
-    slot.run_id = t.run_id;
-    console.log(line(t));
+    t = await Promise.race([run, hung]);
   } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
     slot.status = "setup_failed";
-    slot.category = invalidCategory((e as Error).message);
-    console.log(`${slot.id.padEnd(26)} could not set up the run: ${CI ? slot.category : (e as Error).message}`);
+    slot.category = invalidCategory(msg);
+    console.log(`${slot.id.padEnd(26)} could not set up the run: ${CI ? slot.category : msg}`);
+    saveManifest();
+    return true;
+  } finally {
+    clearTimeout(timer);
   }
+  if (t === WATCHDOG) {
+    slot.status = "setup_failed";
+    slot.category = "run watchdog";
+    console.log(`${slot.id.padEnd(26)} run hung past its budget; its sandbox is retired`);
+    saveManifest();
+    return false;
+  }
+  writeFileSync(join(outDir, `${t.run_id}.json`), `${JSON.stringify(t, null, 2)}\n`);
+  rows.push(t);
+  slot.status = "written";
+  slot.run_id = t.run_id;
   saveManifest();
+  console.log(line(t));
+  return true;
+}
+
+// Each worker owns one chain and takes the next pending slot. A run's verdict does not depend on the
+// order; its recorded absolute balances and vault id do, since earlier runs on that chain moved money.
+let next = 0;
+let fatal: unknown = null;
+async function worker(chain: Chain): Promise<void> {
+  try {
+    while (!aborted && next < manifest.slots.length) {
+      const slot = manifest.slots[next++];
+      const g = slot.kind === "attack" ? generators.find((x) => x.generator.id === slot.id)! : null;
+      const scenario = g ? g.scenario : controlScenarios.find((x) => x.id === slot.id)!;
+      const usable = await record(slot, runOnce({
+        chain, agentAccount: AGENT_ACCOUNT, agent, scenario, runnerCommit, wasmMatchesTestnet,
+        generator: g ? { id: g.generator.id, sha256: g.sha256, make: (seed) => injector(g.generator, g.scenario, seed) } : undefined,
+      }));
+      if (!usable) return void (await chain.stop());
+    }
+  } catch (e) {
+    // Only bookkeeping (writing a file) can throw here: stop handing out slots, let the others finish.
+    fatal ??= e;
+    aborted = true;
+  }
 }
 
 try {
-  for (const slot of manifest.slots) {
-    if (slot.kind === "attack") {
-      const g = generators.find((x) => x.generator.id === slot.id)!;
-      await record(slot, runOnce({
-        chain, agentAccount: AGENT_ACCOUNT, agent, scenario: g.scenario, runnerCommit, wasmMatchesTestnet,
-        generator: { id: g.generator.id, sha256: g.sha256, make: (seed) => injector(g.generator, g.scenario, seed) },
-      }));
-    } else {
-      const s = controlScenarios.find((x) => x.id === slot.id)!;
-      await record(slot, runOnce({ chain, agentAccount: AGENT_ACCOUNT, agent, scenario: s, runnerCommit, wasmMatchesTestnet }));
-    }
-  }
+  await Promise.all(chains.map(worker));
 } finally {
   await stop();
 }
+if (fatal) throw fatal;
 
 const valid = rows.filter((t) => t.status === "valid");
 const attacks = valid.filter((t) => t.kind === "attack");

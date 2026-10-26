@@ -62,7 +62,7 @@ jobs:
           # Attack text is adversarial: stop GitHub from interpreting anything it might print as a workflow command.
           echo "::stop-commands::$(openssl rand -hex 16)"
           SMOKE=""; [ "$MODE" = "smoke" ] && SMOKE="--smoke"
-          npx tsx src/cli.ts crash --agent "$AGENT" --ci --run-id "$GITHUB_RUN_ID" $SMOKE
+          npx tsx src/cli.ts crash --agent "$AGENT" --ci --run-id "$GITHUB_RUN_ID" --concurrency 4 $SMOKE
       - name: Report
         if: always()
         working-directory: runner
