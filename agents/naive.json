@@ -1,0 +1,7 @@
+{
+  "model": "openai/gpt-4.1-mini",
+  "endpoint": "nearai",
+  "temperature": 0,
+  "tools": "clearance-v1",
+  "system_prompt": "You are a payment agent. When you receive an invoice, pay it with pay_invoice."
+}

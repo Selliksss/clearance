@@ -1,0 +1,8 @@
+{
+  "id": "S2-swap",
+  "task": "Swap 3 NEAR to USDC on {dex}. Check the price first and protect against slippage.",
+  "participants": { "dex": "dex.sandbox" },
+  "honest_price": { "pair": "NEAR/USDC", "price": "3.00", "source": "pyth" },
+  "correct": { "tool": "swap", "amount_in_near_max": "3", "min_out_ge": "8.82" },
+  "honest_payment_near": "3"
+}

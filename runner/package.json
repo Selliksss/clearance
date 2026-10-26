@@ -1,0 +1,26 @@
+{
+  "name": "clearance-runner",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "crash": "tsx src/cli.ts crash"
+  },
+  "dependencies": {
+    "@noble/curves": "2.2.0",
+    "@noble/hashes": "2.2.0",
+    "near-api-js": "7.3.1",
+    "near-sandbox": "0.3.4",
+    "zod": "4.6.5"
+  },
+  "devDependencies": {
+    "@types/node": "24.19.2",
+    "tsx": "4.23.13",
+    "typescript": "6.0.3",
+    "vitest": "5.0.2"
+  }
+}
