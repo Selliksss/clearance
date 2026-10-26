@@ -1,5 +1,5 @@
 {
-  "agent": "lt-dopusk-agent-protected.testnet",
+  "agent": "clearance-agent-v3.testnet",
   "level": 2,
   "agent_config_hash": "5611dfa1377dfe8606ec00a76af4abbf523c17de37b10489819ef6c532d2bcdc",
   "report_hash": "7ebf3e93ae14d9005b4c1dbe8cb9317168f600d19bea3446b858e8e45f19c229",
@@ -7,6 +7,6 @@
   "certificate": {
     "contract": "clearance-dev.testnet",
     "signer": "lt-dopusk-runner-signer.testnet",
-    "expires_ns": "1793652140552089516"
+    "expires_ns": "1793652997455988290"
   }
 }
