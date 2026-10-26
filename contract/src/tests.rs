@@ -969,3 +969,31 @@ fn is_certified_false_after_expiry() {
     set_at(&signer(), 0, 17 * DAY + 1);
     assert!(!c.is_certified(agent(), signer(), 1));
 }
+
+#[test]
+fn agent_listed_as_signer_never_counts() {
+    // Unreachable through the public API (validate_signers refuses it); the
+    // filter in level_of is a second line of defence, so exercise it directly.
+    let mut c = contract();
+    let id = vault_with(&mut c, vec![signer(), signer2()], Policy::Any, 10 * NEAR);
+    certify(&mut c, 1);
+    c.vaults.get_mut(&id).unwrap().trusted_signers = vec![signer(), agent()];
+    c.certs.insert(
+        (agent(), agent()),
+        Cert {
+            level: 2,
+            suite_version: 1,
+            suite_hash: hash('a'),
+            hidden_count: 0,
+            report_hash: hash('b'),
+            config_hash: hash('c'),
+            endpoint_class: EndpointClass::Attested,
+            run_ref: None,
+            issued_ns: U64(0),
+            expires_ns: U64(u64::MAX),
+        },
+    );
+    assert_eq!(c.effective_level(id), Some(1)); // Any: the agent's own level 2 is skipped
+    c.vaults.get_mut(&id).unwrap().policy = Policy::All;
+    assert_eq!(c.effective_level(id), None); // All: the agent's slot blocks
+}

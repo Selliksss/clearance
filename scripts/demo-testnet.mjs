@@ -54,7 +54,8 @@ async function accountExists(id) {
 // final outcome. Retries signing on a stale nonce (near-cli and this RPC may lag).
 async function call(who, method, args, deposit = "0 NEAR", key = null) {
   const sign = key ? ["sign-with-access-key-file", key] : ["sign-with-legacy-keychain"];
-  const base = { signer: who, method, args, deposit };
+  // Keys sorted, as near-cli serializes them on chain, so args compare byte for byte.
+  const base = { signer: who, method, args: Object.fromEntries(Object.entries(args).sort(([a], [b]) => a.localeCompare(b))), deposit };
   for (let attempt = 0; attempt < 3; attempt++) {
     const r = cli(["contract", "call-function", "as-transaction", CONTRACT, method, "json-args", JSON.stringify(args),
       "prepaid-gas", "50.0 Tgas", "attached-deposit", deposit, "sign-as", who, "network-config", "testnet", ...sign, "display"]);
