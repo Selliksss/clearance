@@ -1,89 +1,128 @@
 {
   "network": "testnet",
   "contract": "clearance-dev.testnet",
-  "vault_id": 2,
+  "vault_id": 3,
   "steps": [
     {
       "step": "owner prepays storage for the runner",
-      "tx": "H8tdty3juCYLaTSm5xsvyKoMtexYsnC5LufqJacV9Lwq",
+      "signer": "lt-dopusk-owner.testnet",
+      "method": "storage_deposit",
+      "tx": "4BDThp6HtV5uk8v3XsJKBcTiV8gjAmxPSkoL843fUHyS",
       "expect": "success",
+      "actual": "success",
       "pass": true
     },
     {
       "step": "stranger prepays its own storage",
-      "tx": "9XyUWuepqUeW5nqMmQbNaytFZu9vpSR5oaHmSPkJxr3Z",
+      "signer": "lt-dopusk-attacker.testnet",
+      "method": "storage_deposit",
+      "tx": "8QvsHUsHwkAy93T5UuMvMxG1PVCPfjK2kk954huQx2YL",
       "expect": "success",
+      "actual": "success",
       "pass": true
     },
     {
       "step": "owner creates a vault: cap 5 NEAR, receiver shop, trusts only the runner",
-      "tx": "C345AMbMeSGuFPsgS6hRPBx9iSastxPe8E6oiX7Fes1q",
+      "signer": "lt-dopusk-owner.testnet",
+      "method": "create_vault",
+      "tx": "F9LgwgqifyFxydcKS2dEjDk2Jtf5hNUFCVTd3g83wAxp",
       "expect": "success",
+      "actual": "success",
       "pass": true
     },
     {
       "step": "untrusted signer issues a certificate",
-      "tx": "87eQJ7Cd4jxetjSWgqHvuoFAuQ9X9UNwzkHuEhXMJjms",
+      "signer": "lt-dopusk-attacker.testnet",
+      "method": "certify",
+      "tx": "9jCS7N3GvyF3KeMhCczmfzg3KB5v2d6Yi2N543rUDz7T",
       "expect": "success",
+      "actual": "success",
       "pass": true
     },
     {
       "step": "spend with only an untrusted certificate",
-      "tx": "8KuFBLNYt4nKGcA38KbEgLbWS3XYyEt5PDaytvhKVHCs",
+      "signer": "lt-dopusk-agent-protected.testnet",
+      "method": "spend",
+      "tx": "hhsfgNeFpBw6bm2xwK7uxKyUix4Qz5foqAGJHhExAhW",
       "expect": "failure",
       "error": "no valid certificate",
+      "actual": "no valid certificate",
       "pass": true
     },
     {
       "step": "agent certifies itself",
-      "tx": "9FkTpEPTLEyn7spPzAn26E4xa1Em8MGgjiBhyCVbikkd",
+      "signer": "lt-dopusk-agent-protected.testnet",
+      "method": "certify",
+      "tx": "DeoNqumSVWWpG3iinvGSeUEghddutV5nvYjbtGUNY5g2",
       "expect": "failure",
       "error": "agent cannot certify itself",
+      "actual": "agent cannot certify itself",
       "pass": true
     },
     {
       "step": "runner certifies level 2 with its function-call key",
-      "tx": "AC8SKo6aaL2JLptz63K2YW8Z2xMvSoXJJdQVJCcBbReK",
+      "signer": "lt-dopusk-runner-signer.testnet",
+      "method": "certify",
+      "tx": "CG24K9R2UT6goG7jbjbuDuNuLm1b4wfQYfuAC2PAgz4h",
       "expect": "success",
+      "actual": "success",
       "pass": true
     },
     {
       "step": "protected agent pays the shop 2 NEAR",
-      "tx": "3xksLrLLDqb9rdNopzLgg6tBFyKcSbXNcNEyCQBc8iWC",
-      "expect": "success",
+      "signer": "lt-dopusk-agent-protected.testnet",
+      "method": "spend",
+      "tx": "EJ2xj11a6gbfDHXUywHt6vGup3AvqnFH1mvsTYqqerY3",
+      "expect": "landed",
+      "actual": "success",
       "pass": true
     },
     {
       "step": "6 NEAR more exceeds min(owner 5, level 10)",
-      "tx": "ES9Een3tvm6RZ13Quu8QHRG1FAGMVrhrtQMVALEE4a8U",
+      "signer": "lt-dopusk-agent-protected.testnet",
+      "method": "spend",
+      "tx": "HUttE8MS3dNepYodiqphCGG3zdY1WHDEiZ3swNjqDsmV",
       "expect": "failure",
       "error": "over window cap",
+      "actual": "over window cap",
       "pass": true
     },
     {
       "step": "payment to an account outside the receiver list",
-      "tx": "B7dajBjXAu5SHRDirR3BzrqtbJzYFNeEs1WVfcoBPKQc",
+      "signer": "lt-dopusk-agent-protected.testnet",
+      "method": "spend",
+      "tx": "BDCPCeSdyd3swYHpiVxzu3HB9nRmvdL5ns5eBbGzYp8T",
       "expect": "failure",
       "error": "receiver not allowed",
+      "actual": "receiver not allowed",
       "pass": true
     },
     {
       "step": "runner revokes with its function-call key",
-      "tx": "HBFzwemPDoDk8Zc4Qt2NKfLa8SxS6pyipEGBjLQdRHfv",
+      "signer": "lt-dopusk-runner-signer.testnet",
+      "method": "revoke",
+      "tx": "EAfiiNLM6Bd6Cr7sGvA4v8PB8LQpRWArjJkxRUpTxYn7",
       "expect": "success",
+      "actual": "success",
       "pass": true
     },
     {
       "step": "spend after revoke",
-      "tx": "CYjQ2ehmSMN3nJvBZpCPSwBcMKTr3UCKvrBFcreWCZYL",
+      "signer": "lt-dopusk-agent-protected.testnet",
+      "method": "spend",
+      "tx": "8htGXat9unKbVUqk1AZk6yTCCRSdJ2dZudV2UL2sDDaW",
       "expect": "failure",
       "error": "no valid certificate",
+      "actual": "no valid certificate",
       "pass": true
     },
     {
       "step": "owner withdraws 0.3 NEAR",
-      "tx": "2Aa8yNczmQKzeMxBw3kJkM2RW4qWvqNzG1XxqFnvuhjf",
-      "expect": "success",
+      "signer": "lt-dopusk-owner.testnet",
+      "method": "withdraw",
+      "tx": "7VDedQxWrfJsiVVdWtJ1pmZ78RDxAfr8D2A269Bbx4nQ",
+      "expect": "landed",
+      "actual": "success",
       "pass": true
     }
   ]

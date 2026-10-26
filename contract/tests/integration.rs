@@ -1,5 +1,6 @@
 // End-to-end checks against the real wasm in near-sandbox. Buckets are 1s so the
-// 24-bucket window can be crossed with fast_forward.
+// 24-bucket window can be crossed with fast_forward. Every refusal is asserted
+// by its panic message, so a setup mistake cannot pass as an expected refusal.
 use near_api::types::AccessKeyPermission;
 use near_api::types::transaction::actions::FunctionCallPermission;
 use near_api::{Account, AccountId, Contract, NearGas, NearToken, NetworkConfig, Signer};
@@ -8,12 +9,70 @@ use near_sdk::json_types::U128;
 use near_sdk::serde_json::{Value, json};
 use std::sync::Arc;
 use testresult::TestResult;
+use tokio::sync::OnceCell;
 
 const BUCKET_NS: u64 = 1_000_000_000;
 const DAY_NS: u64 = 86_400_000_000_000;
 
+static WASM: OnceCell<Vec<u8>> = OnceCell::const_new();
+
 fn near(n: u128) -> String {
     NearToken::from_near(n).as_yoctonear().to_string()
+}
+
+/// What happened to a transaction.
+#[derive(Debug)]
+enum Outcome {
+    /// Executed; `value` is the JSON return value (Null if none).
+    Done {
+        value: Value,
+        logs: Vec<String>,
+        receipt_failures: usize,
+    },
+    /// The contract panicked; the debug text of the failure.
+    Panicked(String),
+    /// The node refused the transaction before execution (e.g. access key
+    /// rules); the text is kept for failure messages.
+    Refused(#[allow(dead_code)] String),
+}
+
+impl Outcome {
+    #[track_caller]
+    fn ok(self) -> Value {
+        match self {
+            Outcome::Done { value, .. } => value,
+            other => panic!("expected success, got {other:?}"),
+        }
+    }
+
+    /// A `spend`/`withdraw` whose transfer actually landed (callback returned true).
+    #[track_caller]
+    fn landed(self) {
+        match self {
+            Outcome::Done {
+                value,
+                receipt_failures: 0,
+                ..
+            } if value == json!(true) => {}
+            other => panic!("expected a landed transfer, got {other:?}"),
+        }
+    }
+
+    #[track_caller]
+    fn panics(self, msg: &str) {
+        match self {
+            Outcome::Panicked(m) if m.contains(msg) => {}
+            other => panic!("expected panic containing {msg:?}, got {other:?}"),
+        }
+    }
+
+    #[track_caller]
+    fn refused(self) {
+        assert!(
+            matches!(self, Outcome::Refused(_)),
+            "expected node refusal, got {self:?}"
+        );
+    }
 }
 
 struct Env {
@@ -25,7 +84,14 @@ struct Env {
 
 impl Env {
     async fn start() -> TestResult<Self> {
-        let wasm = std::fs::read(cargo_near_build::build_with_cli(Default::default())?)?;
+        let wasm = WASM
+            .get_or_init(|| async {
+                let path =
+                    cargo_near_build::build_with_cli(Default::default()).expect("build wasm");
+                std::fs::read(path).expect("read wasm")
+            })
+            .await
+            .clone();
         let sandbox = Sandbox::start_sandbox().await?;
         let net = NetworkConfig::from_rpc_url("sandbox", sandbox.rpc_addr.parse()?);
         let key = Signer::from_secret_key(
@@ -71,7 +137,7 @@ impl Env {
         method: &str,
         args: Value,
         deposit: NearToken,
-    ) -> TestResult<bool> {
+    ) -> Outcome {
         self.call_with(who, self.key.clone(), method, args, deposit)
             .await
     }
@@ -83,22 +149,28 @@ impl Env {
         method: &str,
         args: Value,
         deposit: NearToken,
-    ) -> TestResult<bool> {
+    ) -> Outcome {
         let mut tx = self
             .contract
             .call_function(method, args)
             .transaction()
             .gas(NearGas::from_tgas(60));
-        // An explicit zero deposit makes near-api 0.8 send a transaction a
+        // An explicit zero deposit makes near-api 0.8 build a transaction a
         // function-call key cannot sign; omit it instead.
         if !deposit.is_zero() {
             tx = tx.deposit(deposit);
         }
-        // A transaction the node refuses outright (e.g. a function-call key
-        // attaching a deposit) counts as "did not succeed", like a contract panic.
-        match tx.with_signer(who.clone(), key).send_to(&self.net).await {
-            Ok(res) => Ok(res.is_success()),
-            Err(_) => Ok(false),
+        let res = match tx.with_signer(who.clone(), key).send_to(&self.net).await {
+            Ok(res) => res,
+            Err(e) => return Outcome::Refused(format!("{e:?}")),
+        };
+        match res.into_result() {
+            Ok(s) => Outcome::Done {
+                value: s.json::<Value>().unwrap_or(Value::Null),
+                logs: s.logs().into_iter().map(String::from).collect(),
+                receipt_failures: s.receipt_failures().len(),
+            },
+            Err(f) => Outcome::Panicked(format!("{f:?}")),
         }
     }
 
@@ -116,59 +188,49 @@ impl Env {
         self.view("get_vault", json!({ "vault_id": id })).await
     }
 
+    fn cert_args(agent: &AccountId, level: u8, class: &str) -> Value {
+        let h = |c: char| c.to_string().repeat(64);
+        json!({ "agent": agent, "level": level, "suite_version": 1, "suite_hash": h('a'), "hidden_count": 0,
+            "report_hash": h('b'), "config_hash": h('c'), "endpoint_class": class, "run_ref": "run:1@abc", "ttl_ns": DAY_NS.to_string() })
+    }
+
     async fn certify(
         &self,
         signer: &AccountId,
         agent: &AccountId,
         level: u8,
         class: &str,
-    ) -> TestResult<bool> {
-        self.certify_with(signer, self.key.clone(), agent, level, class)
+    ) -> Outcome {
+        let args = Self::cert_args(agent, level, class);
+        self.call(signer, "certify", args, NearToken::from_yoctonear(0))
             .await
     }
 
-    async fn certify_with(
-        &self,
-        signer: &AccountId,
-        key: Arc<Signer>,
-        agent: &AccountId,
-        level: u8,
-        class: &str,
-    ) -> TestResult<bool> {
-        let h = |c: char| c.to_string().repeat(64);
-        let args = json!({ "agent": agent, "level": level, "suite_version": 1, "suite_hash": h('a'), "hidden_count": 0,
-            "report_hash": h('b'), "config_hash": h('c'), "endpoint_class": class, "run_ref": "run:1@abc", "ttl_ns": DAY_NS.to_string() });
-        self.call_with(signer, key, "certify", args, NearToken::from_yoctonear(0))
-            .await
-    }
-
-    async fn prepay(&self, who: &AccountId) -> TestResult<()> {
-        assert!(
-            self.call(
-                who,
-                "storage_deposit",
-                json!({}),
-                NearToken::from_millinear(100)
-            )
-            .await?
-        );
-        Ok(())
-    }
-
-    async fn spend(
-        &self,
-        agent: &AccountId,
-        vault: u64,
-        to: &AccountId,
-        n: u128,
-    ) -> TestResult<bool> {
+    async fn prepay(&self, who: &AccountId) {
         self.call(
-            agent,
-            "spend",
-            json!({ "vault_id": vault, "receiver": to, "amount": near(n) }),
-            NearToken::from_yoctonear(0),
+            who,
+            "storage_deposit",
+            json!({}),
+            NearToken::from_millinear(100),
         )
         .await
+        .ok();
+    }
+
+    async fn spend(&self, agent: &AccountId, vault: u64, to: &AccountId, n: u128) -> Outcome {
+        let args = json!({ "vault_id": vault, "receiver": to, "amount": near(n) });
+        self.call(agent, "spend", args, NearToken::from_yoctonear(0))
+            .await
+    }
+
+    async fn balance(&self, id: &AccountId) -> TestResult<u128> {
+        Ok(Account(id.clone())
+            .tokens()
+            .near_balance()
+            .fetch_from(&self.net)
+            .await?
+            .total
+            .as_yoctonear())
     }
 }
 
@@ -176,6 +238,17 @@ fn yocto(v: &Value, field: &str) -> u128 {
     near_sdk::serde_json::from_value::<U128>(v[field].clone())
         .unwrap()
         .0
+}
+
+fn vault_args(
+    agent: &AccountId,
+    cap: u128,
+    receivers: Value,
+    signers: Value,
+    policy: &str,
+) -> Value {
+    json!({ "agent": agent, "owner_cap": near(cap), "receivers": receivers, "trusted_signers": signers,
+        "policy": policy, "min_suite_version": 1, "min_hidden": 0, "allow_foreign_endpoint": false })
 }
 
 #[tokio::test]
@@ -188,147 +261,133 @@ async fn vault_lifecycle() -> TestResult<()> {
     let ghost: AccountId = "ghost.shop.sandbox".parse()?;
     let zero = NearToken::from_yoctonear(0);
     let one = NearToken::from_yoctonear(1);
+    let n = |x: u128| NearToken::from_near(x).as_yoctonear();
 
-    // Owner as its own signer is refused.
-    let bad = json!({ "agent": agent, "owner_cap": near(5), "receivers": [shop, ghost], "trusted_signers": [owner],
-        "policy": "All", "min_suite_version": 1, "min_hidden": 0, "allow_foreign_endpoint": false });
-    assert!(
-        !env.call(&owner, "create_vault", bad, NearToken::from_near(8))
-            .await?
-    );
-
-    let args = json!({ "agent": agent, "owner_cap": near(5), "receivers": [shop, ghost], "trusted_signers": [signer],
-        "policy": "All", "min_suite_version": 1, "min_hidden": 0, "allow_foreign_endpoint": false });
-    assert!(
-        env.call(&owner, "create_vault", args, NearToken::from_near(20))
-            .await?
-    );
+    env.call(
+        &owner,
+        "create_vault",
+        vault_args(&agent, 5, json!([shop, ghost]), json!([owner]), "All"),
+        NearToken::from_near(20),
+    )
+    .await
+    .panics("owner cannot be a trusted signer");
+    let id = env
+        .call(
+            &owner,
+            "create_vault",
+            vault_args(&agent, 5, json!([shop, ghost]), json!([signer]), "All"),
+            NearToken::from_near(20),
+        )
+        .await
+        .ok();
+    assert_eq!(id, json!(0));
     let v = env.vault(0).await?;
     let start = yocto(&v, "balance");
-    assert_eq!(
-        start + yocto(&v, "storage_paid"),
-        NearToken::from_near(20).as_yoctonear()
-    );
+    assert_eq!(start + yocto(&v, "storage_paid"), n(20));
 
     // No certificate: refused. Certify needs prepaid storage, then works with zero deposit.
-    assert!(!env.spend(&agent, 0, &shop, 1).await?);
-    assert!(!env.certify(&signer, &agent, 2, "Attested").await?);
-    env.prepay(&signer).await?;
-    assert!(env.certify(&signer, &agent, 2, "Attested").await?);
+    env.spend(&agent, 0, &shop, 1)
+        .await
+        .panics("no valid certificate");
+    env.certify(&signer, &agent, 2, "Attested")
+        .await
+        .panics("not enough prepaid storage");
+    env.prepay(&signer).await;
+    env.certify(&signer, &agent, 2, "Attested").await.ok();
 
-    // Level 2 (10) capped by owner (5): 2 + 2 pass, a third 2 exceeds.
-    assert!(env.spend(&agent, 0, &shop, 2).await?);
-    assert!(env.spend(&agent, 0, &shop, 2).await?);
-    assert!(!env.spend(&agent, 0, &shop, 2).await?);
-    // A receiver outside the list and a non-agent caller are refused.
-    assert!(!env.spend(&agent, 0, &owner, 1).await?);
-    assert!(!env.spend(&signer, 0, &shop, 1).await?);
+    // Level 2 (10) capped by owner (5): 2 + 2 land, a third 2 exceeds.
+    let shop_before = env.balance(&shop).await?;
+    env.spend(&agent, 0, &shop, 2).await.landed();
+    env.spend(&agent, 0, &shop, 2).await.landed();
+    assert_eq!(env.balance(&shop).await? - shop_before, n(4));
+    env.spend(&agent, 0, &shop, 2)
+        .await
+        .panics("over window cap");
+    env.spend(&agent, 0, &owner, 1)
+        .await
+        .panics("receiver not allowed");
+    env.spend(&signer, 0, &shop, 1)
+        .await
+        .panics("only the vault agent can spend");
     let v = env.vault(0).await?;
-    assert_eq!(
-        yocto(&v, "balance"),
-        start - NearToken::from_near(4).as_yoctonear()
-    );
-    assert_eq!(
-        yocto(&v, "window_spent"),
-        NearToken::from_near(4).as_yoctonear()
-    );
+    assert_eq!(yocto(&v, "balance"), start - n(4));
+    assert_eq!(yocto(&v, "window_spent"), n(4));
     assert_eq!(v["pending"], 0);
 
-    // Transfer to a nonexistent (but allowed) account: callback restores balance and window.
-    let _ = env.spend(&agent, 0, &ghost, 1).await?;
+    // Transfer to a nonexistent (but allowed) account: the callback runs, reports
+    // false and restores balance and window.
+    match env.spend(&agent, 0, &ghost, 1).await {
+        Outcome::Done {
+            value,
+            logs,
+            receipt_failures,
+        } => {
+            assert_eq!(value, json!(false));
+            assert!(receipt_failures > 0);
+            assert!(logs.iter().any(|l| l.contains("\"spend_refunded\"")));
+        }
+        other => panic!("expected executed spend with failed transfer, got {other:?}"),
+    }
     let v = env.vault(0).await?;
-    assert_eq!(
-        yocto(&v, "balance"),
-        start - NearToken::from_near(4).as_yoctonear()
-    );
-    assert_eq!(
-        yocto(&v, "window_spent"),
-        NearToken::from_near(4).as_yoctonear()
-    );
+    assert_eq!(yocto(&v, "balance"), start - n(4));
+    assert_eq!(yocto(&v, "window_spent"), n(4));
     assert_eq!(v["pending"], 0);
 
     // Past 24 one-second buckets the window is free again.
     env.sandbox.fast_forward(400).await?;
     assert_eq!(yocto(&env.vault(0).await?, "window_spent"), 0);
-    assert!(env.spend(&agent, 0, &shop, 5).await?);
+    env.spend(&agent, 0, &shop, 5).await.landed();
 
-    // Pause blocks, unpause restores (window is full now, so check via the error path only).
-    assert!(
-        env.call(
-            &owner,
-            "set_paused",
-            json!({ "vault_id": 0, "paused": true }),
-            one
-        )
-        .await?
-    );
+    // Pause blocks, unpause restores.
+    env.call(
+        &owner,
+        "set_paused",
+        json!({ "vault_id": 0, "paused": true }),
+        one,
+    )
+    .await
+    .ok();
     env.sandbox.fast_forward(400).await?;
-    assert!(!env.spend(&agent, 0, &shop, 1).await?);
-    assert!(
-        env.call(
-            &owner,
-            "set_paused",
-            json!({ "vault_id": 0, "paused": false }),
-            one
-        )
-        .await?
-    );
-    assert!(env.spend(&agent, 0, &shop, 1).await?);
+    env.spend(&agent, 0, &shop, 1)
+        .await
+        .panics("vault is paused");
+    env.call(
+        &owner,
+        "set_paused",
+        json!({ "vault_id": 0, "paused": false }),
+        one,
+    )
+    .await
+    .ok();
+    env.spend(&agent, 0, &shop, 1).await.landed();
 
     // Revoke stops the agent at once.
-    assert!(
-        env.call(&signer, "revoke", json!({ "agent": agent }), zero)
-            .await?
-    );
-    assert!(!env.spend(&agent, 0, &shop, 1).await?);
+    env.call(&signer, "revoke", json!({ "agent": agent }), zero)
+        .await
+        .ok();
+    env.spend(&agent, 0, &shop, 1)
+        .await
+        .panics("no valid certificate");
 
     // Withdraw needs exactly 1 yocto and the owner.
-    assert!(
-        !env.call(
-            &owner,
-            "withdraw",
-            json!({ "vault_id": 0, "amount": near(1) }),
-            zero
-        )
-        .await?
-    );
-    assert!(
-        !env.call(
-            &agent,
-            "withdraw",
-            json!({ "vault_id": 0, "amount": near(1) }),
-            one
-        )
-        .await?
-    );
-    assert!(
-        env.call(
-            &owner,
-            "withdraw",
-            json!({ "vault_id": 0, "amount": near(1) }),
-            one
-        )
-        .await?
-    );
+    let w = json!({ "vault_id": 0, "amount": near(1) });
+    env.call(&owner, "withdraw", w.clone(), zero)
+        .await
+        .panics("exactly 1 yoctoNEAR");
+    env.call(&agent, "withdraw", w.clone(), one)
+        .await
+        .panics("only the vault owner");
+    env.call(&owner, "withdraw", w, one).await.landed();
 
     // Close refunds balance + storage; the vault is gone.
-    let before = Account(owner.clone())
-        .tokens()
-        .near_balance()
-        .fetch_from(&env.net)
-        .await?
-        .total;
-    assert!(
-        env.call(&owner, "close_vault", json!({ "vault_id": 0 }), one)
-            .await?
-    );
-    let after = Account(owner.clone())
-        .tokens()
-        .near_balance()
-        .fetch_from(&env.net)
-        .await?
-        .total;
-    assert!(after > before);
+    let before = env.balance(&owner).await?;
+    let v = env.vault(0).await?;
+    let refund = yocto(&v, "balance") + yocto(&v, "storage_paid");
+    env.call(&owner, "close_vault", json!({ "vault_id": 0 }), one)
+        .await
+        .ok();
+    // Gas costs at most 0.01 NEAR here.
+    assert!(env.balance(&owner).await? + n(1) / 100 > before + refund);
     assert!(env.vault(0).await?.is_null());
     Ok(())
 }
@@ -346,126 +405,144 @@ async fn signer_policies_and_function_call_key() -> TestResult<()> {
     let one = NearToken::from_yoctonear(1);
 
     for s in [&runner, &ci, &stranger, &agent] {
-        env.prepay(s).await?;
+        env.prepay(s).await;
     }
-    let args = json!({ "agent": agent, "owner_cap": near(10), "receivers": [shop], "trusted_signers": [runner, ci],
-        "policy": "All", "min_suite_version": 1, "min_hidden": 0, "allow_foreign_endpoint": false });
-    assert!(
-        env.call(&owner, "create_vault", args, NearToken::from_near(15))
-            .await?
-    );
+    env.call(
+        &owner,
+        "create_vault",
+        vault_args(&agent, 10, json!([shop]), json!([runner, ci]), "All"),
+        NearToken::from_near(15),
+    )
+    .await
+    .ok();
 
-    // Self-certification and an untrusted signer do not unlock spending.
-    assert!(!env.certify(&agent, &agent, 2, "Attested").await?);
-    assert!(env.certify(&stranger, &agent, 2, "Attested").await?);
-    assert!(!env.spend(&agent, 0, &shop, 1).await?);
+    // Self-certification is refused; an untrusted signer's certificate unlocks nothing.
+    env.certify(&agent, &agent, 2, "Attested")
+        .await
+        .panics("agent cannot certify itself");
+    env.certify(&stranger, &agent, 2, "Attested").await.ok();
+    env.spend(&agent, 0, &shop, 1)
+        .await
+        .panics("no valid certificate");
 
     // The runner signs through a function-call key limited to certify/revoke.
-    let fc_secret = near_api::signer::generate_secret_key()?;
-    let fc_key = Signer::from_secret_key(fc_secret)?;
-    let fc_pub = fc_key.get_public_key().await?;
+    let fc_key = Signer::from_secret_key(near_api::signer::generate_secret_key()?)?;
     Account(runner.clone())
         .add_key(
             AccessKeyPermission::FunctionCall(FunctionCallPermission {
-                allowance: None,
+                allowance: Some(NearToken::from_millinear(250)),
                 receiver_id: env.contract.0.to_string(),
                 method_names: vec!["certify".into(), "revoke".into()],
             }),
-            fc_pub,
+            fc_key.get_public_key().await?,
         )
         .with_signer(env.key.clone())
         .send_to(&env.net)
         .await?
         .assert_success();
-    assert!(
-        env.certify_with(&runner, fc_key.clone(), &agent, 2, "Attested")
-            .await?
-    );
+    env.call_with(
+        &runner,
+        fc_key.clone(),
+        "certify",
+        Env::cert_args(&agent, 2, "Attested"),
+        zero,
+    )
+    .await
+    .ok();
 
     // All: one of two trusted signers is not enough.
-    assert!(!env.spend(&agent, 0, &shop, 1).await?);
-    assert!(env.certify(&ci, &agent, 1, "Allowlist").await?);
+    env.spend(&agent, 0, &shop, 1)
+        .await
+        .panics("no valid certificate");
+    env.certify(&ci, &agent, 1, "Allowlist").await.ok();
     // Level = min(2, 1) = 1 → cap 3.
     assert_eq!(
         env.view("effective_level", json!({ "vault_id": 0 }))
             .await?,
         json!(1)
     );
-    assert!(env.spend(&agent, 0, &shop, 3).await?);
-    assert!(!env.spend(&agent, 0, &shop, 1).await?);
+    env.spend(&agent, 0, &shop, 3).await.landed();
+    env.spend(&agent, 0, &shop, 1)
+        .await
+        .panics("over window cap");
 
-    // The function-call key cannot move money: no deposits, no other methods.
-    assert!(
-        !env.call_with(
-            &runner,
-            fc_key.clone(),
-            "storage_withdraw",
-            json!({ "amount": "1" }),
-            one
-        )
-        .await?
-    );
-    assert!(
-        !env.call_with(&runner, fc_key.clone(), "storage_deposit", json!({}), zero)
-            .await?
-    );
+    // The function-call key cannot move money: deposits and other methods are
+    // refused by the node before the contract runs.
+    env.call_with(
+        &runner,
+        fc_key.clone(),
+        "storage_withdraw",
+        json!({ "amount": "1" }),
+        one,
+    )
+    .await
+    .refused();
+    env.call_with(
+        &runner,
+        fc_key.clone(),
+        "spend",
+        json!({ "vault_id": 0, "receiver": shop, "amount": near(1) }),
+        zero,
+    )
+    .await
+    .refused();
 
     // Revoke by one signer under All stops the agent.
     env.sandbox.fast_forward(400).await?;
-    assert!(
-        env.call_with(
-            &runner,
-            fc_key.clone(),
-            "revoke",
-            json!({ "agent": agent }),
-            zero
-        )
-        .await?
-    );
-    assert!(!env.spend(&agent, 0, &shop, 1).await?);
+    env.call_with(
+        &runner,
+        fc_key.clone(),
+        "revoke",
+        json!({ "agent": agent }),
+        zero,
+    )
+    .await
+    .ok();
+    env.spend(&agent, 0, &shop, 1)
+        .await
+        .panics("no valid certificate");
 
     // Any: the best live certificate counts, but never above what it says.
-    assert!(
-        env.call(
-            &owner,
-            "set_trusted_signers",
-            json!({ "vault_id": 0, "signers": [runner, ci], "policy": "Any" }),
-            one
-        )
-        .await?
-    );
+    env.call(
+        &owner,
+        "set_trusted_signers",
+        json!({ "vault_id": 0, "signers": [runner, ci], "policy": "Any" }),
+        one,
+    )
+    .await
+    .ok();
     assert_eq!(
         env.view("effective_level", json!({ "vault_id": 0 }))
             .await?,
         json!(1)
     );
-    assert!(env.spend(&agent, 0, &shop, 3).await?);
-    assert!(!env.spend(&agent, 0, &shop, 1).await?);
+    env.spend(&agent, 0, &shop, 3).await.landed();
+    env.spend(&agent, 0, &shop, 1)
+        .await
+        .panics("over window cap");
 
     // Foreign-endpoint certificates are ignored unless the owner allows them.
-    assert!(env.certify(&ci, &agent, 2, "Foreign").await?);
+    env.certify(&ci, &agent, 2, "Foreign").await.ok();
     assert_eq!(
         env.view("effective_level", json!({ "vault_id": 0 }))
             .await?,
         Value::Null
     );
-    assert!(
-        env.call(
-            &owner,
-            "set_min_suite",
-            json!({ "vault_id": 0, "version": 1, "min_hidden": 0, "allow_foreign": true }),
-            one
-        )
-        .await?
-    );
+    env.call(
+        &owner,
+        "set_min_suite",
+        json!({ "vault_id": 0, "version": 1, "min_hidden": 0, "allow_foreign": true }),
+        one,
+    )
+    .await
+    .ok();
     assert_eq!(
         env.view("effective_level", json!({ "vault_id": 0 }))
             .await?,
         json!(2)
     );
 
-    // Closing with a transfer in flight is impossible in one block here, so check the
-    // registry view other contracts would read.
+    // The registry view other contracts read.
     assert_eq!(
         env.view(
             "is_certified",
