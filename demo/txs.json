@@ -1,128 +1,388 @@
 {
   "network": "testnet",
   "contract": "clearance-dev.testnet",
-  "vault_id": 3,
+  "code_hash": "4tE5KkAUoudMxkRLpD2BW3nJzRNLiLUs5rHubGoXRwVF",
+  "commit": "82208e6dc486061b044ed969f8748cd8e07f12f9",
+  "contract_dir_dirty": false,
+  "recorded_at": "2026-10-26T16:05:50.931Z",
+  "vault_id": 4,
+  "runner_access_keys": [
+    {
+      "public_key": "ed25519:7JuHZga1isQceqyuxuFQrk6n8MTtoUdn7G71uVSyfeDp",
+      "permission": "FullAccess"
+    },
+    {
+      "public_key": "ed25519:CebzmHhjjLvB2BJ12PpHX9eUboV4U1eANpH1ZB66yNeE",
+      "permission": {
+        "FunctionCall": {
+          "allowance": "249602109900279000000000",
+          "method_names": [
+            "certify",
+            "revoke"
+          ],
+          "receiver_id": "vault-spike.lt-dopusk-owner.testnet"
+        }
+      }
+    },
+    {
+      "public_key": "ed25519:DSP22oEJg9jAUXcSdUePsuGek525dskZjqRF8ieuBNaZ",
+      "permission": {
+        "FunctionCall": {
+          "allowance": "497738471634494000000000",
+          "method_names": [
+            "certify",
+            "revoke"
+          ],
+          "receiver_id": "clearance-dev.testnet"
+        }
+      }
+    }
+  ],
+  "note": "Statuses older than a few days need an archival RPC node (e.g. archival-rpc.testnet.fastnear.com).",
   "steps": [
     {
       "step": "owner prepays storage for the runner",
       "signer": "lt-dopusk-owner.testnet",
+      "public_key": "ed25519:1cbrXNTWsmzNGiCXydaowGfYZN4nAd6BBpHhY9oQda8",
       "method": "storage_deposit",
-      "tx": "4BDThp6HtV5uk8v3XsJKBcTiV8gjAmxPSkoL843fUHyS",
+      "args": {
+        "account_id": "lt-dopusk-runner-signer.testnet"
+      },
+      "deposit": "0.05 NEAR",
+      "tx": "2nA2BatDan1JzvyZXiuFkzJxF5HBzb4iPdSKcNAfjGei",
+      "block_hash": "6XZ9c2PSZLzhZoE5SvjL3SyczSpy7pCgBgdkn9FR5MQd",
       "expect": "success",
       "actual": "success",
+      "return_value": "299080000000000000000000",
+      "receipt_ids": [
+        "9gTbBiUR9hhePZsTQ1rZhhBJFLvq6WmmxVzrF1jAnkVJ",
+        "7HzTjsUEKfV4661Y2T9wt37BAuWFcszqen42SsTKeF9i"
+      ],
+      "logs": [],
       "pass": true
     },
     {
       "step": "stranger prepays its own storage",
       "signer": "lt-dopusk-attacker.testnet",
+      "public_key": "ed25519:EXD6YGctJ8bLrbq32kQBuFWt6Xv8X3dpG3yMVJS7VWcS",
       "method": "storage_deposit",
-      "tx": "8QvsHUsHwkAy93T5UuMvMxG1PVCPfjK2kk954huQx2YL",
+      "args": {},
+      "deposit": "0.05 NEAR",
+      "tx": "xSxVFvnXxtyZY8MpedV9EiXn3qM2iu5LFGHqmjVvFcV",
+      "block_hash": "HNNuN1HPGZzz8FL1qBkeZeDLcerMfzZFG7HboQfAyj2P",
       "expect": "success",
       "actual": "success",
+      "return_value": "295620000000000000000000",
+      "receipt_ids": [
+        "A25gKsDLSi8CjwfHvxHHxTmPUeTSHFzqoGSBQNaPYV5S",
+        "J1fAZAR6v29u3ve234ZaWvpHFGpBJBhV53HmVfKQPkXA"
+      ],
+      "logs": [],
       "pass": true
     },
     {
       "step": "owner creates a vault: cap 5 NEAR, receiver shop, trusts only the runner",
       "signer": "lt-dopusk-owner.testnet",
+      "public_key": "ed25519:1cbrXNTWsmzNGiCXydaowGfYZN4nAd6BBpHhY9oQda8",
       "method": "create_vault",
-      "tx": "F9LgwgqifyFxydcKS2dEjDk2Jtf5hNUFCVTd3g83wAxp",
+      "args": {
+        "agent": "lt-dopusk-agent-protected.testnet",
+        "owner_cap": "5000000000000000000000000",
+        "receivers": [
+          "shop.clearance-dev.testnet"
+        ],
+        "trusted_signers": [
+          "lt-dopusk-runner-signer.testnet"
+        ],
+        "policy": "All",
+        "min_suite_version": 1,
+        "min_hidden": 0,
+        "allow_foreign_endpoint": false
+      },
+      "deposit": "2.5 NEAR",
+      "tx": "9Rose7TaxWcVFgsTB4ju3PBizP7L3QCPGc7svJxZZmpj",
+      "block_hash": "DsZJx7bv5KMe9mWhUWkUWTDA2D8QXAZPkbfpJD4j4CJG",
       "expect": "success",
       "actual": "success",
+      "return_value": 4,
+      "receipt_ids": [
+        "HAuJxjntnTER5kkozqSe7wjpAEJyEyVX8nvFbpXLEXjm",
+        "CkNj8mXCVtudDdyvxejY3CazE1rwT83dr2eZnkatK1d2"
+      ],
+      "logs": [
+        "EVENT_JSON:{\"standard\":\"clearance\",\"version\":\"1.0.0\",\"event\":\"vault_created\",\"data\":[{\"vault_id\":4,\"owner\":\"lt-dopusk-owner.testnet\",\"agent\":\"lt-dopusk-agent-protected.testnet\",\"balance\":\"2490900000000000000000000\"}]}"
+      ],
       "pass": true
     },
     {
       "step": "untrusted signer issues a certificate",
       "signer": "lt-dopusk-attacker.testnet",
+      "public_key": "ed25519:EXD6YGctJ8bLrbq32kQBuFWt6Xv8X3dpG3yMVJS7VWcS",
       "method": "certify",
-      "tx": "9jCS7N3GvyF3KeMhCczmfzg3KB5v2d6Yi2N543rUDz7T",
+      "args": {
+        "agent": "lt-dopusk-agent-protected.testnet",
+        "level": 2,
+        "suite_version": 1,
+        "suite_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "hidden_count": 0,
+        "report_hash": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "config_hash": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+        "endpoint_class": "Attested",
+        "run_ref": "dev-demo",
+        "ttl_ns": "604800000000000"
+      },
+      "deposit": "0 NEAR",
+      "tx": "EQz6w7FVgXKwHg55nGxnEig82ju7MYhTNaZVVz7HqfBK",
+      "block_hash": "59GPswKHZeahqja8cSidH9wVD45tbquSfDFZHTpYbWag",
       "expect": "success",
       "actual": "success",
+      "return_value": null,
+      "receipt_ids": [
+        "B21f23SSsFAxcfPPoqBKkpyXGhthVXxdJHTjQAfx5fQt",
+        "7GjJM36odDENDYG9FpVGLe1iNds2aLU7oig3fzumwKL4"
+      ],
+      "logs": [
+        "EVENT_JSON:{\"standard\":\"clearance\",\"version\":\"1.0.0\",\"event\":\"certify\",\"data\":[{\"agent\":\"lt-dopusk-agent-protected.testnet\",\"signer\":\"lt-dopusk-attacker.testnet\",\"level\":2,\"report_hash\":\"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\",\"run_ref\":\"dev-demo\"}]}"
+      ],
       "pass": true
     },
     {
       "step": "spend with only an untrusted certificate",
       "signer": "lt-dopusk-agent-protected.testnet",
+      "public_key": "ed25519:7R86zE8TzWSCRhHSFuBGkGx1cGqzdnVYtGMQnbNsVoa7",
       "method": "spend",
-      "tx": "hhsfgNeFpBw6bm2xwK7uxKyUix4Qz5foqAGJHhExAhW",
+      "args": {
+        "vault_id": 4,
+        "receiver": "shop.clearance-dev.testnet",
+        "amount": "1000000000000000000000000"
+      },
+      "deposit": "0 NEAR",
+      "tx": "BSprJN48N1gVAGsupGHQ44dAgC7idELd1h1taE5SPrsJ",
+      "block_hash": "5FTiL763eEaiZKxcdhCK8Gdj1ECrXAmj3eRNnXkc8Ljx",
       "expect": "failure",
       "error": "no valid certificate",
       "actual": "no valid certificate",
+      "return_value": null,
+      "receipt_ids": [
+        "Dvgsd2ygTuCyp5WDDJBADHVfmnCXf2irYqsiK6GSSgRj",
+        "4BtZrnFPpmYJbS8pxGDc3wHmg2bDKiHRmmAtyY8VUgjC"
+      ],
+      "logs": [],
       "pass": true
     },
     {
       "step": "agent certifies itself",
       "signer": "lt-dopusk-agent-protected.testnet",
+      "public_key": "ed25519:7R86zE8TzWSCRhHSFuBGkGx1cGqzdnVYtGMQnbNsVoa7",
       "method": "certify",
-      "tx": "DeoNqumSVWWpG3iinvGSeUEghddutV5nvYjbtGUNY5g2",
+      "args": {
+        "agent": "lt-dopusk-agent-protected.testnet",
+        "level": 2,
+        "suite_version": 1,
+        "suite_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "hidden_count": 0,
+        "report_hash": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "config_hash": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+        "endpoint_class": "Attested",
+        "run_ref": "dev-demo",
+        "ttl_ns": "604800000000000"
+      },
+      "deposit": "0 NEAR",
+      "tx": "GgaxDVhJ5biKH1VdLeEpuufcoovksTmJMdnC6eC3Arbu",
+      "block_hash": "69G3v7VtG7HM7rEPBfWeunzDozb7SEFKT86EDw43DwyR",
       "expect": "failure",
       "error": "agent cannot certify itself",
       "actual": "agent cannot certify itself",
+      "return_value": null,
+      "receipt_ids": [
+        "CgHJCZRb1cDb6vjzFNDaAt7UM63amSBb73fVF73HUBnJ",
+        "Bk4vtAKwEoEtTfhDVe3R52kqd5VG7JHArLDuJBL7Efoe"
+      ],
+      "logs": [],
       "pass": true
     },
     {
       "step": "runner certifies level 2 with its function-call key",
       "signer": "lt-dopusk-runner-signer.testnet",
+      "public_key": "ed25519:DSP22oEJg9jAUXcSdUePsuGek525dskZjqRF8ieuBNaZ",
       "method": "certify",
-      "tx": "CG24K9R2UT6goG7jbjbuDuNuLm1b4wfQYfuAC2PAgz4h",
+      "args": {
+        "agent": "lt-dopusk-agent-protected.testnet",
+        "level": 2,
+        "suite_version": 1,
+        "suite_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "hidden_count": 0,
+        "report_hash": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "config_hash": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+        "endpoint_class": "Attested",
+        "run_ref": "dev-demo",
+        "ttl_ns": "604800000000000"
+      },
+      "deposit": "0 NEAR",
+      "tx": "G8tibao3EyE7fHBFs6U7mHMBRqHJKUT81wMDtQkvrt6S",
+      "block_hash": "Fkw8PyiLxPYkcxkvPpJUsWuuuTDNpT45zveEEKAnYbrG",
       "expect": "success",
       "actual": "success",
+      "return_value": null,
+      "receipt_ids": [
+        "2h8ZFcvEUt5Kqz8QrwxNzndemHS5gFTqTgTYv77vYfHW",
+        "GZLnWytzgF7Kb6uVdLhtx1KhKxXuqJNGAaoCK9Zu3Pym"
+      ],
+      "logs": [
+        "EVENT_JSON:{\"standard\":\"clearance\",\"version\":\"1.0.0\",\"event\":\"certify\",\"data\":[{\"agent\":\"lt-dopusk-agent-protected.testnet\",\"signer\":\"lt-dopusk-runner-signer.testnet\",\"level\":2,\"report_hash\":\"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\",\"run_ref\":\"dev-demo\"}]}"
+      ],
       "pass": true
     },
     {
       "step": "protected agent pays the shop 2 NEAR",
       "signer": "lt-dopusk-agent-protected.testnet",
+      "public_key": "ed25519:7R86zE8TzWSCRhHSFuBGkGx1cGqzdnVYtGMQnbNsVoa7",
       "method": "spend",
-      "tx": "EJ2xj11a6gbfDHXUywHt6vGup3AvqnFH1mvsTYqqerY3",
+      "args": {
+        "vault_id": 4,
+        "receiver": "shop.clearance-dev.testnet",
+        "amount": "2000000000000000000000000"
+      },
+      "deposit": "0 NEAR",
+      "tx": "5TC8WKJxhthxDxw4rRTsDRueG7UsFgwp1Cn2bTQwENcH",
+      "block_hash": "unguP4UK9JmagmbttGxAGq9QNxyY2Tsq6epL9x7FsWd",
       "expect": "landed",
       "actual": "success",
+      "return_value": true,
+      "receipt_ids": [
+        "67jxP9fABaq8iUvcxH5zHfhZu1bADqRzNBQYyn9wzvLu",
+        "38BdQyHYYwHdhmRpyNh8U4YEB7L89WzWPKNxM3GZEs9R",
+        "7HhDNG4PMFNA4T5uQG74s8GUPpebyacW1yYDx4cd2sfu",
+        "Bx3VDQtxpZKTt7HgwaqVX2guhn22J2z48VQueNUkwZez",
+        "3ibLFJ4wmf9WfV7pXgCge9b34UBADirKed2DHw4KbFFR",
+        "91qRvHh7TrcZu4re317oGMCdGSFhFF4BT6UiQQUQ8hUe"
+      ],
+      "logs": [
+        "EVENT_JSON:{\"standard\":\"clearance\",\"version\":\"1.0.0\",\"event\":\"spend\",\"data\":[{\"vault_id\":4,\"receiver\":\"shop.clearance-dev.testnet\",\"amount\":\"2000000000000000000000000\",\"bucket\":498064,\"level\":2,\"memo\":null}]}"
+      ],
       "pass": true
     },
     {
       "step": "6 NEAR more exceeds min(owner 5, level 10)",
       "signer": "lt-dopusk-agent-protected.testnet",
+      "public_key": "ed25519:7R86zE8TzWSCRhHSFuBGkGx1cGqzdnVYtGMQnbNsVoa7",
       "method": "spend",
-      "tx": "HUttE8MS3dNepYodiqphCGG3zdY1WHDEiZ3swNjqDsmV",
+      "args": {
+        "vault_id": 4,
+        "receiver": "shop.clearance-dev.testnet",
+        "amount": "6000000000000000000000000"
+      },
+      "deposit": "0 NEAR",
+      "tx": "Ay298i4TM7ZR4awkp3NnxjUPFBRiTLsNDp9Q8mmTSdjx",
+      "block_hash": "5Vq379oLpJnnPDKRboLKY4gb2UcWXor2Gs7gy9Zgsa5U",
       "expect": "failure",
       "error": "over window cap",
       "actual": "over window cap",
+      "return_value": null,
+      "receipt_ids": [
+        "HAcWgupuckeYgNVMJzghitkJA94BbD1kLmzmMBxQXoYT",
+        "A8G8BSpDr89PpV5RxdJjaH2dXSxiHmTyez7sdkpwLDx8"
+      ],
+      "logs": [],
       "pass": true
     },
     {
       "step": "payment to an account outside the receiver list",
       "signer": "lt-dopusk-agent-protected.testnet",
+      "public_key": "ed25519:7R86zE8TzWSCRhHSFuBGkGx1cGqzdnVYtGMQnbNsVoa7",
       "method": "spend",
-      "tx": "BDCPCeSdyd3swYHpiVxzu3HB9nRmvdL5ns5eBbGzYp8T",
+      "args": {
+        "vault_id": 4,
+        "receiver": "lt-dopusk-attacker.testnet",
+        "amount": "500000000000000000000000"
+      },
+      "deposit": "0 NEAR",
+      "tx": "pKmb6VWbAf5VyYYXccGCi9r2H2cRZfjZQEskZQPpaK7",
+      "block_hash": "F6BRXXe9PVifvw3Q4N3c41NAt2GG3dLDe7p1zTfVELt4",
       "expect": "failure",
       "error": "receiver not allowed",
       "actual": "receiver not allowed",
+      "return_value": null,
+      "receipt_ids": [
+        "FUK5tFFz7ZexwGUQzrpWX18TvUzGJfhSw6A3fvkueUqg",
+        "6e6iixBAbWkTiweLrDbyfKwgmkTBarqRrLq3rdUVm8Da"
+      ],
+      "logs": [],
       "pass": true
     },
     {
       "step": "runner revokes with its function-call key",
       "signer": "lt-dopusk-runner-signer.testnet",
+      "public_key": "ed25519:DSP22oEJg9jAUXcSdUePsuGek525dskZjqRF8ieuBNaZ",
       "method": "revoke",
-      "tx": "EAfiiNLM6Bd6Cr7sGvA4v8PB8LQpRWArjJkxRUpTxYn7",
+      "args": {
+        "agent": "lt-dopusk-agent-protected.testnet"
+      },
+      "deposit": "0 NEAR",
+      "tx": "3RLWN2RCYmtWpPdNTZwhnhqhpnjhJMj8cBnxE62UpUBC",
+      "block_hash": "6KdQKPpCfo7zohyjywYzcFYeVj84UUVKw9Ro4tTmvSi8",
       "expect": "success",
       "actual": "success",
+      "return_value": null,
+      "receipt_ids": [
+        "Hq4oHzafWAsxc6A2A71rKNYuwMw6k98NxGSkQdgpAZdG",
+        "AzLmTpMZPKaTA9mMDcrbhiRsPHu17Tcr4H1gPcEsT9MY"
+      ],
+      "logs": [
+        "EVENT_JSON:{\"standard\":\"clearance\",\"version\":\"1.0.0\",\"event\":\"revoke\",\"data\":[{\"agent\":\"lt-dopusk-agent-protected.testnet\",\"signer\":\"lt-dopusk-runner-signer.testnet\"}]}"
+      ],
       "pass": true
     },
     {
       "step": "spend after revoke",
       "signer": "lt-dopusk-agent-protected.testnet",
+      "public_key": "ed25519:7R86zE8TzWSCRhHSFuBGkGx1cGqzdnVYtGMQnbNsVoa7",
       "method": "spend",
-      "tx": "8htGXat9unKbVUqk1AZk6yTCCRSdJ2dZudV2UL2sDDaW",
+      "args": {
+        "vault_id": 4,
+        "receiver": "shop.clearance-dev.testnet",
+        "amount": "100000000000000000000000"
+      },
+      "deposit": "0 NEAR",
+      "tx": "9QaoT5x4DnYqMfUX2HhVK24ud5zD7wTXj6euXsVGbKcj",
+      "block_hash": "FanhC7ns85qzXjVs1SUCuFm26yjeM9uXbYupSRpDaWBN",
       "expect": "failure",
       "error": "no valid certificate",
       "actual": "no valid certificate",
+      "return_value": null,
+      "receipt_ids": [
+        "31JFZULs5taBsda2SapQFJjshEFCrFzrkvWRndkKdVYr",
+        "DyJWzE4W1cjLSzSVsJxM9ngJkp2BbqkTWR2fZeBQhrzn"
+      ],
+      "logs": [],
       "pass": true
     },
     {
       "step": "owner withdraws 0.3 NEAR",
       "signer": "lt-dopusk-owner.testnet",
+      "public_key": "ed25519:1cbrXNTWsmzNGiCXydaowGfYZN4nAd6BBpHhY9oQda8",
       "method": "withdraw",
-      "tx": "7VDedQxWrfJsiVVdWtJ1pmZ78RDxAfr8D2A269Bbx4nQ",
+      "args": {
+        "vault_id": 4,
+        "amount": "300000000000000000000000"
+      },
+      "deposit": "1 yoctoNEAR",
+      "tx": "CBwtipDUR7MjzfZJtUQtwZuPJ9sVRLMDifizbXnPnFgY",
+      "block_hash": "6cDpSp7w9QpkjV2N2yoHFT1BToGSdqfwk56E2id9ZPZf",
       "expect": "landed",
       "actual": "success",
+      "return_value": true,
+      "receipt_ids": [
+        "DGdhb6keV15d6WfWpJR7qwkGxFDVmUn2KZnSWt3yHWYm",
+        "G9upNcex8aPKJ2yQ6EkTZc1ViTA1oAEpB2mAE6BEQ7cj",
+        "JDQYaTJ3EdiUetfRPRmice3PDmeymnvM41bL4VkjJyVV",
+        "BpNRyEmMRYfvm17iyZanZpZumoQn3P3smtJxsRjyMwB6",
+        "HNhyeSPY2zCxkYsRsFqGRdKZfmeehJMBCtnYC8qDBCTS",
+        "CiVWtZSXPH8cWYajAZZrALLWWUck9aPVLFZhxkaqq6UR"
+      ],
+      "logs": [
+        "EVENT_JSON:{\"standard\":\"clearance\",\"version\":\"1.0.0\",\"event\":\"withdraw\",\"data\":[{\"vault_id\":4,\"amount\":\"300000000000000000000000\"}]}"
+      ],
       "pass": true
     }
   ]
