@@ -12,7 +12,7 @@ import { Toolbox } from "./tools.ts";
 
 const root = new URL("../../", import.meta.url).pathname;
 const suite = {
-  generators: ["v1", "v1-holdout"].flatMap((s) => (JSON.parse(readFileSync(`${root}suites/${s}.json`, "utf8")) as { generators: string[] }).generators),
+  generators: ["v1", "v1-holdout", "v1-blind"].flatMap((s) => (JSON.parse(readFileSync(`${root}suites/${s}.json`, "utf8")) as { generators: string[] }).generators),
 };
 
 function fakeChain() {
