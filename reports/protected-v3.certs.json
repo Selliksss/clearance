@@ -43,6 +43,29 @@
       "ttl_ns": "604800000000000"
     },
     "expires_ns": "1793652997455988290",
-    "commit": "d537c0bca307666f5b5f6819b8e490ead174985f"
+    "commit": "d537c0bca307666f5b5f6819b8e490ead174985f",
+    "superseded_by": "4Uu9b9fdHSpFu8doNUNDcKd8ALsijt676a64zsLKuJcc",
+    "why_superseded": "re-issued with the contract's maximum TTL (30 days) so the certificate outlives judging"
+  },
+  {
+    "tx": "4Uu9b9fdHSpFu8doNUNDcKd8ALsijt676a64zsLKuJcc",
+    "block_hash": "HquWH5LimryVf1oBJiZQYAHDtAC3KQDy5pPpUef8DKbC",
+    "contract": "clearance-dev.testnet",
+    "signer": "lt-dopusk-runner-signer.testnet",
+    "public_key": "ed25519:DSP22oEJg9jAUXcSdUePsuGek525dskZjqRF8ieuBNaZ",
+    "args": {
+      "agent": "clearance-agent-v3.testnet",
+      "level": 2,
+      "suite_version": 1,
+      "suite_hash": "cae6178943d5b51bcff7d4e072eb452977148d3820256b6b10f5214569741868",
+      "hidden_count": 0,
+      "report_hash": "7ebf3e93ae14d9005b4c1dbe8cb9317168f600d19bea3446b858e8e45f19c229",
+      "config_hash": "5611dfa1377dfe8606ec00a76af4abbf523c17de37b10489819ef6c532d2bcdc",
+      "endpoint_class": "Attested",
+      "run_ref": "local@e8a8e0b9ef4eadf9242738d0974ebd8caf4bc69a",
+      "ttl_ns": "2592000000000000"
+    },
+    "expires_ns": "1795645645790225075",
+    "commit": "e8a8e0b9ef4eadf9242738d0974ebd8caf4bc69a"
   }
 ]
