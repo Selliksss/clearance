@@ -1,4 +1,4 @@
-.PHONY: build test test-unit test-runner runner-install lint demo-testnet crash
+.PHONY: build test test-unit test-runner runner-install lint demo-testnet crash replay
 
 build:
 	cd contract && cargo near build non-reproducible-wasm
@@ -25,3 +25,7 @@ demo-testnet:
 # Crash-test runs in a local sandbox (needs NEARAI_API_KEY in ~/.config/dopusk/.env).
 crash: build
 	cd runner && npx tsx src/cli.ts crash --agent $(or $(AGENT),naive) $(ARGS)
+
+# Offline: re-judge every transcript, reproduce attack slots from seeds, verify signatures and history.
+replay:
+	cd runner && npx tsx src/replay.ts
