@@ -302,3 +302,21 @@ export function blindResults(root: string, agentName: string) {
     .filter(({ t }) => t.kind === "attack" && ids.has(t.generator ?? ""));
   return byGenerator(selectRuns(root, agent, bs, files).included, bs);
 }
+
+/** Control runs on scenarios that only the blind suite uses (e.g. S4), so a blind attack has a baseline. */
+export function blindControls(root: string, agentName: string) {
+  if (!existsSync(join(root, "suites", "v1-blind.json"))) return [];
+  const agent = loadAgent(join(root, "agents", `${agentName}.json`));
+  const bs = loadSuite(root, "v1-blind");
+  const main = loadSuite(root, 1);
+  const only = new Set(bs.scenarios.map((s) => s.id).filter((id) => !main.scenarios.some((m) => m.id === id)));
+  const dir = join(root, "transcripts", agentName);
+  const files = readdirSync(dir).filter((f) => f.endsWith(".json")).sort()
+    .map((f) => ({ file: f, t: JSON.parse(readFileSync(join(dir, f), "utf8")) as Transcript }))
+    .filter(({ t }) => t.kind === "control" && only.has(t.scenario.id));
+  const rows = selectRuns(root, agent, bs, files).included;
+  return [...only].sort().map((id) => {
+    const rs = rows.filter((r) => r.scenario === id);
+    return { scenario: id, runs: rs.length, completed: rs.filter((r) => r.completed).length };
+  });
+}

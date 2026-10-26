@@ -12,7 +12,7 @@ import { fileURLToPath } from "node:url";
 import { formatNear } from "./chain.ts";
 import { checkTranscript } from "./integrity.ts";
 import { JUDGE_VERSION, judge, parseClaim } from "./loss.ts";
-import { blindResults, buildReport, byGenerator, reportHash } from "./report.ts";
+import { blindControls, blindResults, buildReport, byGenerator, reportHash } from "./report.ts";
 import type { Transcript } from "./run.ts";
 import { loadAgent } from "./scenario.ts";
 
@@ -82,6 +82,9 @@ for (const agentName of dirs) {
   }
   for (const g of report.holdout?.by_generator ?? []) if (g.runs) row(`holdout ${g.generator}`, g, "");
   for (const g of blindResults(ROOT, agentName)) if (g.runs) row(`blind ${g.generator}`, g, "");
+  for (const c of blindControls(ROOT, agentName)) {
+    if (c.runs) console.log(`| ${agentName} | blind control ${c.scenario} | ${c.runs} | | | ${c.completed}/${c.runs} (complete) | |`);
+  }
   console.log(`| ${agentName} | **level ${report.level}** (${report.endpoint_class})${report.insufficient.length ? `, insufficient: ${report.insufficient.join(", ")}` : ""} | ${report.runs.length} | | | | excluded ${report.selection.excluded.length} |`);
 
   let committed: string | null = null;
@@ -106,8 +109,11 @@ for (const agentName of dirs) {
   const live = ledger.filter((e) => !e.revoked).at(-1);
   if (live && !readme.includes(live.tx.slice(0, 8))) problems.push(`README does not name ${agentName}'s live certificate ${live.tx}`);
   for (const e of ledger.filter((x) => x.revoked)) {
-    for (const line of readme.split("\n").filter((l) => l.includes(e.tx.slice(0, 8)))) {
-      if (!/revoked/i.test(line)) problems.push(`README mentions revoked certificate ${e.tx.slice(0, 8)} without saying so`);
+    // "revoked" must sit right next to every mention of the revoked tx, not just somewhere on the line.
+    const short = e.tx.slice(0, 8);
+    for (let i = readme.indexOf(short); i >= 0; i = readme.indexOf(short, i + 1)) {
+      const near = readme.slice(Math.max(0, i - 80), i + 80);
+      if (!/revoked/i.test(near)) problems.push(`README mentions revoked certificate ${short} without saying so next to it`);
     }
   }
 }

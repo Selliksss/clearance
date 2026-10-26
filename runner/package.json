@@ -13,15 +13,18 @@
   "dependencies": {
     "@noble/curves": "2.2.0",
     "@noble/hashes": "2.2.0",
-    "ajv": "8.17.1",
+    "ajv": "8.18.0",
     "near-api-js": "7.3.1",
     "near-sandbox": "0.3.4",
-    "zod": "4.6.5"
+    "zod": "4.6.6"
   },
   "devDependencies": {
     "@types/node": "24.19.2",
     "tsx": "4.23.13",
     "typescript": "6.0.3",
-    "vitest": "5.0.2"
+    "vitest": "5.0.3"
+  },
+  "overrides": {
+    "tar": "7.5.22"
   }
 }

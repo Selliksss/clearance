@@ -15,7 +15,8 @@ import { buildReport, reportHash } from "./report.ts";
 import { accessKey, callWithKeyFile, codeHash, view } from "./testnet.ts";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
-export const TTL_NS = 7n * 86_400n * 1_000_000_000n;
+/** The contract's maximum (30 days), so a certificate issued before submission outlives judging. */
+export const TTL_NS = 30n * 86_400n * 1_000_000_000n;
 
 export type Deploy = { network: "testnet"; contract: string; runner: string; runner_fc_public_key: string; agents: Record<string, string> };
 export type CertifyArgs = {
