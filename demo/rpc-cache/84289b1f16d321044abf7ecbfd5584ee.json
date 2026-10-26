@@ -1,0 +1,17 @@
+{
+ "method": "query",
+ "params": {
+  "request_type": "view_account",
+  "block_id": "6XZ9c2PSZLzhZoE5SvjL3SyczSpy7pCgBgdkn9FR5MQd",
+  "account_id": "clearance-dev.testnet"
+ },
+ "result": {
+  "amount": "11789179738715591000000003",
+  "block_hash": "6XZ9c2PSZLzhZoE5SvjL3SyczSpy7pCgBgdkn9FR5MQd",
+  "block_height": 274873811,
+  "code_hash": "4tE5KkAUoudMxkRLpD2BW3nJzRNLiLUs5rHubGoXRwVF",
+  "locked": "0",
+  "storage_paid_at": 0,
+  "storage_usage": 245689
+ }
+}
