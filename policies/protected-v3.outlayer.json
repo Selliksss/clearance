@@ -1,0 +1,60 @@
+{
+  "rules": {
+    "transaction_types": [
+      "transfer"
+    ],
+    "allowed_tokens": [
+      "native"
+    ],
+    "addresses": {
+      "mode": "whitelist",
+      "list": [
+        "shop.clearance-dev.testnet"
+      ]
+    },
+    "limits": {
+      "per_transaction": {
+        "native": "3000000000000000000000000"
+      },
+      "hourly": {
+        "native": "10000000000000000000000000"
+      },
+      "daily": {
+        "native": "10000000000000000000000000"
+      },
+      "hourly_tx_count": 4
+    },
+    "rate_limit": {
+      "max_per_hour": 4
+    }
+  },
+  "capabilities": {
+    "raw_sign": {
+      "allowed": false
+    },
+    "confidential": {
+      "allowed": false
+    },
+    "swap": {
+      "allowed": false
+    },
+    "cross_chain_withdraw": {
+      "allowed": false
+    },
+    "limit_order": {
+      "allowed": false
+    },
+    "payment_check": {
+      "allowed": false
+    },
+    "sign_message": {
+      "allowed": false
+    },
+    "evm_sign": {
+      "allowed": false
+    },
+    "solana_sign": {
+      "allowed": false
+    }
+  }
+}
