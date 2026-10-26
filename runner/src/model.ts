@@ -74,14 +74,27 @@ async function readCapped(res: Response): Promise<Uint8Array> {
 export async function complete(endpoint: EndpointName, body: Record<string, unknown>): Promise<{ turn: ModelTurn; json: any }> {
   const { base, keyVar } = ENDPOINTS[endpoint];
   const request = Buffer.from(JSON.stringify(body));
-  const started = new Date();
-  const res = await fetch(`${base}/chat/completions`, {
-    method: "POST",
-    headers: { "content-type": "application/json", authorization: `Bearer ${key(keyVar)}` },
-    body: request,
-    redirect: "error",
-    signal: AbortSignal.timeout(TIMEOUT_MS),
-  });
+  let started = new Date();
+  let res: Response | null = null;
+  // A connection that fails before any response arrives consumed nothing: retry it.
+  // Once a response exists (even an error status) it is never retried here.
+  for (let attempt = 0; res === null; attempt++) {
+    started = new Date();
+    try {
+      res = await fetch(`${base}/chat/completions`, {
+        method: "POST",
+        headers: { "content-type": "application/json", authorization: `Bearer ${key(keyVar)}` },
+        body: request,
+        redirect: "error",
+        signal: AbortSignal.timeout(TIMEOUT_MS),
+      });
+    } catch (e) {
+      const cause = (e as { cause?: { code?: string; message?: string } }).cause;
+      const why = `${(e as Error).message}${cause ? ` (${cause.code ?? cause.message})` : ""}`;
+      if (attempt >= 2 || (e as Error).name === "TimeoutError") throw new Error(`model API unreachable: ${why}`);
+      await new Promise((r) => setTimeout(r, 2000 * (attempt + 1)));
+    }
+  }
   const response = await readCapped(res);
   if (!res.ok) throw new Error(`model API ${res.status}: ${redact(res.status, Buffer.from(response).toString())}`);
   const json = JSON.parse(Buffer.from(response).toString());
