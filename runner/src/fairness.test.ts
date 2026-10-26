@@ -11,7 +11,9 @@ import { type Scenario, loadScenario } from "./scenario.ts";
 import { Toolbox } from "./tools.ts";
 
 const root = new URL("../../", import.meta.url).pathname;
-const suite = JSON.parse(readFileSync(`${root}suites/v1.json`, "utf8")) as { generators: string[] };
+const suite = {
+  generators: ["v1", "v1-holdout"].flatMap((s) => (JSON.parse(readFileSync(`${root}suites/${s}.json`, "utf8")) as { generators: string[] }).generators),
+};
 
 function fakeChain() {
   let vault = 100n * NEAR;

@@ -12,7 +12,7 @@ import { fileURLToPath } from "node:url";
 import { formatNear } from "./chain.ts";
 import { checkTranscript } from "./integrity.ts";
 import { JUDGE_VERSION, judge, parseClaim } from "./loss.ts";
-import { buildReport, reportHash } from "./report.ts";
+import { buildReport, byGenerator, reportHash } from "./report.ts";
 import type { Transcript } from "./run.ts";
 import { loadAgent } from "./scenario.ts";
 
@@ -60,8 +60,8 @@ for (const agentName of dirs) {
   }
 }
 
-console.log(`| agent | run | n | deceived | loss, NEAR | completed | false reports | excluded |`);
-console.log(`|---|---|---|---|---|---|---|---|`);
+console.log(`| agent | run | n | deceived | loss, NEAR | did what a correct agent does | false reports |`);
+console.log(`|---|---|---|---|---|---|---|`);
 for (const agentName of dirs) {
   let report;
   try {
@@ -70,19 +70,18 @@ for (const agentName of dirs) {
     problems.push(`report for ${agentName}: ${(e as Error).message.split("\n")[0]}`);
     continue;
   }
-  const groups = new Map<string, typeof report.runs>();
-  for (const r of report.runs) {
-    const key = r.generator ?? `control ${r.scenario}`;
-    groups.set(key, [...(groups.get(key) ?? []), r]);
+  const fr = (gen: string | null, scen?: string) =>
+    report.runs.filter((r) => (gen ? r.generator === gen : r.kind === "control" && r.scenario === scen) && r.false_report).length;
+  const row = (label: string, g: ReturnType<typeof byGenerator>[number], falseReports: number | string) =>
+    console.log(`| ${agentName} | ${label}${g.delivered < g.runs ? ` (${g.runs - g.delivered} not delivered)` : ""} | ${g.runs} | ${g.deceived}/${g.runs} | ` +
+      `${formatNear(BigInt(g.loss_yocto))} | ${g.outcome_matched}/${g.runs} (${g.expected_under_attack}) | ${falseReports} |`);
+  for (const g of report.by_generator) row(g.generator, g, fr(g.generator));
+  for (const scen of [...new Set(report.runs.filter((r) => r.kind === "control").map((r) => r.scenario))].sort()) {
+    const rs = report.runs.filter((r) => r.kind === "control" && r.scenario === scen);
+    console.log(`| ${agentName} | control ${scen} | ${rs.length} | | | ${rs.filter((r) => r.completed).length}/${rs.length} (complete) | ${fr(null, scen)} |`);
   }
-  for (const [key, rows] of [...groups.entries()].sort()) {
-    const n = rows.length;
-    const undelivered = rows.filter((r) => !r.delivered).length;
-    const loss = rows.reduce((s, r) => s + BigInt(r.loss_yocto), 0n);
-    console.log(`| ${agentName} | ${key}${undelivered ? ` (${undelivered} not delivered)` : ""} | ${n} | ${rows.filter((r) => r.deceived).length}/${n} | ` +
-      `${formatNear(loss)} | ${rows.filter((r) => r.completed).length}/${n} | ${rows.filter((r) => r.false_report).length} | |`);
-  }
-  console.log(`| ${agentName} | **level ${report.level}** (${report.endpoint_class}) | ${report.runs.length} | | | | | ${report.selection.excluded.length} |`);
+  for (const g of report.holdout?.by_generator ?? []) if (g.runs) row(`holdout ${g.generator}`, g, "");
+  console.log(`| ${agentName} | **level ${report.level}** (${report.endpoint_class})${report.insufficient.length ? `, insufficient: ${report.insufficient.join(", ")}` : ""} | ${report.runs.length} | | | | excluded ${report.selection.excluded.length} |`);
 
   let committed: string | null = null;
   try {

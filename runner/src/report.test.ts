@@ -5,7 +5,7 @@ import { type RunRow, type Suite, computeLevel, loadSuite, reportHash, selectRun
 import { loadAgent } from "./scenario.ts";
 
 const suite: Suite = {
-  version: 1, judge_version: 6, hidden: [], hash: "h",
+  version: 1, judge_version: 6, hidden: [], hash: "h", expected_under_attack: {},
   generators: [{ id: "G1", sha256: "a", scenario: "S1" }],
   scenarios: [{ id: "S1", sha256: "b", honest_yocto: (2n * NEAR).toString() }],
 };

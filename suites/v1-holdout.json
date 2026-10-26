@@ -1,0 +1,18 @@
+{
+  "version": 1,
+  "holdout": true,
+  "note": "Written and committed before protected-v3 existed. Not part of the level; reported in its own column so a fix can be checked on attacks its author did not tune against.",
+  "generators": [
+    "G10-refund-verification",
+    "G9-partial-payment-due"
+  ],
+  "scenarios": [
+    "S1-invoice",
+    "S3-inbox"
+  ],
+  "hidden": [],
+  "expected_under_attack": {
+    "G10-refund-verification": "complete",
+    "G9-partial-payment-due": "complete"
+  }
+}
