@@ -52,3 +52,54 @@ describe("certify-ci guards", () => {
     expect(() => checkArtifact(dir)).toThrow(/unexpected artifact file/);
   });
 });
+
+describe("TEE signer allowlist", () => {
+  const root = join(import.meta.dirname, "..", "..");
+  const v3 = JSON.parse(readFileSync(join(root, "reports", "protected-v3.json"), "utf8"));
+  it("the certified protected-v3 report passes", async () => {
+    const { checkTeeSigners } = await import("./certify.ts");
+    expect(() => checkTeeSigners(root, v3)).not.toThrow();
+  });
+  it("an unpinned or missing signer is refused for Attested", async () => {
+    const { checkTeeSigners } = await import("./certify.ts");
+    expect(() => checkTeeSigners(root, { ...v3, tee_signers: ["0x" + "1".repeat(40)] })).toThrow(/not all pinned/);
+    expect(() => checkTeeSigners(root, { ...v3, tee_signers: [] })).toThrow(/not all pinned/);
+    expect(() => checkTeeSigners(root, { ...v3, model: "other/model" })).toThrow(/not all pinned/);
+  });
+  it("non-Attested reports are not checked", async () => {
+    const { checkTeeSigners } = await import("./certify.ts");
+    expect(() => checkTeeSigners(root, { ...v3, endpoint_class: "Allowlist", tee_signers: [] })).not.toThrow();
+  });
+});
+
+describe("earlier run history", () => {
+  const run = (id: number, title: string, conclusion = "failure", branch = "main") =>
+    ({ id, display_title: title, conclusion, status: "completed", head_branch: branch });
+  it("pages through the whole history and hides only smoke runs on main", async () => {
+    process.env.GITHUB_REPOSITORY = "o/r";
+    const { earlierRuns } = await import("./certify-ci.ts");
+    const all = [run(9, "ci-signer protected-v3 full", "success"), ...Array.from({ length: 120 }, (_, i) => run(100 + i, "ci-signer protected-v3 smoke")),
+      run(5, "ci-signer protected-v3 full"), run(4, "ci-signer protected-v3 smoke", "success", "evil"), run(3, "ci-signer")];
+    const get = async (url: string) => {
+      const page = Number(new URL(url).searchParams.get("page"));
+      return { total_count: all.length, workflow_runs: all.slice((page - 1) * 100, page * 100) };
+    };
+    expect(await earlierRuns("9", get)).toBe("5:failure:main:full,4:success:evil:smoke,3:failure:main:ci-signer");
+  });
+  it("an incomplete or unreadable history is null", async () => {
+    process.env.GITHUB_REPOSITORY = "o/r";
+    const { earlierRuns } = await import("./certify-ci.ts");
+    expect(await earlierRuns("1", async () => ({ total_count: 300, workflow_runs: [] }))).toBeNull();
+    expect(await earlierRuns("1", async () => null)).toBeNull();
+  });
+});
+
+describe("transcript ids", () => {
+  it("an id that is not a safe file name stops the integrity check", async () => {
+    const { checkTranscript } = await import("./integrity.ts");
+    const root = join(import.meta.dirname, "..", "..");
+    for (const t of [{ scenario: { id: "../x" }, generator: null }, { generator: null }, { scenario: { id: "G1" }, generator: "a/b" }]) {
+      expect(checkTranscript(root, "x.json", t as never, null).problems).toEqual(["scenario or generator id is not a safe file name"]);
+    }
+  });
+});

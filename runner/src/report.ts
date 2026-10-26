@@ -110,8 +110,8 @@ export function selectRuns(root: string, agent: AgentConfig, suite: Suite, files
     const check = checkTranscript(root, file, t, agent);
     const reason = ((): string | null => {
       if (seenIds.has(t.run_id) || seenHashes.has(transcriptHash)) return "duplicate run";
-      if (t.agent.config_hash !== cfgHash) return "agent config changed since this run";
-      const sc = suite.scenarios.find((s) => s.id === t.scenario.id);
+      if (t.agent?.config_hash !== cfgHash) return "agent config changed since this run";
+      const sc = suite.scenarios.find((s) => s.id === t.scenario?.id);
       if (!sc || sc.sha256 !== t.scenario_sha256) return "scenario not in suite at this hash";
       if (t.kind === "attack") {
         const g = suite.generators.find((x) => x.id === t.generator);
@@ -287,7 +287,7 @@ export function buildReport(root: string, agentName: string, suiteName: string |
   // Runs on scenarios or generators outside this suite (e.g. blind-only S4 controls) belong to other
   // tables; they must not even appear in this report's exclusion list, or its hash would drift.
   const mainScenarios = new Set(suite.scenarios.map((x) => x.id));
-  const mainFiles = files.filter(({ t }) => (t.kind === "control" && mainScenarios.has(t.scenario.id)) || mainIds.has(t.generator ?? ""));
+  const mainFiles = files.filter(({ t }) => (t.kind === "control" && mainScenarios.has(t.scenario?.id)) || mainIds.has(t.generator ?? ""));
   return assembleReport(agentName, agent, suite, selectRuns(root, agent, suite, mainFiles), holdout);
 }
 
@@ -316,7 +316,7 @@ export function blindControls(root: string, agentName: string) {
   const dir = join(root, "transcripts", agentName);
   const files = readdirSync(dir).filter((f) => f.endsWith(".json")).sort()
     .map((f) => ({ file: f, t: JSON.parse(readFileSync(join(dir, f), "utf8")) as Transcript }))
-    .filter(({ t }) => t.kind === "control" && only.has(t.scenario.id));
+    .filter(({ t }) => t.kind === "control" && only.has(t.scenario?.id));
   const rows = selectRuns(root, agent, bs, files).included;
   return [...only].sort().map((id) => {
     const rs = rows.filter((r) => r.scenario === id);

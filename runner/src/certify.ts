@@ -27,6 +27,17 @@ const ACCOUNT_RE = /^(([a-z\d]+[-_])*[a-z\d]+\.)*([a-z\d]+[-_])*[a-z\d]+$/;
 const ED25519_RE = /^ed25519:[1-9A-HJ-NP-Za-km-z]{32,50}$/;
 const CERT_METHODS = new Set(["certify", "revoke"]);
 
+/** An Attested report is only signed when every TEE signer it saw is pinned in deploy/tee-signers.json. */
+export function checkTeeSigners(root: string, report: { endpoint_class: string; model: string; tee_signers?: string[] }): void {
+  if (report.endpoint_class !== "Attested") return;
+  const pinned = (JSON.parse(readFileSync(join(root, "deploy", "tee-signers.json"), "utf8"))[report.model] as string[] | undefined)
+    ?.map((s) => s.toLowerCase());
+  const seen = report.tee_signers ?? [];
+  if (!pinned?.length || seen.length === 0 || !seen.every((s) => pinned.includes(s))) {
+    throw new Error(`TEE signers ${seen.join(",") || "none"} are not all pinned in deploy/tee-signers.json for ${report.model}`);
+  }
+}
+
 export function checkDeploy(d: Deploy): void {
   for (const [k, v] of [["contract", d.contract], ["runner", d.runner], ...Object.entries(d.agents)]) {
     if (typeof v !== "string" || !ACCOUNT_RE.test(v) || v.length > 64) throw new Error(`deploy/testnet.json: ${k} is not a NEAR account id`);
@@ -98,6 +109,7 @@ async function main() {
   const report = buildReport(ROOT, agentName);
   const committed = readFileSync(join(ROOT, "reports", `${agentName}.json`), "utf8");
   if (committed !== `${JSON.stringify(report, null, 2)}\n`) throw new Error(`reports/${agentName}.json is stale; run make report AGENT=${agentName}`);
+  checkTeeSigners(ROOT, report);
   const args = buildCertifyArgs(report, agentAccount, commit);
 
   const recorded = JSON.parse(readFileSync(join(ROOT, "demo", "txs.json"), "utf8")).code_hash;

@@ -4,6 +4,7 @@
 # planned run. Job 2 executes nothing from that artifact: it rebuilds the report with this commit's
 # code, checks it, and signs (or revokes) with its own function-call key, run_ref "run:<id>@<sha>".
 name: ci-signer
+run-name: ci-signer ${{ inputs.agent }} ${{ inputs.mode }}
 
 on:
   workflow_dispatch:
@@ -44,6 +45,15 @@ jobs:
       - name: Install (no install scripts)
         working-directory: runner
         run: npm ci --ignore-scripts
+      - name: NEAR sandbox binary, pinned by hash
+        run: |
+          curl -sfL -o "$RUNNER_TEMP/near-sandbox.tar.gz" https://s3-us-west-1.amazonaws.com/build.nearprotocol.com/nearcore/Linux-x86_64/2.13.4/near-sandbox.tar.gz
+          echo "5690a4635172263cf026683f75965cac09dd916912584f12709974fed620163f  $RUNNER_TEMP/near-sandbox.tar.gz" | sha256sum -c -
+          tar -xzf "$RUNNER_TEMP/near-sandbox.tar.gz" -C "$RUNNER_TEMP"
+          test -x "$RUNNER_TEMP/Linux-x86_64/near-sandbox"
+          # The URL's version must stay the one near-sandbox records in transcripts.
+          node -e 'const l = require("./runner/package-lock.json").packages["node_modules/near-sandbox"]; if (l.version !== "0.3.4") throw new Error("near-sandbox " + l.version + ": update the pinned binary")'
+          echo "NEAR_SANDBOX_BIN_PATH=$RUNNER_TEMP/Linux-x86_64/near-sandbox" >> "$GITHUB_ENV"
       - name: Crash test
         working-directory: runner
         env:
@@ -91,6 +101,7 @@ jobs:
     environment: ci-signer
     permissions:
       contents: read
+      actions: read
     env:
       AGENT: ${{ inputs.agent }}
     steps:
@@ -109,8 +120,10 @@ jobs:
           path: ${{ runner.temp }}/art
       - name: Rebuild, check and sign
         working-directory: runner
+        shell: bash
         env:
           CI_SIGNER_KEY: ${{ secrets.CI_SIGNER_KEY }}
+          GITHUB_TOKEN: ${{ github.token }}
         run: |
           echo "::stop-commands::$(openssl rand -hex 16)"
           npx tsx src/certify-ci.ts "$AGENT" "$RUNNER_TEMP/art" | tee -a "$GITHUB_STEP_SUMMARY"

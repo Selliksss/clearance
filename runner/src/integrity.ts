@@ -30,6 +30,11 @@ export type Integrity = {
 
 export function checkTranscript(root: string, file: string, t: Transcript, agent: AgentConfig | null): Integrity {
   const problems: string[] = [];
+  const SAFE_ID = /^[A-Za-z0-9-]{1,60}$/;
+  const safe = (v: unknown) => typeof v === "string" && SAFE_ID.test(v);
+  if (!safe(t.scenario?.id) || (t.generator !== null && !safe(t.generator))) {
+    return { problems: ["scenario or generator id is not a safe file name"], delivered: false, injected: null, generator: null, signers: [] };
+  }
   if (basename(file) !== `${t.run_id}.json`) problems.push("file name is not <run_id>.json");
   if (sha256hex(canonical(t.scenario)) !== t.scenario_sha256) problems.push("embedded scenario does not match its hash");
   try {

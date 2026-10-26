@@ -1,0 +1,6 @@
+{
+  "note": "TEE signing addresses accepted for an Attested certificate. Seen on every protected-v3 turn; NEAR AI's attestation for this address was not re-verified in these runs (planned: online check in the CI sign job). An Attested report whose signers are not all listed here is refused by make certify and the CI signer.",
+  "z-ai/glm-5.3-flash": [
+    "0x3b753b4406613c5e70ae640508632b600424fa0c"
+  ]
+}
