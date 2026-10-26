@@ -50,10 +50,10 @@ impl Outcome {
     fn landed(self) {
         match self {
             Outcome::Done {
-                value,
+                value: Value::Bool(true),
                 receipt_failures: 0,
                 ..
-            } if value == json!(true) => {}
+            } => {}
             other => panic!("expected a landed transfer, got {other:?}"),
         }
     }
