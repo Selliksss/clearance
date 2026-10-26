@@ -134,6 +134,7 @@ async function main() {
   writeFileSync(`${ledger}.tmp`, `${JSON.stringify(entries, null, 2)}\n`);
   renameSync(`${ledger}.tmp`, ledger);
   console.log(`certified ${agentAccount}: level ${args.level} (${args.endpoint_class}), report_hash ${args.report_hash}\n  tx https://testnet.nearblocks.io/txns/${tx.hash}`);
+  console.log("next: make demo ARGS=--record-cache, then commit demo/rpc-cache, reports and README (the offline demo must vouch for this certificate)");
 }
 
 if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {

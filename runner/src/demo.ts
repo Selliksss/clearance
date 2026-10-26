@@ -187,6 +187,10 @@ async function main() {
     const entry = ledger.filter((e: { revoked?: unknown }) => !e.revoked).at(-1);
     step(!!entry && entry.args.report_hash === cert?.report_hash && readme.includes(entry.tx), "LOCAL",
       `README links the certificate transaction for this report`, entry ? `${EXPLORER}/txns/${entry.tx}` : "no ledger entry");
+    // A stale cache would vouch for an older certificate: the one on chain must be the latest one issued.
+    const latest = !!entry && !!cert && String(entry.expires_ns) === String(cert.expires_ns);
+    step(latest, got, `${a}: the certificate on testnet is the latest one issued (ledger ${entry?.tx?.slice(0, 8) ?? "-"}…)`,
+      !latest && got.source === "CACHED" ? "cache is older than the last make certify: run make demo ARGS=--record-cache" : "");
     const policyFile = join(ROOT, "policies", `${a}.outlayer.json`);
     if (!existsSync(policyFile)) {
       step(false, "LOCAL", `OutLayer policy for ${a}`, "missing");

@@ -1,0 +1,7 @@
+# Offline check of a fresh clone: build once with the network (installs dependencies),
+# then: docker run --rm --network none clearance-demo make demo ARGS=--offline
+FROM node:20
+WORKDIR /repo
+COPY . .
+RUN git config --global --add safe.directory /repo && cd runner && npm ci --ignore-scripts
+CMD ["make", "demo"]

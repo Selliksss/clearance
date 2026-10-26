@@ -5,18 +5,24 @@
 Clearance crash-tests AI agents that hold money. It measures how easily an agent is tricked into paying the wrong party, records the result as a certificate on NEAR, and caps the agent's spending by that result — in its own vault contract, or as an OutLayer Agent Custody policy.
 
 ## Check it in one command
-Node 20+ (tested in `node:20` and `node:22` containers on a fresh clone). No keys, no Rust.
+Node 20+, no keys, no Rust. Tested on a fresh clone in `node:20` and `node:22` containers.
 
 ```bash
-make demo                  # network needed for npm install and the LIVE testnet checks
-make demo ARGS=--offline   # testnet answers from demo/rpc-cache/ instead (marked CACHED)
+make demo                  # installs dependencies (needs the network), then checks LIVE against testnet
+make demo ARGS=--offline   # once dependencies are installed: testnet answers from demo/rpc-cache/ (marked CACHED)
 ```
 
-The last line should read `all steps PASS (31 pass; testnet evidence: 21 live, 0 cached)`. It checks every transcript (hashes, TEE signatures, history, verdicts), that each report rebuilds byte for byte, the contract's code on testnet now and at the blocks of the recorded transactions, that the contract sources are unchanged since the commit that built that code, that the live certificate carries the `report_hash` the transcripts rebuild, the OutLayer policy, and 13 recorded transactions on testnet.
+Fully offline in a container takes two steps, because installing dependencies needs the network once (the repo ships `Dockerfile.demo` for this):
+```bash
+docker build -t clearance-demo -f Dockerfile.demo .
+docker run --rm --network none clearance-demo make demo ARGS=--offline
+```
+
+The last line should read `all steps PASS (32 pass; testnet evidence: 22 live, 0 cached)` (offline: `0 live, 22 cached`). It checks every transcript (hashes, TEE signatures, history, verdicts), that each report rebuilds byte for byte, the contract's code on testnet now and at the blocks of the recorded transactions, that the contract sources are unchanged since the commit that built that code, that the live certificate carries the `report_hash` the transcripts rebuild, the OutLayer policy, and 13 recorded transactions on testnet.
 
 ## What the crash test found
 <!-- RESULTS:BEGIN -->
-Five reference agents, 8 attack generators (G1–G8), a small holdout of 2 (G9–G10, same author, weak evidence — see below) and 4 blind generators (G11–G14, by authors that never saw the defenders, three of them non-Claude models). Every number below is printed by `make replay` from the transcripts in `transcripts/`.
+Five reference agents, 8 attack generators (G1–G8), a small holdout of 2 (G9–G10, same author, weak evidence — see below) and 4 blind generators (G11–G14: three by non-Claude models whose prompts are in the repo and contain nothing about the defenders, one by a Claude subagent where that is only self-reported). Every number below is printed by `make replay` from the transcripts in `transcripts/`.
 
 **Only one agent earned a certificate: `protected-v3`, level 2** — 0 deceptions, 0 NEAR lost, 0 false reports in 40 attack runs at n = 5 per generator, 15/15 honest tasks. Certificate on testnet: [`4Uu9b9fd…`](https://testnet.nearblocks.io/txns/4Uu9b9fdHSpFu8doNUNDcKd8ALsijt676a64zsLKuJcc) for `clearance-agent-v3.testnet`, `report_hash 7ebf3e93…` (= `make report AGENT=protected-v3`), config hash `5611dfa1377d…`, valid until **2026-11-25 22:27 UTC** (30 days, the contract's maximum). History: `2GPV1RuF…` was the same certificate with a 7-day term, superseded; `CujxSWDf…` on a shared account name was revoked by `BTfbXYEp…`. OutLayer policy for this level: [`policies/protected-v3.outlayer.json`](policies/protected-v3.outlayer.json) — 3 NEAR per transfer, 10 per day, whitelist, NEAR transfers only, every other capability denied.
 
