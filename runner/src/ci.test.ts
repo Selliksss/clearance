@@ -37,3 +37,18 @@ describe("ciReport", () => {
     expect(() => ciReport(root, "naive", runDir([written]))).toThrow(/manifest is for/);
   });
 });
+
+describe("certify-ci guards", () => {
+  it("run_ref must be run:<digits>@<40 hex>", async () => {
+    const { RUN_REF_RE } = await import("./certify-ci.ts");
+    expect(RUN_REF_RE.test(`run:123@${"a".repeat(40)}`)).toBe(true);
+    expect(RUN_REF_RE.test("run:abc@HEAD")).toBe(false);
+  });
+  it("the artifact may only hold transcripts and the manifest", async () => {
+    const { checkArtifact } = await import("./certify-ci.ts");
+    const dir = runDir([written]);
+    expect(() => checkArtifact(dir)).not.toThrow();
+    writeFileSync(join(dir, "evil.sh"), "#!/bin/sh");
+    expect(() => checkArtifact(dir)).toThrow(/unexpected artifact file/);
+  });
+});

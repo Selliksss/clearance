@@ -1,0 +1,116 @@
+# CI signer: the crash test runs here, in public (once the repo is public), so nobody has to trust
+# that the author did not discard unfavourable runs. Job 1 runs the whole levelled suite for a frozen
+# agent on the exact wasm deployed on testnet and uploads every transcript plus a manifest of every
+# planned run. Job 2 executes nothing from that artifact: it rebuilds the report with this commit's
+# code, checks it, and signs (or revokes) with its own function-call key, run_ref "run:<id>@<sha>".
+name: ci-signer
+
+on:
+  workflow_dispatch:
+    inputs:
+      agent:
+        description: Agent config in agents/ (frozen)
+        type: choice
+        options: [protected-v3]
+        default: protected-v3
+      mode:
+        description: smoke = 1 attack + 1 control, never signs; full = whole suite at n=5
+        type: choice
+        options: [smoke, full]
+        default: smoke
+
+permissions: {}
+
+concurrency:
+  group: ci-signer-${{ inputs.agent }}
+  cancel-in-progress: false
+
+jobs:
+  crash:
+    runs-on: ubuntu-latest
+    timeout-minutes: ${{ inputs.mode == 'full' && 330 || 25 }}
+    permissions:
+      contents: read
+    env:
+      AGENT: ${{ inputs.agent }}
+      MODE: ${{ inputs.mode }}
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+      - name: Install (no install scripts)
+        working-directory: runner
+        run: npm ci --ignore-scripts
+      - name: Crash test
+        working-directory: runner
+        env:
+          NEARAI_API_KEY: ${{ secrets.NEARAI_API_KEY }}
+        run: |
+          # Attack text is adversarial: stop GitHub from interpreting anything it might print as a workflow command.
+          echo "::stop-commands::$(openssl rand -hex 16)"
+          SMOKE=""; [ "$MODE" = "smoke" ] && SMOKE="--smoke"
+          npx tsx src/cli.ts crash --agent "$AGENT" --ci --run-id "$GITHUB_RUN_ID" $SMOKE
+      - name: Report
+        if: always()
+        working-directory: runner
+        run: |
+          echo "::stop-commands::$(openssl rand -hex 16)"
+          npx tsx src/report-cli.ts "$AGENT" --ci "../transcripts-ci/$GITHUB_RUN_ID/$AGENT" --out "../transcripts-ci/$GITHUB_RUN_ID/report.json"
+      - name: Summary (hex and integers only)
+        if: always()
+        run: |
+          node -e '
+            const r = require(process.argv[1]);
+            const ok = (v) => /^[0-9a-f]{64}$|^[0-9]+$|^(smoke|full|Attested|Allowlist|Foreign)$/.test(String(v)) ? v : "?";
+            const c = r.ci || {};
+            const lines = ["| field | value |", "|---|---|",
+              "| level | " + ok(r.level) + " |", "| endpoint class | " + ok(r.endpoint_class) + " |",
+              "| mode | " + ok(c.mode) + " |", "| planned | " + ok(c.planned) + " |", "| written | " + ok(c.written) + " |",
+              "| missing | " + ok((c.missing || []).length) + " |", "| attacks deceived | " + ok(r.totals.deceived) + " |",
+              "| controls completed | " + ok(r.totals.controls_completed) + "/" + ok(r.totals.controls) + " |",
+              "| config hash | " + ok(r.agent_config_hash) + " |", "| suite hash | " + ok(r.suite_hash) + " |"];
+            console.log(lines.join("\n"));
+          ' "$GITHUB_WORKSPACE/transcripts-ci/$GITHUB_RUN_ID/report.json" >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        if: always()
+        with:
+          name: ci-${{ github.run_id }}
+          path: transcripts-ci/${{ github.run_id }}/
+          retention-days: 90
+          if-no-files-found: error
+
+  sign:
+    needs: crash
+    # Only a full run, on main, first attempt, in the public repo (protected environment with the key).
+    if: always() && inputs.mode == 'full' && github.ref == 'refs/heads/main' && github.run_attempt == 1 && !github.event.repository.private
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: ci-signer
+    permissions:
+      contents: read
+    env:
+      AGENT: ${{ inputs.agent }}
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+      - name: Install (no install scripts)
+        working-directory: runner
+        run: npm ci --ignore-scripts
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: ci-${{ github.run_id }}
+          path: ${{ runner.temp }}/art
+      - name: Rebuild, check and sign
+        working-directory: runner
+        env:
+          CI_SIGNER_KEY: ${{ secrets.CI_SIGNER_KEY }}
+        run: |
+          echo "::stop-commands::$(openssl rand -hex 16)"
+          npx tsx src/certify-ci.ts "$AGENT" "$RUNNER_TEMP/art" | tee -a "$GITHUB_STEP_SUMMARY"

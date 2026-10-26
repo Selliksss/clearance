@@ -7,5 +7,7 @@
     "naive": "lt-dopusk-agent-naive.testnet",
     "protected": "lt-dopusk-agent-protected.testnet",
     "protected-v3": "clearance-agent-v3.testnet"
-  }
+  },
+  "ci_signer": "lt-dopusk-ci-signer.testnet",
+  "ci_signer_fc_public_key": "ed25519:ExuyfUsJEru1UHK6HJFbrpPqWFeDu5mDEeGqDXfvpwrt"
 }
