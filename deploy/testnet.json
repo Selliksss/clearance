@@ -6,6 +6,6 @@
   "agents": {
     "naive": "lt-dopusk-agent-naive.testnet",
     "protected": "lt-dopusk-agent-protected.testnet",
-    "protected-v3": "lt-dopusk-agent-protected.testnet"
+    "protected-v3": "clearance-agent-v3.testnet"
   }
 }
