@@ -54,7 +54,7 @@ async function accountExists(id) {
 // final outcome. Retries signing on a stale nonce (near-cli and this RPC may lag).
 async function call(who, method, args, deposit = "0 NEAR", key = null) {
   const sign = key ? ["sign-with-access-key-file", key] : ["sign-with-legacy-keychain"];
-  const base = { signer: who, method };
+  const base = { signer: who, method, args, deposit };
   for (let attempt = 0; attempt < 3; attempt++) {
     const r = cli(["contract", "call-function", "as-transaction", CONTRACT, method, "json-args", JSON.stringify(args),
       "prepaid-gas", "50.0 Tgas", "attached-deposit", deposit, "sign-as", who, "network-config", "testnet", ...sign, "display"]);
@@ -88,7 +88,15 @@ function judge(result) {
   const receiptFailed = result.receipts_outcome.some((o) => o.outcome.status.Failure);
   const value = result.status.SuccessValue;
   const ok = typeof value === "string" && !panic && !receiptFailed;
-  return { ok, value, actual: panic ?? (ok ? "success" : `failure: ${JSON.stringify(result.status).slice(0, 200)}`) };
+  const decoded = typeof value === "string" && value ? JSON.parse(Buffer.from(value, "base64").toString()) : null;
+  return {
+    ok, value, decoded,
+    actual: panic ?? (ok ? "success" : `failure: ${JSON.stringify(result.status).slice(0, 200)}`),
+    public_key: result.transaction.public_key,
+    block_hash: result.transaction_outcome.block_hash,
+    receipt_ids: result.receipts_outcome.map((o) => o.id),
+    logs: result.receipts_outcome.flatMap((o) => o.outcome.logs),
+  };
 }
 
 const steps = [];
@@ -99,10 +107,20 @@ function step(name, expect, res, error = null) {
     expect === "failure" ? !res.ok && res.actual.includes(error)
       : expect === "landed" ? res.ok && res.value === TRUE_B64
         : res.ok);
-  steps.push({ step: name, signer: res.signer, method: res.method, tx: res.tx, expect, ...(error ? { error } : {}), actual: res.actual, pass });
+  steps.push({ step: name, signer: res.signer, public_key: res.public_key ?? null, method: res.method, args: res.args,
+    deposit: res.deposit, tx: res.tx, block_hash: res.block_hash ?? null, expect, ...(error ? { error } : {}), actual: res.actual,
+    return_value: res.decoded ?? null, receipt_ids: res.receipt_ids ?? [], logs: res.logs ?? [], pass });
   console.log(`${pass ? "PASS" : "FAIL"}  ${name}  ${res.tx ?? "(no tx)"}  [${res.actual}]`);
   return res;
 }
+
+// What produced these results: the code on chain, the commit it was built from,
+// and the runner's access keys (its function-call key must be limited to certify/revoke).
+const codeHash = (await rpc("query", { request_type: "view_account", finality: "final", account_id: CONTRACT })).result.code_hash;
+const commit = spawnSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).stdout.trim();
+const dirty = spawnSync("git", ["status", "--porcelain", "contract/"], { encoding: "utf8" }).stdout.trim() !== "";
+const runnerKeys = (await rpc("query", { request_type: "view_access_key_list", finality: "final", account_id: RUNNER })).result.keys
+  .map((k) => ({ public_key: k.public_key, permission: k.access_key.permission }));
 
 // Setup: a merchant account must exist, otherwise "pays the shop" would be refunded.
 if (!(await accountExists(SHOP))) {
@@ -139,6 +157,9 @@ step("owner withdraws 0.3 NEAR", "landed", await call(OWNER, "withdraw", { vault
 const failed = steps.filter((s) => !s.pass).length;
 mkdirSync(DEMO_DIR, { recursive: true });
 const file = join(DEMO_DIR, failed ? "txs.failed.json" : "txs.json");
-writeFileSync(file, `${JSON.stringify({ network: "testnet", contract: CONTRACT, vault_id: vaultId, steps }, null, 2)}\n`);
+const header = { network: "testnet", contract: CONTRACT, code_hash: codeHash, commit, contract_dir_dirty: dirty,
+  recorded_at: new Date().toISOString(), vault_id: vaultId, runner_access_keys: runnerKeys,
+  note: "Statuses older than a few days need an archival RPC node (e.g. archival-rpc.testnet.fastnear.com)." };
+writeFileSync(file, `${JSON.stringify({ ...header, steps }, null, 2)}\n`);
 console.log(failed ? `${failed} step(s) did not match; wrote ${file}` : `all steps matched; wrote ${file}`);
 process.exit(failed ? 1 : 0);

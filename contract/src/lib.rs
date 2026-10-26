@@ -185,6 +185,11 @@ impl Contract {
             return None;
         }
         let mut levels = v.trusted_signers.iter().map(|s| {
+            // Re-checked here, not only in validate_signers: an agent's own
+            // certificate never counts (under All it blocks, under Any it is skipped).
+            if s == &v.agent {
+                return None;
+            }
             self.certs
                 .get(&(v.agent.clone(), s.clone()))
                 .filter(|c| Self::cert_usable(c, v, now_ns))

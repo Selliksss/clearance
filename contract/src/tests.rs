@@ -775,3 +775,197 @@ fn is_certified_rejects_level_zero_query() {
     assert!(!c.is_certified(agent(), signer(), 0));
     assert!(c.is_certified(agent(), signer(), 1));
 }
+
+// ---- gaps found in review ----
+
+fn event(log: &str) -> near_sdk::serde_json::Value {
+    near_sdk::serde_json::from_str(log.strip_prefix("EVENT_JSON:").expect("event log")).unwrap()
+}
+
+#[test]
+fn spend_and_certify_events_carry_their_fields() {
+    let mut c = contract();
+    let id = vault(&mut c);
+    certify(&mut c, 2);
+    let e = event(get_logs().last().unwrap());
+    assert_eq!(e["standard"], "clearance");
+    assert_eq!(e["event"], "certify");
+    assert_eq!(e["data"][0]["level"], 2);
+    assert_eq!(e["data"][0]["report_hash"], hash('b'));
+    assert_eq!(e["data"][0]["run_ref"], "run:1@abc");
+    set(&agent(), 0);
+    let _ = c.spend(id, shop(), U128(2 * NEAR), Some("inv-1".into()));
+    let e = event(get_logs().last().unwrap());
+    assert_eq!(e["event"], "spend");
+    let d = &e["data"][0];
+    assert_eq!(d["vault_id"], id);
+    assert_eq!(d["receiver"], "shop.near");
+    assert_eq!(d["amount"], (2 * NEAR).to_string());
+    assert_eq!(d["bucket"], 10 * DAY / H);
+    assert_eq!(d["level"], 2);
+    assert_eq!(d["memo"], "inv-1");
+}
+
+#[test]
+#[should_panic(expected = "no vault")]
+fn spend_on_missing_vault_rejected() {
+    let mut c = contract();
+    set(&agent(), 0);
+    let _ = c.spend(7, shop(), U128(NEAR), None);
+}
+
+#[test]
+#[should_panic(expected = "no valid certificate")]
+fn policy_any_without_usable_certs_blocks_spend() {
+    let mut c = contract();
+    let id = vault_with(&mut c, vec![signer(), signer2()], Policy::Any, 10 * NEAR);
+    certify_as(&mut c, &signer2(), 2, EndpointClass::Foreign); // filtered out
+    spend(&mut c, id, 1);
+}
+
+#[test]
+#[should_panic(expected = "no valid certificate")]
+fn adding_uncertified_signer_under_all_freezes_agent() {
+    let mut c = contract();
+    let id = vault(&mut c);
+    certify(&mut c, 2);
+    spend(&mut c, id, 1);
+    set(&owner(), 1);
+    c.set_trusted_signers(id, vec![signer(), signer2()], Policy::All);
+    spend(&mut c, id, 1);
+}
+
+#[test]
+#[should_panic(expected = "ttl out of range")]
+fn zero_ttl_rejected() {
+    let mut c = contract();
+    set(&signer(), 0);
+    c.certify(
+        agent(),
+        1,
+        1,
+        hash('a'),
+        0,
+        hash('b'),
+        hash('c'),
+        EndpointClass::Allowlist,
+        None,
+        U64(0),
+    );
+}
+
+#[test]
+fn recertify_with_shorter_run_ref_refunds_storage() {
+    let mut c = contract();
+    certify(&mut c, 2); // run_ref "run:1@abc"
+    let before = c.storage_balance_of(signer()).0;
+    set(&signer(), 0);
+    c.certify(
+        agent(),
+        2,
+        1,
+        hash('a'),
+        0,
+        hash('b'),
+        hash('c'),
+        EndpointClass::Attested,
+        None,
+        U64(DAY),
+    );
+    assert!(c.storage_balance_of(signer()).0 > before);
+}
+
+#[test]
+fn storage_deposit_for_another_account() {
+    let mut c = contract();
+    set(&owner(), NEAR / 10);
+    c.storage_deposit(Some(signer()));
+    assert!(c.storage_balance_of(signer()).0 > 0);
+    assert_eq!(c.storage_balance_of(owner()).0, 0);
+}
+
+#[test]
+fn partial_storage_withdraw_keeps_entry() {
+    let mut c = contract();
+    set(&signer(), NEAR / 10);
+    let credited = c.storage_deposit(None).0;
+    set(&signer(), 1);
+    let _ = c.storage_withdraw(U128(credited / 2));
+    assert_eq!(c.storage_balance_of(signer()).0, credited - credited / 2);
+}
+
+#[test]
+#[should_panic(expected = "vault balance cannot cover storage")]
+fn settings_growth_needs_vault_balance() {
+    let mut c = contract();
+    set(&owner(), 20 * NEAR);
+    let id = c.create_vault(
+        agent(),
+        U128(NEAR),
+        vec![],
+        vec![signer()],
+        Policy::All,
+        1,
+        0,
+        false,
+    );
+    let paid = c.get_vault(id).unwrap().storage_paid.0;
+    set(&owner(), 1);
+    let _ = c.withdraw(id, U128(20 * NEAR - paid));
+    set(&owner(), 1);
+    c.set_receivers(
+        id,
+        (0..10)
+            .map(|i| acc(&format!("receiver-{i}.near")))
+            .collect(),
+    );
+}
+
+#[test]
+#[should_panic(expected = "only the vault owner")]
+fn deposit_by_stranger_rejected() {
+    let mut c = contract();
+    let id = vault(&mut c);
+    set(&agent(), NEAR);
+    c.deposit(id);
+}
+
+#[test]
+#[should_panic(expected = "attach a deposit")]
+fn zero_deposit_rejected() {
+    let mut c = contract();
+    let id = vault(&mut c);
+    set(&owner(), 0);
+    c.deposit(id);
+}
+
+#[test]
+fn failed_transfer_for_removed_vault_credits_owner() {
+    let mut c = contract();
+    callback_env(PromiseResult::Failed);
+    assert!(!c.on_transfer_done(42, owner(), 0, U128(NEAR)));
+    let bal = c.storage_balance_of(owner()).0;
+    assert!(bal > 0 && bal < NEAR);
+}
+
+#[test]
+#[should_panic(expected = "bucket_ns must be positive")]
+fn init_rejects_zero_bucket() {
+    set(&owner(), 0);
+    Contract::init(U64(0), [U128(1), U128(2)], U64(DAY));
+}
+
+#[test]
+#[should_panic(expected = "level caps must be positive and non-decreasing")]
+fn init_rejects_decreasing_caps() {
+    set(&owner(), 0);
+    Contract::init(U64(H), [U128(10), U128(3)], U64(DAY));
+}
+
+#[test]
+fn is_certified_false_after_expiry() {
+    let mut c = contract();
+    certify(&mut c, 2); // ttl 7 days from day 10
+    set_at(&signer(), 0, 17 * DAY + 1);
+    assert!(!c.is_certified(agent(), signer(), 1));
+}

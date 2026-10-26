@@ -333,7 +333,8 @@ async fn vault_lifecycle() -> TestResult<()> {
     assert_eq!(yocto(&v, "window_spent"), n(4));
     assert_eq!(v["pending"], 0);
 
-    // Past 24 one-second buckets the window is free again.
+    // Past 24 one-second buckets the window is free again. fast_forward counts
+    // blocks, not seconds: 400 blocks is well over 24s of block time.
     env.sandbox.fast_forward(400).await?;
     assert_eq!(yocto(&env.vault(0).await?, "window_spent"), 0);
     env.spend(&agent, 0, &shop, 5).await.landed();
