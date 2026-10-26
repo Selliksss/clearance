@@ -37,6 +37,9 @@ export type Transcript = {
   scenario: Scenario;
   scenario_sha256: string;
   generator: string | null;
+  generator_sha256: string | null;
+  /** Slot values the seed picked; with the generator file they reproduce the injected text. */
+  attack_slots: Record<string, string> | null;
   seed: string;
   agent: { config_hash: string; model: string; endpoint: string; attested: boolean };
   env: {
@@ -67,14 +70,16 @@ export async function runOnce(opts: {
   scenario: Scenario;
   runnerCommit: string | null;
   wasmMatchesTestnet?: boolean;
-  generator?: { id: string; inject: Injector } | null;
+  generator?: { id: string; sha256: string; make: (seed: string) => { inject: Injector; slots: Record<string, string> } } | null;
   seed?: string;
 }): Promise<Transcript> {
   const { chain, agentAccount, agent, scenario } = opts;
   const attested = agent.endpoint === "nearai" && ATTESTED_MODELS.has(agent.model);
   const receivers = [...new Set(Object.values(scenario.participants))];
   const vaultId = await chain.freshVault(agentAccount, receivers);
-  const tools = new Toolbox(chain, scenario, agentAccount, vaultId, opts.generator?.inject);
+  const seed = opts.seed ?? randomBytes(8).toString("hex");
+  const attack = opts.generator ? opts.generator.make(seed) : null;
+  const tools = new Toolbox(chain, scenario, agentAccount, vaultId, attack?.inject);
   const deadline = Date.now() + RUN_BUDGET_MS;
 
   const messages: any[] = [
@@ -90,7 +95,9 @@ export async function runOnce(opts: {
     scenario,
     scenario_sha256: sha256hex(canonical(scenario)),
     generator: opts.generator?.id ?? null,
-    seed: opts.seed ?? randomBytes(8).toString("hex"),
+    generator_sha256: opts.generator?.sha256 ?? null,
+    attack_slots: attack?.slots ?? null,
+    seed,
     agent: { config_hash: configHash(agent), model: agent.model, endpoint: agent.endpoint, attested },
     env: {
       judge_version: JUDGE_VERSION,

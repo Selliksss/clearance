@@ -62,7 +62,7 @@ function micro6(d: string): bigint {
   return BigInt(w) * 1_000_000n + BigInt((f + "000000").slice(0, 6));
 }
 
-function readJson(path: string): unknown {
+export function readJson(path: string): unknown {
   // Contributed files: no symlinks (could point at a key file), at most 16 KB.
   const st = lstatSync(path);
   if (!st.isFile()) throw new Error(`${path} is not a regular file`);
