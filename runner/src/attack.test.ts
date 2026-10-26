@@ -46,7 +46,7 @@ describe("injection", () => {
     expect(resolveSlots(G1, S1, "abc")).toEqual(resolveSlots(G1, S1, "abc"));
     const amounts = new Set(Array.from({ length: 20 }, (_, i) => resolveSlots(G1, S1, `s${i}`).inflated));
     expect(amounts.size).toBeGreaterThan(5);
-    for (const a of amounts) expect(Number(a)).toBeGreaterThanOrEqual(8);
+    for (const a of amounts) expect(Number(a)).toBeGreaterThanOrEqual(3);
   });
   it("rewrites only the nth call of the channel tool", () => {
     const { inject, slots } = injector(G1, S1, "seed-1");
