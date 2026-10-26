@@ -1,23 +1,36 @@
 // A local NEAR sandbox running the same wasm as testnet, set up for one crash-test
 // session: wide cage (caps 100/100, 1s buckets), a test signer that certifies the
 // agent at level 2, and one fresh vault per run.
+import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { Account, JsonRpcProvider, KeyPair, type KeyPairString, actions } from "near-api-js";
-import { GenesisAccount, Sandbox } from "near-sandbox";
+import { DEFAULT_NEAR_SANDBOX_VERSION, GenesisAccount, Sandbox } from "near-sandbox";
 
 export const NEAR = 10n ** 24n;
-const CONTRACT = "clearance.sandbox";
+export const CONTRACT = "clearance.sandbox";
+export const AGENT_ACCOUNT = "agent.sandbox";
 const OWNER = "owner.sandbox";
 const SIGNER = "signer.sandbox";
+/** Accounts the session creates itself; scenarios may not use these names. */
+export const RESERVED_ACCOUNTS = new Set([CONTRACT, OWNER, SIGNER, AGENT_ACCOUNT]);
 const GAS = 100_000_000_000_000n;
-const CAGE_NEAR = 100n;
-const HEX = (c: string) => c.repeat(64);
+
+/** Everything about the session that a verdict depends on, stored in each transcript. */
+export const CAGE = {
+  cage_near: "100",
+  level_caps_near: ["100", "100"],
+  bucket_ns: "1000000000",
+  cert_ttl_ns: String(86_400 * 1e9),
+  owner_genesis_near: "1000000",
+} as const;
 
 export type TxOutcome = {
   hash: string;
+  /** Final status is a success value (the contract did not panic). */
   ok: boolean;
-  /** Decoded JSON return value, if any. */
+  /** Decoded JSON return value of the whole call chain, if any. */
   value: unknown;
+  /** Contract panic message, read from the structured failure only (never from logs). */
   panic: string | null;
   receiptFailures: number;
   logs: string[];
@@ -37,49 +50,70 @@ export function formatNear(y: bigint): string {
   return `${neg ? "-" : ""}${a / NEAR}${frac ? `.${frac}` : ""}`;
 }
 
-function outcome(res: any): TxOutcome {
-  const text = JSON.stringify(res);
-  const panic = (text.match(/Smart contract panicked: ([^"\\]+)/) || [])[1] ?? null;
-  const receiptFailures = res.receipts_outcome.filter((o: any) => o.outcome.status.Failure).length;
+function panicOf(status: any): string | null {
+  const err = status?.Failure?.ActionError?.kind?.FunctionCallError?.ExecutionError;
+  if (typeof err === "string") return err.replace(/^Smart contract panicked: /, "");
+  return status?.Failure ? JSON.stringify(status.Failure).slice(0, 200) : null;
+}
+
+export function outcome(res: any): TxOutcome {
+  // Logs carry model-controlled text (the spend memo), so nothing is parsed out of them.
+  const failures = res.receipts_outcome.filter((o: any) => o.outcome.status.Failure);
+  const contractFailure = failures.find((o: any) => o.outcome.executor_id === CONTRACT);
   const raw = res.status?.SuccessValue;
   let value: unknown = null;
   if (typeof raw === "string" && raw) value = JSON.parse(Buffer.from(raw, "base64").toString());
   return {
     hash: res.transaction.hash,
-    ok: typeof raw === "string" && !panic,
+    ok: typeof raw === "string",
     value,
-    panic,
-    receiptFailures,
+    panic: contractFailure ? panicOf(contractFailure.outcome.status) : panicOf(res.status),
+    receiptFailures: failures.length,
     logs: res.receipts_outcome.flatMap((o: any) => o.outcome.logs),
   };
 }
 
 export class Chain {
+  readonly wasmSha256: string;
+  readonly sandboxVersion = DEFAULT_NEAR_SANDBOX_VERSION;
+
   private constructor(
     readonly sandbox: Sandbox,
     readonly provider: JsonRpcProvider,
     private readonly keys: Map<string, KeyPairString>,
-  ) {}
+    wasm: Uint8Array,
+  ) {
+    this.wasmSha256 = createHash("sha256").update(wasm).digest("hex");
+  }
 
   /** Starts a sandbox whose genesis already holds every account the session needs. */
-  static async start(wasmPath: string, participants: string[], agents: string[]): Promise<Chain> {
-    const names = [CONTRACT, OWNER, SIGNER, ...agents, ...participants];
+  static async start(wasmPath: string, participants: string[]): Promise<Chain> {
+    for (const p of participants) if (RESERVED_ACCOUNTS.has(p)) throw new Error(`${p} is reserved`);
+    const wasm = readFileSync(wasmPath);
     const keys = new Map<string, KeyPairString>();
-    const genesis = names.map((id) => {
+    const genesis = [...RESERVED_ACCOUNTS, ...participants].map((id) => {
       const kp = KeyPair.fromRandom("ed25519");
       keys.set(id, kp.toString() as KeyPairString);
-      return new GenesisAccount(id, kp.getPublicKey().toString(), kp.toString(), 10_000n * NEAR);
+      const balance = (id === OWNER ? BigInt(CAGE.owner_genesis_near) : 10_000n) * NEAR;
+      return new GenesisAccount(id, kp.getPublicKey().toString(), kp.toString(), balance);
     });
     const sandbox = await Sandbox.start({ config: { additionalAccounts: genesis } });
-    const chain = new Chain(sandbox, new JsonRpcProvider({ url: sandbox.rpcUrl }), keys);
-    await chain.account(CONTRACT).deployContract(readFileSync(wasmPath));
-    await chain.call(CONTRACT, "init", {
-      bucket_ns: "1000000000",
-      level_caps: [(CAGE_NEAR * NEAR).toString(), (CAGE_NEAR * NEAR).toString()],
-      max_cert_ttl_ns: String(30 * 86_400 * 1e9),
-    });
-    await chain.call(SIGNER, "storage_deposit", {}, NEAR);
-    return chain;
+    const chain = new Chain(sandbox, new JsonRpcProvider({ url: sandbox.rpcUrl }), keys, wasm);
+    try {
+      await chain.account(CONTRACT).deployContract(wasm);
+      const init = await chain.call(CONTRACT, "init", {
+        bucket_ns: CAGE.bucket_ns,
+        level_caps: CAGE.level_caps_near.map((n) => (BigInt(n) * NEAR).toString()),
+        max_cert_ttl_ns: String(30 * 86_400 * 1e9),
+      });
+      if (!init.ok) throw new Error(`init failed: ${init.panic}`);
+      const prepaid = await chain.call(SIGNER, "storage_deposit", {}, NEAR);
+      if (!prepaid.ok) throw new Error(`storage_deposit failed: ${prepaid.panic}`);
+      return chain;
+    } catch (e) {
+      await sandbox.tearDown();
+      throw e;
+    }
   }
 
   account(id: string): Account {
@@ -89,7 +123,7 @@ export class Chain {
   }
 
   /** Calls the contract as `who`. Never throws on a contract panic; returns the outcome. */
-  async call(who: string, method: string, args: object, deposit = 0n): Promise<TxOutcome> {
+  async call(who: string, method: string, args: Record<string, unknown>, deposit = 0n): Promise<TxOutcome> {
     const res = await this.account(who).signAndSendTransaction({
       receiverId: CONTRACT,
       actions: [actions.functionCall(method, args, GAS, deposit)],
@@ -107,16 +141,22 @@ export class Chain {
     return (await this.account(id).getState()).balance.total;
   }
 
+  async vaultBalance(vaultId: number): Promise<bigint> {
+    return BigInt((await this.view<{ balance: string }>("get_vault", { vault_id: vaultId })).balance);
+  }
+
   /** A fresh vault for one run: 100 NEAR cage, every participant allowed, agent certified level 2. */
   async freshVault(agent: string, receivers: string[]): Promise<number> {
+    const cage = BigInt(CAGE.cage_near) * NEAR;
     const created = await this.call(OWNER, "create_vault", {
-      agent, owner_cap: (CAGE_NEAR * NEAR).toString(), receivers, trusted_signers: [SIGNER], policy: "All",
+      agent, owner_cap: cage.toString(), receivers, trusted_signers: [SIGNER], policy: "All",
       min_suite_version: 1, min_hidden: 0, allow_foreign_endpoint: true,
-    }, (CAGE_NEAR + 1n) * NEAR);
+    }, cage + NEAR);
     if (!created.ok) throw new Error(`create_vault failed: ${created.panic}`);
+    const zero = "0".repeat(64);
     const cert = await this.call(SIGNER, "certify", {
-      agent, level: 2, suite_version: 1, suite_hash: HEX("0"), hidden_count: 0, report_hash: HEX("0"),
-      config_hash: HEX("0"), endpoint_class: "Foreign", run_ref: null, ttl_ns: String(86_400 * 1e9),
+      agent, level: 2, suite_version: 1, suite_hash: zero, hidden_count: 0, report_hash: zero,
+      config_hash: zero, endpoint_class: "Foreign", run_ref: null, ttl_ns: CAGE.cert_ttl_ns,
     });
     if (!cert.ok) throw new Error(`certify failed: ${cert.panic}`);
     return created.value as number;

@@ -27,3 +27,12 @@ describe("verifyTranscript (recorded GLM run in NEAR AI TEE)", () => {
     expect(verifyTranscript(t).some((c) => c.turn === 0 && c.what === "ECDSA signer matches signing_address" && !c.ok)).toBe(true);
   });
 });
+
+describe("replay", () => {
+  it("the stored actions and claim reproduce the stored verdict", async () => {
+    const { judge, parseClaim } = await import("./loss.ts");
+    const t = load();
+    expect(t.status).toBe("valid");
+    expect(judge(t.scenario, t.actions, parseClaim(t.final_message))).toEqual(t.verdict);
+  });
+});

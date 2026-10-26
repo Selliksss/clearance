@@ -1,17 +1,17 @@
 // Usage:
 //   tsx src/cli.ts crash --agent naive [--scenario S1-invoice] [--control] [--runs 1]
-// Writes transcripts/<agent>/<run_id>.json and prints one line per run.
+// Writes transcripts/<agent>/<run_id>.json (invalid runs included, marked) and prints one line per run.
+import { spawnSync } from "node:child_process";
 import { mkdirSync, readdirSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseArgs } from "node:util";
-import { Chain, formatNear } from "./chain.ts";
+import { AGENT_ACCOUNT, Chain, formatNear } from "./chain.ts";
 import { runOnce } from "./run.ts";
 import { loadAgent, loadScenario } from "./scenario.ts";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 const WASM = join(ROOT, "contract", "target", "near", "clearance.wasm");
-const AGENT_ACCOUNT = "agent.sandbox";
 
 const { positionals, values } = parseArgs({
   allowPositionals: true,
@@ -41,8 +41,20 @@ if (scenarios.length === 0) throw new Error(`no scenario ${values.scenario}`);
 const runs = Number(values.runs);
 if (!Number.isInteger(runs) || runs < 1 || runs > 30) throw new Error("--runs must be 1..30");
 
+const git = spawnSync("git", ["-C", ROOT, "rev-parse", "HEAD"], { encoding: "utf8" });
+const dirty = spawnSync("git", ["-C", ROOT, "status", "--porcelain", "runner/src", "contract/src", "agents", "scenarios"], { encoding: "utf8" });
+const runnerCommit = git.status === 0 ? `${git.stdout.trim()}${dirty.stdout.trim() ? "+dirty" : ""}` : null;
+
 const participants = [...new Set(scenarios.flatMap((s) => Object.values(s.participants)))];
-const chain = await Chain.start(WASM, participants, [AGENT_ACCOUNT]);
+const chain = await Chain.start(WASM, participants);
+let stopping = false;
+const stop = async () => {
+  if (stopping) return;
+  stopping = true;
+  await chain.stop();
+};
+for (const sig of ["SIGINT", "SIGTERM"] as const) process.on(sig, () => void stop().then(() => process.exit(130)));
+
 const outDir = join(ROOT, "transcripts", agentName);
 mkdirSync(outDir, { recursive: true });
 let failures = 0;
@@ -51,24 +63,24 @@ try {
     for (let i = 0; i < runs; i++) {
       let t;
       try {
-        t = await runOnce({ chain, agentAccount: AGENT_ACCOUNT, agent, scenario });
+        t = await runOnce({ chain, agentAccount: AGENT_ACCOUNT, agent, scenario, runnerCommit });
       } catch (e) {
-        // Network or API failure: the run is invalid and is not scored or written.
         failures++;
-        console.log(`invalid ${scenario.id}: ${(e as Error).message}`);
+        console.log(`invalid ${scenario.id}: could not set up the run: ${(e as Error).message}`);
         continue;
       }
       writeFileSync(join(outDir, `${t.run_id}.json`), `${JSON.stringify(t, null, 2)}\n`);
       const v = t.verdict;
-      if (!v.completed || v.deceived) failures++;
+      if (t.status !== "valid" || !v.completed || v.deceived) failures++;
       const calls = t.turns.flatMap((x) => x.tool_calls.map((c) => c.name)).join(",");
       console.log(
-        `${t.kind} ${scenario.id} completed=${v.completed} deceived=${v.deceived} loss=${formatNear(BigInt(v.loss_yocto))} ` +
-        `false_report=${v.false_report} typo=${v.typo} turns=${t.turns.length} signed=${t.agent.attested} tools=[${calls}] -> ${t.run_id}`,
+        `${t.status === "valid" ? t.kind : `INVALID(${t.invalid_reason})`} ${scenario.id} completed=${v.completed} ` +
+        `deceived=${v.deceived} loss=${formatNear(BigInt(v.loss_yocto))} false_report=${v.false_report} ` +
+        `typo=${v.typo} turns=${t.turns.length} signed=${t.agent.attested} tools=[${calls}] -> ${t.run_id}`,
       );
     }
   }
 } finally {
-  await chain.stop();
+  await stop();
 }
 process.exit(failures ? 1 : 0);

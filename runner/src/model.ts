@@ -83,12 +83,12 @@ export async function complete(endpoint: EndpointName, body: Record<string, unkn
     signal: AbortSignal.timeout(TIMEOUT_MS),
   });
   const response = await readCapped(res);
-  if (!res.ok) throw new Error(`model API ${res.status}: ${Buffer.from(response).toString().slice(0, 300)}`);
+  if (!res.ok) throw new Error(`model API ${res.status}: ${redact(res.status, Buffer.from(response).toString())}`);
   const json = JSON.parse(Buffer.from(response).toString());
   const requested = String(body.model);
   const got = String(json.model ?? "");
   // The gateway may answer with a dated or unprefixed id; anything else is a substitution.
-  if (!(got.startsWith(requested) || got.startsWith(requested.split("/").pop()!))) {
+  if (!sameModel(requested, got)) {
     throw new Error(`model mismatch: asked ${requested}, got ${got}`);
   }
   return {
@@ -108,16 +108,37 @@ export async function complete(endpoint: EndpointName, body: Record<string, unkn
   };
 }
 
-/** Fetches the TEE signature record for a NEAR AI completion (attested models only). */
+/** "gpt-4.1-mini" matches "gpt-4.1-mini" and "gpt-4.1-mini-2025-04-14", not "gpt-4.1-mini-x". */
+export function sameModel(requested: string, got: string): boolean {
+  const esc = (m: string) => m.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const short = requested.split("/").pop()!;
+  return [requested, short].some((m) => new RegExp(`^${esc(m)}(-\\d{4}-\\d{2}-\\d{2})?$`).test(got));
+}
+
+/** Auth errors can echo a masked key; never print their bodies. */
+function redact(status: number, body: string): string {
+  if (status === 401 || status === 403) return "(auth error body withheld)";
+  return body.replace(/\b(sk|nai|key)[-_][A-Za-z0-9*_-]{6,}/g, "[redacted]").slice(0, 300);
+}
+
+/** Fetches the TEE signature record for a NEAR AI completion (attested models only).
+ *  The record can lag the completion by a moment, so it is retried briefly. */
 export async function fetchSignature(completionId: string, model: string): Promise<SignatureRecord> {
   const url = `${ENDPOINTS.nearai.base}/signature/${encodeURIComponent(completionId)}?model=${encodeURIComponent(model)}&signing_algo=ecdsa`;
-  const res = await fetch(url, {
-    headers: { authorization: `Bearer ${key(ENDPOINTS.nearai.keyVar)}`, accept: "application/json" },
-    redirect: "error",
-    signal: AbortSignal.timeout(TIMEOUT_MS),
-  });
-  if (!res.ok) throw new Error(`signature API ${res.status}: ${(await res.text()).slice(0, 200)}`);
-  return (await res.json()) as SignatureRecord;
+  let last = "";
+  for (let attempt = 0; attempt < 4; attempt++) {
+    if (attempt) await new Promise((r) => setTimeout(r, 1000 * 2 ** attempt));
+    const res = await fetch(url, {
+      headers: { authorization: `Bearer ${key(ENDPOINTS.nearai.keyVar)}`, accept: "application/json" },
+      redirect: "error",
+      signal: AbortSignal.timeout(TIMEOUT_MS),
+    });
+    const body = Buffer.from(await readCapped(res)).toString();
+    if (res.ok) return JSON.parse(body) as SignatureRecord;
+    last = `signature API ${res.status}: ${redact(res.status, body)}`;
+    if (res.status !== 404 && res.status < 500) break;
+  }
+  throw new Error(last);
 }
 
 /** Offline check that a signature's text covers exactly these bytes. ECDSA recovery is separate. */
