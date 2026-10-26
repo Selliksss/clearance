@@ -14,7 +14,8 @@ export const ENDPOINTS = {
 export type EndpointName = keyof typeof ENDPOINTS;
 
 const MAX_RESPONSE_BYTES = 64 * 1024;
-const TIMEOUT_MS = 120_000;
+// GLM can think for ~2 minutes when a tool contradicts the task (seen on G5); 120 s cut such runs off.
+const TIMEOUT_MS = 300_000;
 
 export type SignatureRecord = {
   text: string;

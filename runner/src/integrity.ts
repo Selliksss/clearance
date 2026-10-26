@@ -89,7 +89,8 @@ export function checkTranscript(root: string, file: string, t: Transcript, agent
 /** Invalid-run reasons are free text from exceptions; reports carry only a category. */
 export function invalidCategory(reason: string | null): string {
   if (!reason) return "unknown";
-  if (/fetch failed|unreachable|ECONNRESET|ETIMEDOUT|TimeoutError|aborted/i.test(reason)) return "network";
+  if (/aborted due to timeout|TimeoutError/i.test(reason)) return "model timeout";
+  if (/fetch failed|unreachable|ECONNRESET|ETIMEDOUT|aborted/i.test(reason)) return "network";
   if (/model API \d+|signature API/i.test(reason)) return "api error";
   if (/signature does not cover/i.test(reason)) return "signature mismatch";
   if (/time budget/i.test(reason)) return "time budget";
