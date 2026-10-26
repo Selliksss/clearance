@@ -126,6 +126,11 @@ fn validate_receivers(receivers: &[AccountId]) {
     require!(receivers.len() <= MAX_RECEIVERS, "at most 10 receivers");
     for (i, r) in receivers.iter().enumerate() {
         require!(!receivers[..i].contains(r), "duplicate receiver");
+        // Funds sent to the contract itself would leave vault accounting.
+        require!(
+            r != &env::current_account_id(),
+            "contract cannot be a receiver"
+        );
     }
 }
 
@@ -176,6 +181,9 @@ impl Contract {
     }
 
     fn level_of(&self, v: &Vault, now_ns: u64) -> Option<u8> {
+        if v.trusted_signers.is_empty() {
+            return None;
+        }
         let mut levels = v.trusted_signers.iter().map(|s| {
             self.certs
                 .get(&(v.agent.clone(), s.clone()))
@@ -234,9 +242,33 @@ impl Contract {
             );
             bal - cost
         } else {
-            bal + storage_cost(before - after)
+            bal.saturating_add(storage_cost(before - after))
         };
         self.storage_balance.insert(who.clone(), new_bal);
+    }
+
+    /// Adds to an account's storage balance. A new entry pays for its own
+    /// storage out of `amount`; if `amount` cannot cover it, the money stays
+    /// with the contract and is logged.
+    fn credit_storage(&mut self, who: &AccountId, amount: u128) -> u128 {
+        if let Some(bal) = self.storage_balance.get(who).copied() {
+            let new_bal = bal.saturating_add(amount);
+            self.storage_balance.insert(who.clone(), new_bal);
+            return new_bal;
+        }
+        let before = env::storage_usage();
+        self.storage_balance.insert(who.clone(), amount);
+        self.storage_balance.flush();
+        let cost = storage_cost(env::storage_usage() - before);
+        if amount < cost {
+            self.storage_balance.remove(who);
+            env::log_str(&format!(
+                "{amount} yoctoNEAR for {who} kept: below entry storage cost"
+            ));
+            return 0;
+        }
+        self.storage_balance.insert(who.clone(), amount - cost);
+        amount - cost
     }
 
     #[payable]
@@ -361,12 +393,12 @@ impl Contract {
             "withdraw",
             json!({ "vault_id": vault_id, "amount": amount }),
         );
-        Promise::new(owner)
+        Promise::new(owner.clone())
             .transfer(NearToken::from_yoctonear(amount.0))
             .then(
                 Self::ext(env::current_account_id())
                     .with_static_gas(CALLBACK_GAS)
-                    .on_withdraw_done(vault_id, amount),
+                    .on_withdraw_done(vault_id, owner, amount),
             )
     }
 
@@ -434,6 +466,7 @@ impl Contract {
         );
         require!(v.balance >= amount, "insufficient vault balance");
 
+        let owner = v.owner.clone();
         // Effects before the interaction; the callback undoes them on failure.
         v.balance -= amount;
         v.buckets.record(now_bucket, amount);
@@ -447,36 +480,65 @@ impl Contract {
             .then(
                 Self::ext(env::current_account_id())
                     .with_static_gas(CALLBACK_GAS)
-                    .on_transfer_done(vault_id, now_bucket, U128(amount)),
+                    .on_transfer_done(vault_id, owner, now_bucket, U128(amount)),
             )
     }
 
     /// Must not panic: a panic here would leave funds outside vault accounting.
     #[private]
-    pub fn on_transfer_done(&mut self, vault_id: u64, bucket: u64, amount: U128) -> bool {
+    /// Returns whether the transfer landed; the outer `spend` transaction
+    /// succeeds either way, so callers must read this value or the events.
+    pub fn on_transfer_done(
+        &mut self,
+        vault_id: u64,
+        owner: AccountId,
+        bucket: u64,
+        amount: U128,
+    ) -> bool {
         let ok = env::promise_result_checked(0, 0).is_ok();
-        if let Some(v) = self.vaults.get_mut(&vault_id) {
-            v.pending = v.pending.saturating_sub(1);
-            if !ok {
-                v.balance = v.balance.saturating_add(amount.0);
-                v.buckets.unrecord(bucket, amount.0);
-                emit(
-                    "spend_refunded",
-                    json!({ "vault_id": vault_id, "amount": amount, "bucket": bucket }),
-                );
+        match self.vaults.get_mut(&vault_id) {
+            Some(v) => {
+                v.pending = v.pending.saturating_sub(1);
+                if !ok {
+                    v.balance = v.balance.saturating_add(amount.0);
+                    v.buckets.unrecord(bucket, amount.0);
+                }
             }
+            // Unreachable while close_vault requires pending == 0; never lose the money.
+            None if !ok => {
+                self.credit_storage(&owner, amount.0);
+            }
+            None => {}
+        }
+        if !ok {
+            emit(
+                "spend_refunded",
+                json!({ "vault_id": vault_id, "amount": amount, "bucket": bucket }),
+            );
         }
         ok
     }
 
     #[private]
-    pub fn on_withdraw_done(&mut self, vault_id: u64, amount: U128) -> bool {
+    pub fn on_withdraw_done(&mut self, vault_id: u64, owner: AccountId, amount: U128) -> bool {
         let ok = env::promise_result_checked(0, 0).is_ok();
-        if let Some(v) = self.vaults.get_mut(&vault_id) {
-            v.pending = v.pending.saturating_sub(1);
-            if !ok {
-                v.balance = v.balance.saturating_add(amount.0);
+        match self.vaults.get_mut(&vault_id) {
+            Some(v) => {
+                v.pending = v.pending.saturating_sub(1);
+                if !ok {
+                    v.balance = v.balance.saturating_add(amount.0);
+                }
             }
+            None if !ok => {
+                self.credit_storage(&owner, amount.0);
+            }
+            None => {}
+        }
+        if !ok {
+            emit(
+                "withdraw_failed",
+                json!({ "vault_id": vault_id, "amount": amount }),
+            );
         }
         ok
     }
@@ -487,9 +549,11 @@ impl Contract {
     pub fn on_refund_done(&mut self, account_id: AccountId, amount: U128) -> bool {
         let ok = env::promise_result_checked(0, 0).is_ok();
         if !ok {
-            let bal = self.storage_balance.get(&account_id).copied().unwrap_or(0);
-            self.storage_balance
-                .insert(account_id, bal.saturating_add(amount.0));
+            self.credit_storage(&account_id, amount.0);
+            emit(
+                "refund_failed",
+                json!({ "account_id": account_id, "amount": amount }),
+            );
         }
         ok
     }
@@ -508,12 +572,7 @@ impl Contract {
             add >= min,
             "first storage deposit must be at least 0.01 NEAR"
         );
-        let new_bal = cur
-            .unwrap_or(0)
-            .checked_add(add)
-            .unwrap_or_else(|| fail("overflow"));
-        self.storage_balance.insert(who, new_bal);
-        U128(new_bal)
+        U128(self.credit_storage(&who, add))
     }
 
     #[payable]
@@ -522,9 +581,19 @@ impl Contract {
         let who = env::predecessor_account_id();
         let bal = self.storage_balance.get(&who).copied().unwrap_or(0);
         require!(amount.0 > 0 && amount.0 <= bal, "invalid amount");
-        self.storage_balance.insert(who.clone(), bal - amount.0);
+        let mut payout = amount.0;
+        if bal == amount.0 {
+            // Emptied: drop the entry and return the storage it was paying for.
+            let before = env::storage_usage();
+            self.storage_balance.remove(&who);
+            self.storage_balance.flush();
+            payout += storage_cost(before - env::storage_usage());
+        } else {
+            self.storage_balance.insert(who.clone(), bal - amount.0);
+        }
+        let amount = U128(payout);
         Promise::new(who.clone())
-            .transfer(NearToken::from_yoctonear(amount.0))
+            .transfer(NearToken::from_yoctonear(payout))
             .then(
                 Self::ext(env::current_account_id())
                     .with_static_gas(CALLBACK_GAS)
@@ -639,11 +708,16 @@ impl Contract {
         self.certs.get(&(agent, signer)).cloned()
     }
 
-    /// True if `signer` holds an unexpired certificate for `agent` at `level` or higher.
+    /// True if `signer` holds an unexpired certificate for `agent` at `level` or
+    /// higher. Weaker than what `spend` checks: it ignores a vault's minimum
+    /// suite version, hidden-slice count and endpoint class, and trusts whatever
+    /// `signer` the caller names. Read `get_cert` to apply those filters.
     pub fn is_certified(&self, agent: AccountId, signer: AccountId, level: u8) -> bool {
-        self.certs
-            .get(&(agent, signer))
-            .is_some_and(|c| c.level >= level && c.expires_ns.0 > env::block_timestamp())
+        level >= 1
+            && self
+                .certs
+                .get(&(agent, signer))
+                .is_some_and(|c| c.level >= level && c.expires_ns.0 > env::block_timestamp())
     }
 
     pub fn storage_balance_of(&self, account_id: AccountId) -> U128 {

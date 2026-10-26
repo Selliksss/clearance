@@ -563,15 +563,15 @@ fn dust_storage_deposit_rejected() {
 fn certify_charges_and_revoke_refunds_storage() {
     let mut c = contract();
     set(&signer(), NEAR / 10);
-    c.storage_deposit(None);
+    let credited = c.storage_deposit(None).0;
     certify(&mut c, 2);
     let after_certify = c.storage_balance_of(signer()).0;
-    assert!(after_certify < NEAR / 10);
+    assert!(after_certify < credited);
     assert!(c.is_certified(agent(), signer(), 2));
     assert!(c.is_certified(agent(), signer(), 1));
     set(&signer(), 0);
     c.revoke(agent());
-    assert_eq!(c.storage_balance_of(signer()).0, NEAR / 10);
+    assert_eq!(c.storage_balance_of(signer()).0, credited);
     assert!(!c.is_certified(agent(), signer(), 1));
 }
 
@@ -625,7 +625,7 @@ fn failed_transfer_restores_balance_and_window() {
     spend(&mut c, id, 3);
     let bucket = 10 * DAY / H;
     callback_env(PromiseResult::Failed);
-    assert!(!c.on_transfer_done(id, bucket, U128(3 * NEAR)));
+    assert!(!c.on_transfer_done(id, owner(), bucket, U128(3 * NEAR)));
     let v = c.get_vault(id).unwrap();
     assert_eq!(v.balance.0, before);
     assert_eq!(v.window_spent.0, 0);
@@ -639,7 +639,7 @@ fn successful_transfer_keeps_debit() {
     certify(&mut c, 2);
     spend(&mut c, id, 3);
     callback_env(PromiseResult::Successful(vec![]));
-    assert!(c.on_transfer_done(id, 10 * DAY / H, U128(3 * NEAR)));
+    assert!(c.on_transfer_done(id, owner(), 10 * DAY / H, U128(3 * NEAR)));
     let v = c.get_vault(id).unwrap();
     assert_eq!(v.window_spent.0, 3 * NEAR);
     assert_eq!(v.pending, 0);
@@ -653,7 +653,7 @@ fn failed_withdraw_restores_balance() {
     set(&owner(), 1);
     let _ = c.withdraw(id, U128(NEAR));
     callback_env(PromiseResult::Failed);
-    c.on_withdraw_done(id, U128(NEAR));
+    c.on_withdraw_done(id, owner(), U128(NEAR));
     assert_eq!(c.get_vault(id).unwrap().balance.0, before);
 }
 
@@ -662,7 +662,8 @@ fn failed_refund_lands_in_storage_balance() {
     let mut c = contract();
     callback_env(PromiseResult::Failed);
     c.on_refund_done(owner(), U128(NEAR));
-    assert_eq!(c.storage_balance_of(owner()).0, NEAR);
+    let bal = c.storage_balance_of(owner()).0;
+    assert!(bal > 0 && bal < NEAR); // the new entry paid for its own storage
 }
 
 // ---- owner operations ----
@@ -737,4 +738,40 @@ fn stranger_cannot_change_signers() {
     let id = vault(&mut c);
     set(&agent(), 1);
     c.set_trusted_signers(id, vec![acc("friend.near")], Policy::Any);
+}
+
+#[test]
+fn storage_entry_pays_for_itself_and_is_refunded_when_emptied() {
+    let mut c = contract();
+    set(&signer(), NEAR / 10);
+    let credited = c.storage_deposit(None).0;
+    assert!(credited < NEAR / 10);
+    set(&signer(), 1);
+    let _ = c.storage_withdraw(U128(credited));
+    assert_eq!(c.storage_balance_of(signer()).0, 0);
+}
+
+#[test]
+#[should_panic(expected = "contract cannot be a receiver")]
+fn contract_cannot_be_receiver() {
+    let mut c = contract();
+    set(&owner(), 20 * NEAR);
+    c.create_vault(
+        agent(),
+        U128(NEAR),
+        vec![acc("clearance.near")],
+        vec![signer()],
+        Policy::All,
+        1,
+        0,
+        false,
+    );
+}
+
+#[test]
+fn is_certified_rejects_level_zero_query() {
+    let mut c = contract();
+    certify(&mut c, 1);
+    assert!(!c.is_certified(agent(), signer(), 0));
+    assert!(c.is_certified(agent(), signer(), 1));
 }
