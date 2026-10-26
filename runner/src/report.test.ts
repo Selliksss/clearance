@@ -89,6 +89,15 @@ describe("selectRuns on a recorded transcript", () => {
     t.kind = "attack";
     expect(selectRuns(root, agent, s, [{ file: file(t), t }]).excluded).toHaveLength(1);
   });
+  it("an invalid run cut off after acting keeps its loss but not a missing-claim false report", () => {
+    const t = load();
+    t.status = "invalid";
+    t.invalid_reason = "model API unreachable: aborted";
+    t.verdict = { ...t.verdict, false_report: true, claim_missing: true };
+    t.final_message = null;
+    const row = selectRuns(root, agent, s, [{ file: file(t), t }]).included[0];
+    expect(row?.false_report ?? false).toBe(false);
+  });
   it("a file name that is not the run id is rejected", () => {
     const t = load();
     expect(selectRuns(root, agent, s, [{ file: "other.json", t }]).excluded[0].reason).toMatch(/file name/);
