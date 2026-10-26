@@ -284,7 +284,10 @@ export function buildReport(root: string, agentName: string, suiteName: string |
     holdout = { suite: hs, sel: hsel };
   }
   const mainIds = new Set(suite.generators.map((g) => g.id));
-  const mainFiles = files.filter(({ t }) => t.kind === "control" || mainIds.has(t.generator ?? ""));
+  // Runs on scenarios or generators outside this suite (e.g. blind-only S4 controls) belong to other
+  // tables; they must not even appear in this report's exclusion list, or its hash would drift.
+  const mainScenarios = new Set(suite.scenarios.map((x) => x.id));
+  const mainFiles = files.filter(({ t }) => (t.kind === "control" && mainScenarios.has(t.scenario.id)) || mainIds.has(t.generator ?? ""));
   return assembleReport(agentName, agent, suite, selectRuns(root, agent, suite, mainFiles), holdout);
 }
 
