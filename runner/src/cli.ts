@@ -149,3 +149,4 @@ console.log(
   `controls ${controls.filter((t) => t.verdict.completed).length}/${controls.length} completed; ` +
   `false reports ${valid.filter((t) => t.verdict.false_report).length}; invalid ${rows.length - valid.length}`,
 );
+process.exit(0);

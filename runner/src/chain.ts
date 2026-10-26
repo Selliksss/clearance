@@ -162,7 +162,12 @@ export class Chain {
     return created.value as number;
   }
 
+  /** near-sandbox's own stop() waits for an "exit" event after SIGTERM and can hang forever
+   *  (the node sometimes ignores SIGTERM); give it 10 s, then SIGKILL. */
   async stop(): Promise<void> {
-    await this.sandbox.tearDown();
+    const child = (this.sandbox as unknown as { childProcess?: { kill(sig?: string): boolean; exitCode: number | null } }).childProcess;
+    const timeout = new Promise<"timeout">((r) => setTimeout(() => r("timeout"), 10_000));
+    const done = await Promise.race([this.sandbox.tearDown().then(() => "ok" as const, () => "error" as const), timeout]);
+    if (done !== "ok" && child && child.exitCode === null) child.kill("SIGKILL");
   }
 }
