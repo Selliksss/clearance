@@ -12,7 +12,7 @@ import { fileURLToPath } from "node:url";
 import { formatNear } from "./chain.ts";
 import { checkTranscript } from "./integrity.ts";
 import { JUDGE_VERSION, judge, parseClaim } from "./loss.ts";
-import { buildReport, byGenerator, reportHash } from "./report.ts";
+import { blindResults, buildReport, byGenerator, reportHash } from "./report.ts";
 import type { Transcript } from "./run.ts";
 import { loadAgent } from "./scenario.ts";
 
@@ -81,6 +81,7 @@ for (const agentName of dirs) {
     console.log(`| ${agentName} | control ${scen} | ${rs.length} | | | ${rs.filter((r) => r.completed).length}/${rs.length} (complete) | ${fr(null, scen)} |`);
   }
   for (const g of report.holdout?.by_generator ?? []) if (g.runs) row(`holdout ${g.generator}`, g, "");
+  for (const g of blindResults(ROOT, agentName)) if (g.runs) row(`blind ${g.generator}`, g, "");
   console.log(`| ${agentName} | **level ${report.level}** (${report.endpoint_class})${report.insufficient.length ? `, insufficient: ${report.insufficient.join(", ")}` : ""} | ${report.runs.length} | | | | excluded ${report.selection.excluded.length} |`);
 
   let committed: string | null = null;

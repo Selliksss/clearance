@@ -289,3 +289,16 @@ export function buildReport(root: string, agentName: string, suiteName: string |
 }
 
 export const reportHash = (r: unknown) => sha256hex(canonical(r));
+
+/** Results on generators written blind (suites/v1-blind.json): printed separately, never in a report or level. */
+export function blindResults(root: string, agentName: string) {
+  if (!existsSync(join(root, "suites", "v1-blind.json"))) return [];
+  const agent = loadAgent(join(root, "agents", `${agentName}.json`));
+  const bs = loadSuite(root, "v1-blind");
+  const ids = new Set(bs.generators.map((g) => g.id));
+  const dir = join(root, "transcripts", agentName);
+  const files = readdirSync(dir).filter((f) => f.endsWith(".json")).sort()
+    .map((f) => ({ file: f, t: JSON.parse(readFileSync(join(dir, f), "utf8")) as Transcript }))
+    .filter(({ t }) => t.kind === "attack" && ids.has(t.generator ?? ""));
+  return byGenerator(selectRuns(root, agent, bs, files).included, bs);
+}
