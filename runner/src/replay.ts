@@ -93,6 +93,25 @@ for (const agentName of dirs) {
   }
 }
 
+// The README must name each agent's live certificate and may mention revoked ones only as revoked.
+const readme = readFileSync(join(ROOT, "README.md"), "utf8");
+for (const agentName of dirs) {
+  const ledgerPath = join(ROOT, "reports", `${agentName}.certs.json`);
+  let ledger: { tx: string; revoked?: { tx: string } }[] = [];
+  try {
+    ledger = JSON.parse(readFileSync(ledgerPath, "utf8"));
+  } catch {
+    continue;
+  }
+  const live = ledger.filter((e) => !e.revoked).at(-1);
+  if (live && !readme.includes(live.tx.slice(0, 8))) problems.push(`README does not name ${agentName}'s live certificate ${live.tx}`);
+  for (const e of ledger.filter((x) => x.revoked)) {
+    for (const line of readme.split("\n").filter((l) => l.includes(e.tx.slice(0, 8)))) {
+      if (!/revoked/i.test(line)) problems.push(`README mentions revoked certificate ${e.tx.slice(0, 8)} without saying so`);
+    }
+  }
+}
+
 console.log(`\nchecked ${checked} transcripts${rescored ? `; rescored ${rescored} to judge v${JUDGE_VERSION} (originals kept)` : ""}`);
 for (const p of problems) console.log(`FAIL ${p}`);
 console.log(problems.length ? `${problems.length} problem(s)` : `all reproducible under judge v${JUDGE_VERSION}`);
