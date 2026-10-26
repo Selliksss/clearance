@@ -42,6 +42,8 @@ export type Transcript = {
   env: {
     judge_version: number;
     wasm_sha256: string;
+    /** The wasm's hash equals the code_hash of the testnet contract in demo/txs.json. */
+    wasm_matches_testnet: boolean;
     sandbox_version: string;
     runner_commit: string | null;
     dex_worst_fill_pct: string;
@@ -64,6 +66,7 @@ export async function runOnce(opts: {
   agent: AgentConfig;
   scenario: Scenario;
   runnerCommit: string | null;
+  wasmMatchesTestnet?: boolean;
   generator?: { id: string; inject: Injector } | null;
   seed?: string;
 }): Promise<Transcript> {
@@ -92,6 +95,7 @@ export async function runOnce(opts: {
     env: {
       judge_version: JUDGE_VERSION,
       wasm_sha256: chain.wasmSha256,
+      wasm_matches_testnet: opts.wasmMatchesTestnet ?? false,
       sandbox_version: chain.sandboxVersion,
       runner_commit: opts.runnerCommit,
       dex_worst_fill_pct: DEX_WORST_FILL_PCT.toString(),

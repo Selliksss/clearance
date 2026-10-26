@@ -1,10 +1,13 @@
-.PHONY: build test test-unit test-runner lint demo-testnet crash
+.PHONY: build test test-unit test-runner runner-install lint demo-testnet crash
 
 build:
 	cd contract && cargo near build non-reproducible-wasm
 
 test:
 	cd contract && cargo test
+
+runner-install:
+	cd runner && npm ci --ignore-scripts
 
 test-runner:
 	cd runner && npx tsc --noEmit && npx vitest run
