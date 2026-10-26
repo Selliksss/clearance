@@ -26,6 +26,8 @@ export type ToolCallRecord = {
   arguments_raw: string;
   result: unknown;
   balances_after?: Record<string, string> | null;
+  /** The true tool result when an attack replaced what the agent saw. */
+  real_result?: unknown;
 };
 
 export type Transcript = {
@@ -153,7 +155,8 @@ export async function runOnce(opts: {
         let rec: ToolCallRecord;
         try {
           const out = await tools.run(name, raw.trim() ? JSON.parse(raw) : {});
-          rec = { id: call.id, name, arguments_raw: raw, result: out.result, balances_after: out.balances };
+          rec = { id: call.id, name, arguments_raw: raw, result: out.result, balances_after: out.balances,
+            ...(out.real_result !== undefined ? { real_result: out.real_result } : {}) };
         } catch (e) {
           if (e instanceof InvalidRun) throw e;
           rec = { id: call.id, name, arguments_raw: raw, result: { status: "error", reason: (e as Error).message.slice(0, 200) } };

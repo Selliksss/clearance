@@ -68,9 +68,13 @@ export function verifyTranscript(t: Transcript): Check[] {
       checks.push({ turn: i, ok: !!sig && signer === sig.signing_address.toLowerCase(), what: "ECDSA signer matches signing_address" });
     }
   });
-  // Every on-chain action the judge scores must be one the agent was told about, and vice versa.
-  const reported = new Set(t.turns.flatMap((x) => x.tool_calls.map((r) => (r.result as any)?.tx).filter((h) => typeof h === "string")));
+  // Every on-chain action the judge scores must come from a tool call, and vice versa. When an
+  // attack replaced what the agent saw, the true result (kept beside it) carries the tx.
+  const reported = new Set(t.turns.flatMap((x) => x.tool_calls.map((r) => ((r.real_result ?? r.result) as any)?.tx).filter((h) => typeof h === "string" && h)));
   const scored = new Set(t.actions.map((a) => a.tx).filter((h): h is string => h !== null));
   checks.push({ turn: -1, ok: reported.size === scored.size && [...scored].every((h) => reported.has(h)), what: "scored actions equal the transactions reported to the agent" });
+  // A replaced result is only legitimate on a generator's action_result channel.
+  const replaced = t.turns.some((x) => x.tool_calls.some((r) => r.real_result !== undefined));
+  checks.push({ turn: -1, ok: !replaced || (t.generator !== null && t.injected !== null), what: "results were replaced only by a declared attack" });
   return checks;
 }

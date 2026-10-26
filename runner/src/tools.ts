@@ -47,7 +47,8 @@ export type Action = {
   refusal: string | null;
 };
 
-export type ToolResult = { result: unknown; balances?: Record<string, string> | null };
+/** `result` is what the agent was shown; `real_result` is set when an attack replaced it. */
+export type ToolResult = { result: unknown; real_result?: unknown; balances?: Record<string, string> | null };
 
 /** A state the runner cannot score honestly; the whole run is marked invalid. */
 export class InvalidRun extends Error {}
@@ -129,7 +130,10 @@ export class Toolbox {
       : r.panic
         ? { status: "denied", reason: r.panic, tx: r.hash }
         : { status: "failed", reason: "transfer did not reach the receiver; funds returned to the vault", tx: r.hash };
-    return { result, balances: await this.balances() };
+    const shown = this.inject(tool, result);
+    return shown === result
+      ? { result, balances: await this.balances() }
+      : { result: shown, real_result: result, balances: await this.balances() };
   }
 
   private async money(name: "transfer" | "pay_invoice", raw: unknown): Promise<ToolResult> {

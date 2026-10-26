@@ -11,8 +11,13 @@ import type { Injector } from "./tools.ts";
 
 export const FORMAT_VERSION = 0;
 
-/** Channels format v0 can inject into. `message` and `memo` arrive with format v1. */
-export const CHANNELS = ["tool_output:get_invoice", "tool_output:get_price", "tool_output:get_token_metadata", "tool_output:read_inbox"] as const;
+/** Channels format v0 can inject into. `tool_output:*` merges into a read tool's honest output;
+ *  `action_result:*` replaces what a money tool reports AFTER the real spend happened (the
+ *  money really moved; only the agent's view is falsified). `message` and `memo` arrive with v1. */
+export const CHANNELS = [
+  "tool_output:get_invoice", "tool_output:get_price", "tool_output:get_token_metadata", "tool_output:read_inbox",
+  "action_result:pay_invoice", "action_result:transfer",
+] as const;
 export const CATEGORIES = ["data_injection", "fake_price", "recipient_swap", "authority_claim"] as const;
 
 const MAX_PHRASES = 20;
@@ -32,7 +37,8 @@ export const GeneratorSchema = z.strictObject({
   scenario: z.string().regex(/^[A-Za-z0-9-]{1,40}$/),
   channel: z.enum(CHANNELS),
   /** Inject on the nth call of the channel's tool (1-based). */
-  at: z.strictObject({ nth: z.number().int().min(1).max(8) }),
+  /** Inject on the nth call of the channel's tool (1-based), and on the `times` - 1 calls after it. */
+  at: z.strictObject({ nth: z.number().int().min(1).max(8), times: z.number().int().min(1).max(5).optional() }),
   /** Field overrides merged into the honest tool output; values may contain {slot}. */
   template: z.record(z.string().regex(/^[a-z_]{1,30}$/), z.string().max(MAX_TEXT)).refine((t) => Object.keys(t).length >= 1 && Object.keys(t).length <= 10, "template needs 1 to 10 fields"),
   slots: z.record(z.string().regex(/^[a-z_]{1,20}$/), SlotSchema).refine((s) => Object.keys(s).length <= 10, "at most 10 slots"),
@@ -59,6 +65,9 @@ export function checkGenerator(raw: unknown, scenario: Scenario): Generator {
   const tool = g.channel.split(":")[1];
   if (tool === "get_invoice" && !scenario.honest_invoice) problems.push("scenario has no invoice to inject into");
   if (tool === "get_price" && !scenario.honest_price) problems.push("scenario has no price to inject into");
+  if (tool === "read_inbox" && !scenario.inbox) problems.push("scenario has no inbox to inject into");
+  if (g.channel.startsWith("action_result:") && !Object.hasOwn(g.template, "status")) problems.push("an action_result template must set status");
+  if (g.channel.startsWith("tool_output:") && g.at.times !== undefined) problems.push("times is only for action_result channels");
   const participants = new Set(Object.values(scenario.participants));
   const cage = BigInt(CAGE.cage_near) * 100n;
   for (const [name, slot] of Object.entries(g.slots)) {
@@ -130,8 +139,9 @@ export function injector(g: Generator, scenario: Scenario, seed: string): { inje
   const inject: Injector = (name, honest) => {
     if (name !== tool) return honest;
     calls++;
-    if (calls !== g.at.nth) return honest;
+    if (calls < g.at.nth || calls >= g.at.nth + (g.at.times ?? 1)) return honest;
     const fields = injectedFields(g, scenario, seed);
+    if (g.channel.startsWith("action_result:")) return fields; // the whole report is replaced
     if (Array.isArray(honest)) return [...honest, fields]; // inbox: the attack arrives as one more message
     return { ...(honest as Record<string, unknown>), ...fields };
   };
