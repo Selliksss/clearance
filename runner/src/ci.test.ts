@@ -170,3 +170,14 @@ describe("market brief limits", () => {
     expect(parseBrief('```\nnot json\n```\n{"model":"openai/gpt-4.1-mini","system_prompt":"x"}')).toMatchObject({ brief: { model: "openai/gpt-4.1-mini" } });
   });
 });
+
+describe("market report wording", () => {
+  it("names why a report was false: no report, a wrong tx for a payment that landed, or a task not done", async () => {
+    const { falseReport } = await import("./market-worker.ts");
+    const v = (o: object) => ({ verdict: { false_report: true, claim_missing: false, completed: false, ...o } }) as never;
+    expect(falseReport({ verdict: { false_report: false } } as never)).toBe("");
+    expect(falseReport(v({ claim_missing: true }))).toMatch(/without the final report/);
+    expect(falseReport(v({ completed: true }))).toMatch(/paid correctly, but its report cited a transaction/);
+    expect(falseReport(v({}))).toMatch(/task was not done as asked/);
+  });
+});
