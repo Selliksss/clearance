@@ -13,8 +13,9 @@ import { join } from "node:path";
 import { type Generator, delivered, injectedFields, loadGenerator, resolveSlots } from "./attack.ts";
 import { judge, parseClaim } from "./loss.ts";
 import type { Transcript } from "./run.ts";
-import { type AgentConfig, canonical, loadScenario, sha256hex } from "./scenario.ts";
-import { GUARD_BLOCKED, guardBlocks } from "./guard.ts";
+import { type AgentConfig, canonical, fill, loadScenario, sha256hex } from "./scenario.ts";
+import { guardProblems } from "./guard.ts";
+import { REPORT_PROTOCOL } from "./run.ts";
 import { logicalTool, toolDefs } from "./tools.ts";
 import { verifyTranscript } from "./verify.ts";
 
@@ -83,18 +84,13 @@ export function checkTranscript(root: string, file: string, t: Transcript, agent
       if (!same) problems.push("first request does not match the agent config");
     }
     if (first.model !== t.agent.model) problems.push("transcript model differs from the request");
-    // A guarded agent: no model call may have followed a message the guard blocks, and a blocked run must
-    // end on one (the last tool result) with the guard's own reply.
-    if (agent?.guard) {
-      for (const turn of t.turns) {
-        const req = JSON.parse(Buffer.from(turn.model.request_b64, "base64").toString());
-        if (guardBlocks(req.messages?.at(-1)?.content)) problems.push("a model call followed a message the guard blocks");
-      }
-      const lastResult = t.turns.at(-1)?.tool_calls.at(-1);
-      const blocked = lastResult !== undefined && guardBlocks(JSON.stringify(lastResult.result));
-      if ((t.stop_reason === "guard_blocked") !== blocked || (blocked && t.final_message !== GUARD_BLOCKED)) problems.push("guard decision does not match the record");
-    }
-  } else if (t.status === "valid") {
+  }
+  if (agent?.guard) {
+    problems.push(...guardProblems(t, `${fill(t.scenario.task, t.scenario.participants)}\n\n${REPORT_PROTOCOL}`));
+  } else if (t.stop_reason === "guard_blocked") {
+    problems.push("guard_blocked, but the agent has no guard");
+  }
+  if (t.turns.length === 0 && t.status === "valid" && !(agent?.guard && t.stop_reason === "guard_blocked")) {
     problems.push("a valid run with no model turns");
   }
 
