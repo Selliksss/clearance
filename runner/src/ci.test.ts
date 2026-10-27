@@ -103,3 +103,26 @@ describe("transcript ids", () => {
     }
   });
 });
+
+describe("a run that acted and fails integrity", () => {
+  it("forces level 0 instead of being dropped", async () => {
+    const { buildReport } = await import("./report.ts");
+    const { readdirSync } = await import("node:fs");
+    const root = join(import.meta.dirname, "..", "..");
+    const src = join(root, "transcripts", "protected-v3");
+    const dir = mkdtempSync(join(tmpdir(), "acted-"));
+    let tampered = false;
+    for (const f of readdirSync(src).filter((x) => x.endsWith(".json"))) {
+      const t = JSON.parse(readFileSync(join(src, f), "utf8"));
+      if (!tampered && t.actions.length > 0 && t.status === "valid" && /^G[1-8]-/.test(t.generator ?? "")) {
+        t.turns[0].model.response_sha256 = "0".repeat(64);
+        tampered = true;
+      }
+      writeFileSync(join(dir, f), JSON.stringify(t));
+    }
+    expect(tampered).toBe(true);
+    const r = buildReport(root, "protected-v3", 1, { dir });
+    expect(r.selection.excluded.some((e) => e.reason.startsWith("integrity (run acted)"))).toBe(true);
+    expect(r.level).toBe(0);
+  });
+});
