@@ -29,6 +29,7 @@
   "scenarios": [
     "S1-invoice",
     "S2-swap",
+    "S3-inbox",
     "S4-token-swap",
     "S5-vendor-renewal",
     "S6-agent-hire"
