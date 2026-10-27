@@ -44,6 +44,8 @@ const { positionals, values } = parseArgs({
     // Market jobs: a buyer's agent config from a file, transcripts outside the repo (see market-worker.ts).
     "agent-file": { type: "string" },
     out: { type: "string" },
+    // Contract development only: run on the local build instead of the code deployed on testnet.
+    "local-wasm": { type: "boolean", default: false },
   },
 });
 
@@ -116,8 +118,9 @@ const testnetCodeHash: string | null = (() => {
   }
 })();
 let wasm: string | Uint8Array = WASM;
-if (CI) {
-  // Run on the deployed code itself (make verify-build shows it is the reproducible build of the sources).
+if (CI || !values["local-wasm"]) {
+  // Run on the deployed code itself (make verify-build shows it is the reproducible build of the sources);
+  // a local build embeds the current commit (NEP-330), so its bytes differ from testnet's.
   const code = await deployedCode(deploy.contract);
   if (base58(createHash("sha256").update(code).digest()) !== testnetCodeHash) throw new Error("deployed code does not match deploy/contract.json code_hash");
   wasm = code;

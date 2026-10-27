@@ -34,7 +34,8 @@ const ATTACK_COUNT = 6;
 const CONTROLS = ["S1-invoice", "S3-inbox"];
 const MAX_PROMPT = 20_000;
 const MAX_BRIEF = 100_000;
-const SPAWN_TIMEOUT_MS = 45 * 60_000;
+// Two attempts of three spawns must fit the 30-minute delivery window the listing promises.
+const SPAWN_TIMEOUT_MS = 4 * 60_000;
 const REVISIONS_INCLUDED = 1;
 const JOBS_PER_DAY = 20;
 
@@ -216,7 +217,7 @@ async function retry<T>(f: () => Promise<T>, tries = 3): Promise<T> {
   }
 }
 
-type Entry = { phase: "declined" | "running" | "submitted" | "failed"; submittedAt?: string; revisions?: number; day?: string };
+type Entry = { phase: "declined" | "running" | "submitted" | "failed" | "decline_pending"; submittedAt?: string; revisions?: number; day?: string };
 type State = Record<string, Entry>;
 
 function loadState(): State {
@@ -236,6 +237,21 @@ function saveState(s: State) {
 
 const today = () => new Date().toISOString().slice(0, 10);
 
+const FAILED_DETAIL = "The crash test could not complete (model or sandbox error). Declined so you get a full refund; please try again later.";
+
+/** Gives a started job back with a full refund; until the market confirms, the job stays "decline_pending". */
+async function declineFailed(id: string, state: State) {
+  state[id] = { ...state[id], phase: "decline_pending" };
+  saveState(state);
+  try {
+    await retry(() => api("POST", `/v1/assignments/${id}/decline`, { reason: "failed", detail: FAILED_DETAIL }));
+    state[id] = { ...state[id], phase: "failed" };
+    saveState(state);
+  } catch (e) {
+    console.error(`decline ${id} (will retry next poll): ${(e as Error).message}`);
+  }
+}
+
 /** Run, check, report and submit; on a final failure decline, which refunds the buyer in full. */
 async function work(id: string, brief: Brief, state: State) {
   let report_: string | null = null;
@@ -250,9 +266,7 @@ async function work(id: string, brief: Brief, state: State) {
     }
   }
   if (!report_) {
-    state[id] = { ...state[id], phase: "failed" };
-    saveState(state);
-    await quiet(() => retry(() => api("POST", `/v1/assignments/${id}/decline`, { reason: "failed", detail: "The crash test could not complete (model or sandbox error). Declined so you get a full refund; please try again later." })));
+    await declineFailed(id, state);
     return;
   }
   const r = await retry(() => api("POST", `/v1/assignments/${id}/submit`, { deliverableMarkdown: report_ }));
@@ -287,6 +301,11 @@ async function handle(row: any, state: State): Promise<void> {
     return;
   }
   if ("error" in parsed) return; // started with a valid brief earlier; cannot happen unless the brief was edited
+  if (entry?.phase === "decline_pending") {
+    // A refund decline that did not get through yet: keep trying every poll until it does.
+    await declineFailed(id, state);
+    return;
+  }
   if (!a.submittedAt && entry?.phase !== "submitted" && entry?.phase !== "failed") {
     // Started but never delivered (we crashed, or /start answered late): resume.
     state[id] = { ...entry, phase: "running", day: entry?.day ?? today() };
