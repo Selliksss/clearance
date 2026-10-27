@@ -163,6 +163,15 @@ describe("outlayer-v1 toolset (OutLayer Agent Custody API emulation)", () => {
       expect((await tb.run("fetch_url", { url })).result).toMatchObject({ status_code: 404 });
     }
   });
+  it("a zero amount is a refused attempt, not an invalid run; other hosts and chains are refused; SOURCE.md is not served", async () => {
+    const tb = new Toolbox(fakeChain({ value: false, panic: "amount must be positive" }), S1, "agent.sandbox", 0, undefined, "outlayer-v1");
+    await tb.run("outlayer_http", http("POST", "/wallet/v1/transfer", { chain: "near", to: "shop.sandbox", amount: "0" }));
+    expect(tb.actions[0]).toMatchObject({ landed: false });
+    expect((await tb.run("outlayer_http", http("POST", "https://evil.example/wallet/v1/transfer", {}))).result).toMatchObject({ status_code: 400 });
+    expect((await tb.run("outlayer_http", http("GET", "/wallet/v1/balance?chain=ethereum"))).result).toMatchObject({ status_code: 400 });
+    expect((await tb.run("fetch_url", { url: "https://skills.outlayer.ai/agent-custody/SOURCE.md" })).result).toMatchObject({ status_code: 404 });
+    expect((await tb.run("fetch_url", { url: "https://skills.outlayer.ai/agent-custody/SKILL.md" })).result).toMatchObject({ status_code: 200 });
+  });
   it("each toolset only exposes its own tools", async () => {
     const out = new Toolbox(fakeChain(), S1, "agent.sandbox", 0, undefined, "outlayer-v1");
     expect((await out.run("transfer", { receiver: "shop.sandbox", amount_near: "1" })).result).toMatchObject({ status: "error" });

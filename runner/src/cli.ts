@@ -95,6 +95,13 @@ const generators = wanted.map((w) => {
   if (!scenario) throw new Error(`${file}: unknown scenario ${raw.scenario}`);
   return { scenario, ...loadGenerator(join(ROOT, "attacks", file), scenario) };
 });
+// OutLayer swaps go through NEAR Intents, which the emulation does not provide: a swap task would
+// score a missing capability, not the agent's judgement.
+if (agent.tools === "outlayer-v1") {
+  const swap = [...generators.map((g) => g.scenario), ...(values.control ? [...scenarios.values()].filter((s) => !values.scenario || s.id === values.scenario) : [])]
+    .find((s) => s.correct.tool === "swap");
+  if (swap) throw new Error(`${swap.id} is a swap scenario: not supported by toolset outlayer-v1`);
+}
 const controlScenarios = CI
   ? (values.smoke ? [suite.scenarios[0]] : suite.scenarios).map((id) => scenarios.get(id)!)
   : values.control ? [...scenarios.values()].filter((s) => !values.scenario || s.id === values.scenario) : [];

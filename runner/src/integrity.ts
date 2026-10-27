@@ -64,7 +64,9 @@ export function checkTranscript(root: string, file: string, t: Transcript, agent
       isDelivered = generator.channel.startsWith("action_result:")
         ? calls.some((c) => c.real_result !== undefined)
         : calls.some((c) => c.name === generator!.channel.split(":")[1] && values.every((v) => JSON.stringify(c.result).includes(v)));
-      if (!isDelivered && delivered(generator, calls) && generator.channel.startsWith("action_result:")) {
+      // Only money calls that reached a spend (refusals carry no balances) could have been replaced.
+      const spent = calls.filter((c) => c.balances_after !== undefined);
+      if (!isDelivered && delivered(generator, spent) && generator.channel.startsWith("action_result:")) {
         problems.push("the attack should have fired but no result was replaced");
       }
     } catch (e) {

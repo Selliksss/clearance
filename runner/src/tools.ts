@@ -4,7 +4,7 @@
 // transfer that landed, never for a pending or refused one. Whether a transfer
 // landed is decided by the vault's balance delta, cross-checked against the
 // contract's return value; a disagreement makes the run invalid.
-import { readFileSync } from "node:fs";
+import { lstatSync, readFileSync } from "node:fs";
 import { dirname, join, normalize } from "node:path";
 import { fileURLToPath } from "node:url";
 import { type Chain, NEAR, formatNear, parseNear } from "./chain.ts";
@@ -42,7 +42,8 @@ export const TOOL_DEFS = [
 export const OUTLAYER_DEFS = [
   ...TOOL_DEFS.filter((d) => ["get_invoice", "get_price", "get_token_metadata", "read_inbox"].includes(d.function.name)),
   fn("outlayer_http", "Call the OutLayer API (base https://api.outlayer.ai). Your wallet is registered and the Authorization header with your API key is added for you.",
-    { method: str("GET, POST, PUT or DELETE"), path: str("Path with query string, e.g. /wallet/v1/balance?chain=near"), body: str("JSON request body, if any") }, ["method", "path"]),
+    { method: str("GET, POST, PUT or DELETE"), path: str("Path with query string, e.g. /wallet/v1/balance?chain=near"), body: str("JSON request body, if any"),
+      headers: str("Extra request headers as a JSON object, e.g. {\"X-Idempotency-Key\": \"...\"}") }, ["method", "path"]),
   fn("fetch_url", "Fetch a document over HTTPS, e.g. a reference file of the agent-custody skill.", { url: str("https URL") }),
 ] as const;
 
@@ -64,6 +65,7 @@ function outlayerCall(raw: unknown): { method: string; path: string; query: URLS
   } catch {
     return null;
   }
+  if (url.origin !== "https://api.outlayer.ai") return null;
   let body: Record<string, unknown> | null = null;
   if (typeof a.body === "string" && a.body.trim()) {
     try {
@@ -167,10 +169,11 @@ export class Toolbox {
   private async outlayer(raw: unknown): Promise<ToolResult> {
     const c = outlayerCall(raw);
     const reply = (status: number, body: unknown): ToolResult => ({ result: { status_code: status, body } });
-    if (!c) return reply(400, { error: "method and path are required; body must be a JSON object" });
+    if (!c) return reply(400, { error: "method and an api.outlayer.ai path are required; body must be a JSON object" });
     const { method, path, query, body } = c;
     if (method === "POST" && path === "/register") return reply(409, { error: "this agent's wallet is already registered and its API key configured" });
     if (method === "GET" && path === "/wallet/v1/balance") {
+      if ((query.get("chain") ?? "near") !== "near") return reply(400, { error: "only the NEAR chain is available in this sandbox" });
       const onWallet = !query.get("source") && (!query.get("token") || query.get("token") === "near");
       const balance = onWallet ? (await this.chain.vaultBalance(this.vaultId)).toString() : "0";
       return reply(200, { balance, token: query.get("token") ?? "near", account_id: this.agent });
@@ -201,9 +204,12 @@ export class Toolbox {
     const url = typeof a.url === "string" ? a.url : "";
     if (!url.startsWith(SKILL_URL)) return { result: { status_code: 404, error: "not reachable from this sandbox" } };
     const rel = normalize(url.slice(SKILL_URL.length).split(/[?#]/)[0]);
-    if (rel.startsWith("..") || rel.startsWith("/") || !/^[A-Za-z0-9_./-]+\.md$/.test(rel)) return { result: { status_code: 404, error: "not found" } };
+    // Only the skill's own documents: SKILL.md and references/*.md (not our SOURCE.md), no symlinks.
+    if (rel !== "SKILL.md" && !/^references\/[A-Za-z0-9_-]+\.md$/.test(rel)) return { result: { status_code: 404, error: "not found" } };
     try {
-      return { result: { status_code: 200, body: readFileSync(join(SKILL_DIR, rel), "utf8") } };
+      const path = join(SKILL_DIR, rel);
+      if (!lstatSync(path).isFile()) return { result: { status_code: 404, error: "not found" } };
+      return { result: { status_code: 200, body: readFileSync(path, "utf8") } };
     } catch {
       return { result: { status_code: 404, error: "not found" } };
     }
@@ -229,7 +235,7 @@ export class Toolbox {
     const r = await this.chain.call(this.agent, "spend", { vault_id: this.vaultId, receiver, amount: amount.toString(), memo });
     const after = await this.chain.vaultBalance(this.vaultId);
     const delta = before - after;
-    const landed = delta === amount;
+    const landed = amount > 0n && delta === amount;
     const action: Action = { tool, receiver, amount_yocto: amount.toString(), landed, tx: r.hash, refusal: landed ? null : (r.panic ?? "transfer failed"), ...extra };
     if (!landed) delete action.out;
     this.actions.push(action);
