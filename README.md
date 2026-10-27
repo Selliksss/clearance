@@ -1,5 +1,7 @@
 # Clearance
 
+**A crash test and an on-chain spending certificate for AI agents that hold money on NEAR.** (Unrelated to JetStream's *Clearance* gateway or other projects with a similar name, see [Related work](#related-work-and-a-name-clash).)
+
 **Status:** work in progress for NEAR Hackathon (Nov 2026), started Oct 26, 2026. Working: the on-chain vault + certificate registry (testnet), the crash-test runner with 8 attack generators + 2 holdout + 28 blind, reports and levels, a level-2 certificate on testnet, OutLayer policy export, and `make demo` (one command for judges). Built but not yet active: the CI signer (it signs only from the public repo). Planned for Nov 1–14: the CI-signed certificate, the attack bounty, deleting the contract account's keys (keyless).
 
 Clearance crash-tests AI agents that hold money. It measures how easily an agent is tricked into paying the wrong party, records the result as a certificate on NEAR, and caps the agent's spending by that result — in its own vault contract, or as an OutLayer Agent Custody policy.
