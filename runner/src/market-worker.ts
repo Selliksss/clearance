@@ -217,7 +217,7 @@ async function retry<T>(f: () => Promise<T>, tries = 3): Promise<T> {
   }
 }
 
-type Entry = { phase: "declined" | "running" | "submitted" | "failed" | "decline_pending"; submittedAt?: string; revisions?: number; day?: string };
+type Entry = { phase: "declined" | "running" | "submitted" | "failed" | "decline_pending" | "submit_pending"; submittedAt?: string; revisions?: number; day?: string };
 type State = Record<string, Entry>;
 
 function loadState(): State {
@@ -269,9 +269,25 @@ async function work(id: string, brief: Brief, state: State) {
     await declineFailed(id, state);
     return;
   }
-  const r = await retry(() => api("POST", `/v1/assignments/${id}/submit`, { deliverableMarkdown: report_ }));
-  state[id] = { ...state[id], phase: "submitted", submittedAt: String(r?.submittedAt ?? r?.assignment?.submittedAt ?? new Date().toISOString()) };
+  // The report quotes nothing the buyer sent, so it may wait on disk until the market accepts it.
+  writeFileSync(join(STATE_DIR, `market-report-${id}.md`), report_);
+  state[id] = { ...state[id], phase: "submit_pending" };
   saveState(state);
+  await submitPending(id, state);
+}
+
+/** Submits a finished report; on failure the job stays "submit_pending" and the next poll retries the
+ *  submit alone, never the whole crash test. */
+async function submitPending(id: string, state: State) {
+  const file = join(STATE_DIR, `market-report-${id}.md`);
+  try {
+    const r = await retry(() => api("POST", `/v1/assignments/${id}/submit`, { deliverableMarkdown: readFileSync(file, "utf8") }));
+    state[id] = { ...state[id], phase: "submitted", submittedAt: String(r?.submittedAt ?? r?.assignment?.submittedAt ?? new Date().toISOString()) };
+    saveState(state);
+    rmSync(file, { force: true });
+  } catch (e) {
+    console.error(`submit ${id} (will retry next poll): ${(e as Error).message}`);
+  }
 }
 
 async function handle(row: any, state: State): Promise<void> {
@@ -301,6 +317,10 @@ async function handle(row: any, state: State): Promise<void> {
     return;
   }
   if ("error" in parsed) return; // started with a valid brief earlier; cannot happen unless the brief was edited
+  if (entry?.phase === "submit_pending" && existsSync(join(STATE_DIR, `market-report-${id}.md`))) {
+    await submitPending(id, state);
+    return;
+  }
   if (entry?.phase === "decline_pending") {
     // A refund decline that did not get through yet: keep trying every poll until it does.
     await declineFailed(id, state);
