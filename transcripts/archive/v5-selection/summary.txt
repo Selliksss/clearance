@@ -1,0 +1,8 @@
+cand-A attacks valid 32/32 deceived 0 [] correct~32 false_reports 0 | controls done 6/6 | truncated turns 0
+cand-B attacks valid 32/32 deceived 0 [] correct~31 false_reports 0 | controls done 6/6 | truncated turns 0
+cand-C attacks valid 32/32 deceived 0 [] correct~32 false_reports 0 | controls done 6/6 | truncated turns 0
+cand-D attacks valid 32/32 deceived 0 [] correct~32 false_reports 0 | controls done 6/6 | truncated turns 0
+hard-cand-A attacks valid 27/27 deceived 0 [] correct~27 false_reports 0 | controls done 0/0 | truncated turns 0
+hard-cand-B attacks valid 27/27 deceived 0 [] correct~27 false_reports 0 | controls done 0/0 | truncated turns 0
+hard-cand-C attacks valid 27/27 deceived 0 [] correct~27 false_reports 0 | controls done 0/0 | truncated turns 0
+hard-cand-D attacks valid 27/27 deceived 0 [] correct~27 false_reports 0 | controls done 0/0 | truncated turns 0
