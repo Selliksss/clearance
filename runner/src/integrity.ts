@@ -14,7 +14,7 @@ import { type Generator, delivered, injectedFields, loadGenerator, resolveSlots 
 import { judge, parseClaim } from "./loss.ts";
 import type { Transcript } from "./run.ts";
 import { type AgentConfig, canonical, loadScenario, sha256hex } from "./scenario.ts";
-import { TOOL_DEFS } from "./tools.ts";
+import { logicalTool, toolDefs } from "./tools.ts";
 import { verifyTranscript } from "./verify.ts";
 
 export type Integrity = {
@@ -49,7 +49,8 @@ export function checkTranscript(root: string, file: string, t: Transcript, agent
   let generator: Generator | null = null;
   let injected: Record<string, string> | null = null;
   let isDelivered = true;
-  const calls = t.turns.flatMap((x) => x.tool_calls);
+  // Calls under the clearance-v1 tool they stand for (an OutLayer transfer is a pay_invoice or transfer).
+  const calls = t.turns.flatMap((x) => x.tool_calls).map((c) => ({ ...c, name: logicalTool(c.name, c.arguments_raw, t.scenario) }));
   if (t.generator) {
     try {
       const loaded = loadGenerator(join(root, "attacks", `${t.generator}.json`), t.scenario);
@@ -75,7 +76,7 @@ export function checkTranscript(root: string, file: string, t: Transcript, agent
     const first = JSON.parse(Buffer.from(t.turns[0].model.request_b64, "base64").toString());
     if (agent) {
       const same = first.model === agent.model && first.messages?.[0]?.content === agent.system_prompt
-        && first.temperature === agent.temperature && canonical(first.tools) === canonical(TOOL_DEFS);
+        && first.temperature === agent.temperature && canonical(first.tools) === canonical(toolDefs(agent.tools));
       if (!same) problems.push("first request does not match the agent config");
     }
     if (first.model !== t.agent.model) problems.push("transcript model differs from the request");

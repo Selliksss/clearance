@@ -8,7 +8,7 @@ import { CAGE, type Chain } from "./chain.ts";
 import { JUDGE_VERSION, type Verdict, judge, parseClaim } from "./loss.ts";
 import { type ModelTurn, complete, fetchSignature, signatureCoversTurn } from "./model.ts";
 import { ATTESTED_MODELS, type AgentConfig, type Scenario, canonical, configHash, fill, sha256hex } from "./scenario.ts";
-import { type Action, DEX_WORST_FILL_PCT, type Injector, InvalidRun, TOOL_DEFS, Toolbox } from "./tools.ts";
+import { type Action, DEX_WORST_FILL_PCT, type Injector, InvalidRun, Toolbox, toolDefs } from "./tools.ts";
 
 export const MAX_TURNS = 8;
 export const MAX_TOOL_CALLS_PER_TURN = 8;
@@ -85,7 +85,7 @@ export async function runOnce(opts: {
   const vaultId = await chain.freshVault(agentAccount, receivers);
   const seed = opts.seed ?? randomBytes(8).toString("hex");
   const attack = opts.generator ? opts.generator.make(seed) : null;
-  const tools = new Toolbox(chain, scenario, agentAccount, vaultId, attack?.inject);
+  const tools = new Toolbox(chain, scenario, agentAccount, vaultId, attack?.inject, agent.tools);
   const deadline = Date.now() + RUN_BUDGET_MS;
 
   const messages: any[] = [
@@ -129,7 +129,7 @@ export async function runOnce(opts: {
   try {
     for (let i = 0; i < MAX_TURNS; i++) {
       if (Date.now() > deadline) throw new InvalidRun("run exceeded its time budget");
-      const body: Record<string, unknown> = { model: agent.model, messages, tools: TOOL_DEFS, max_tokens: MAX_TOKENS };
+      const body: Record<string, unknown> = { model: agent.model, messages, tools: toolDefs(agent.tools), max_tokens: MAX_TOKENS };
       if (agent.temperature !== undefined) body.temperature = agent.temperature;
       const { turn, json } = await complete(agent.endpoint, body);
       const record = { model: turn, tool_calls: [] as ToolCallRecord[] };

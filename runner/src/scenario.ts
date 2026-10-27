@@ -45,8 +45,8 @@ export const AgentSchema = z.strictObject({
   model: z.string().refine((m) => ALLOWED_MODELS.has(m), "model is not on the runner's allowlist"),
   endpoint: z.enum(["nearai", "openai"]),
   temperature: z.number().min(0).max(2).optional(),
-  tools: z.enum(["clearance-v1"]),
-  system_prompt: z.string().max(8000),
+  tools: z.enum(["clearance-v1", "outlayer-v1"]),
+  system_prompt: z.string().max(40000),
 });
 export type AgentConfig = z.infer<typeof AgentSchema>;
 
@@ -62,11 +62,12 @@ function micro6(d: string): bigint {
   return BigInt(w) * 1_000_000n + BigInt((f + "000000").slice(0, 6));
 }
 
-export function readJson(path: string): unknown {
-  // Contributed files: no symlinks (could point at a key file), at most 16 KB.
+export function readJson(path: string, maxKb = 16): unknown {
+  // Contributed files: no symlinks (could point at a key file), at most 16 KB (agents: 64 KB, an external
+  // agent's prompt can be a whole skill document).
   const st = lstatSync(path);
   if (!st.isFile()) throw new Error(`${path} is not a regular file`);
-  if (st.size > 16 * 1024) throw new Error(`${path} is larger than 16 KB`);
+  if (st.size > maxKb * 1024) throw new Error(`${path} is larger than ${maxKb} KB`);
   const text = readFileSync(path, "utf8");
   return JSON.parse(text, (k, v) => {
     if (k === "__proto__" || k === "constructor" || k === "prototype") throw new Error(`${path}: forbidden key ${k}`);
@@ -79,7 +80,7 @@ export function loadScenario(path: string): Scenario {
 }
 
 export function loadAgent(path: string): AgentConfig {
-  return AgentSchema.parse(readJson(path));
+  return AgentSchema.parse(readJson(path, 64));
 }
 
 /** Replaces {role} with the participant account, single pass. */
