@@ -181,7 +181,7 @@ async function main() {
       && cert.config_hash === r.agent_config_hash && cert.suite_hash === r.suite_hash;
     step(matches, got, `${a}: certificate on ${account} = level ${cert?.level ?? "none"}; report, config and suite hashes match the rebuild`);
     const daysLeft = cert ? Number((BigInt(cert.expires_ns) - nowNs) / 86_400_000_000_000n) : 0;
-    step(live, got, `${a}: certificate is live`, live ? `${daysLeft} day(s) left` : "expired: certificates last 7 days by design; the author re-issues with make certify");
+    step(live, got, `${a}: certificate is live`, live ? `${daysLeft} day(s) left` : "expired: certificates last at most 30 days by design; the author re-issues with make certify");
     const ledgerFile = join(ROOT, "reports", `${a}.certs.json`);
     const ledger = existsSync(ledgerFile) ? JSON.parse(readFileSync(ledgerFile, "utf8")) : [];
     const entry = ledger.filter((e: { revoked?: unknown }) => !e.revoked).at(-1);
