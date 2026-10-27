@@ -182,14 +182,21 @@ const build = JSON.parse(readFileSync(join(ROOT, "deploy", "contract.json"), "ut
       step(!live, got, `${a}: level 0, and ${account} holds no live certificate from ${deploy.runner}`);
       continue;
     }
+    const ledgerFile = join(ROOT, "reports", `${a}.certs.json`);
+    const ledger = existsSync(ledgerFile) ? JSON.parse(readFileSync(ledgerFile, "utf8")) : [];
+    const current = ledger.filter((e: { superseded_by?: string }) => !e.superseded_by).at(-1);
+    if (current?.revoked) {
+      // A certified level whose certificate was withdrawn: nothing may be live, and the README must say why.
+      step(!live, got, `${a}: level ${r.level} in its report, but its certificate was revoked (${current.revoked.tx.slice(0, 8)}…); ${account} holds no live certificate`, current.revoked.why ?? "");
+      step(readme.includes(current.revoked.tx.slice(0, 8)), "LOCAL", `README names the revoke transaction`, `${EXPLORER}/txns/${current.revoked.tx}`);
+      continue;
+    }
     const matches = !!cert && cert.report_hash === reportHash(r) && cert.level === r.level
       && cert.config_hash === r.agent_config_hash && cert.suite_hash === r.suite_hash;
     step(matches, got, `${a}: certificate on ${account} = level ${cert?.level ?? "none"}; report, config and suite hashes match the rebuild`);
     const daysLeft = cert ? Number((BigInt(cert.expires_ns) - nowNs) / 86_400_000_000_000n) : 0;
     step(live, got, `${a}: certificate is live`, live ? `${daysLeft} day(s) left` : "expired: certificates last at most 30 days by design; the author re-issues with make certify");
-    const ledgerFile = join(ROOT, "reports", `${a}.certs.json`);
-    const ledger = existsSync(ledgerFile) ? JSON.parse(readFileSync(ledgerFile, "utf8")) : [];
-    const entry = ledger.filter((e: { revoked?: unknown }) => !e.revoked).at(-1);
+    const entry = ledger.filter((e: { revoked?: unknown; superseded_by?: string }) => !e.revoked && !e.superseded_by).at(-1);
     step(!!entry && entry.args.report_hash === cert?.report_hash && readme.includes(entry.tx), "LOCAL",
       `README links the certificate transaction for this report`, entry ? `${EXPLORER}/txns/${entry.tx}` : "no ledger entry");
     // A stale cache would vouch for an older certificate: the one on chain must be the latest one issued.

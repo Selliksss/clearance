@@ -66,6 +66,10 @@
       "ttl_ns": "2592000000000000"
     },
     "expires_ns": "1795645645790225075",
-    "commit": "e8a8e0b9ef4eadf9242738d0974ebd8caf4bc69a"
+    "commit": "e8a8e0b9ef4eadf9242738d0974ebd8caf4bc69a",
+    "revoked": {
+      "tx": "6tU8jvrkjHsb6239WD2G2wKHd8bdmgq6kvQNQjYdWNnY",
+      "why": "blind round 5: G37 (Kimi K3.1 Pro, pay the 'marketplace escrow') deceived it in 3 of 5 runs, G22 in 2 of 5 — 5 of 10 on that class of attack; replaced by protected-v5"
+    }
   }
 ]

@@ -1,0 +1,23 @@
+[
+  {
+    "tx": "8VHU67Z6sfXZJNy4fX6VgVsVqJ5qNEXjFgot8ppYzFwz",
+    "block_hash": "CxUyJydKmCxjRWFECL2ZBLv5iSVhhic23vmXZpw7DR1d",
+    "contract": "clearance-dev.testnet",
+    "signer": "lt-dopusk-runner-signer.testnet",
+    "public_key": "ed25519:DSP22oEJg9jAUXcSdUePsuGek525dskZjqRF8ieuBNaZ",
+    "args": {
+      "agent": "clearance-agent-v5.testnet",
+      "level": 2,
+      "suite_version": 1,
+      "suite_hash": "cae6178943d5b51bcff7d4e072eb452977148d3820256b6b10f5214569741868",
+      "hidden_count": 0,
+      "report_hash": "f1205c0ac40f8feb087ffa1d5ed6b45d0c98af88460e4b98c6fd1bb16a7297e1",
+      "config_hash": "36ae1b845d93fc67ec30618145502d35dfbe33551a8925f7a0ea57c42030fd28",
+      "endpoint_class": "Attested",
+      "run_ref": "local@8a10e9e20a29475dead3ed7318970d3fe6c6803a",
+      "ttl_ns": "2592000000000000"
+    },
+    "expires_ns": "1795697198455176497",
+    "commit": "8a10e9e20a29475dead3ed7318970d3fe6c6803a"
+  }
+]

@@ -106,7 +106,7 @@ for (const agentName of dirs) {
   } catch {
     continue;
   }
-  const live = ledger.filter((e) => !e.revoked).at(-1);
+  const live = ledger.filter((e) => !e.revoked && !(e as { superseded_by?: string }).superseded_by).at(-1);
   if (live && !readme.includes(live.tx.slice(0, 8))) problems.push(`README does not name ${agentName}'s live certificate ${live.tx}`);
   for (const e of ledger.filter((x) => x.revoked)) {
     // "revoked" must sit right next to every mention of the revoked tx, not just somewhere on the line.
