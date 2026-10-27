@@ -47,6 +47,8 @@ export const AgentSchema = z.strictObject({
   temperature: z.number().min(0).max(2).optional(),
   tools: z.enum(["clearance-v1", "outlayer-v1", "agentkit-v1"]),
   system_prompt: z.string().max(40000),
+  /** A pre-model filter that is part of the agent (see guard.ts). */
+  guard: z.enum(["agentkit-regex-v1"]).optional(),
 });
 export type AgentConfig = z.infer<typeof AgentSchema>;
 
@@ -102,7 +104,7 @@ export function canonical(v: unknown): string {
 
 export const sha256hex = (s: string) => createHash("sha256").update(s).digest("hex");
 
-/** config_hash = sha256(JCS({model, system_prompt, temperature, tools})); endpoint and keys excluded. */
+/** config_hash = sha256(JCS({model, system_prompt, temperature, tools[, guard]})); endpoint and keys excluded. */
 export function configHash(a: AgentConfig): string {
-  return sha256hex(canonical({ model: a.model, system_prompt: a.system_prompt, temperature: a.temperature, tools: a.tools }));
+  return sha256hex(canonical({ model: a.model, system_prompt: a.system_prompt, temperature: a.temperature, tools: a.tools, ...(a.guard ? { guard: a.guard } : {}) }));
 }

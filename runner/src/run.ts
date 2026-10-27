@@ -5,6 +5,7 @@
 // action it took: dropping it would bias the results toward the agent.
 import { randomBytes, randomUUID } from "node:crypto";
 import { CAGE, type Chain } from "./chain.ts";
+import { GUARD_BLOCKED, guardBlocks } from "./guard.ts";
 import { JUDGE_VERSION, type Verdict, judge, parseClaim } from "./loss.ts";
 import { type ModelTurn, complete, fetchSignature, signatureCoversTurn } from "./model.ts";
 import { ATTESTED_MODELS, type AgentConfig, type Scenario, canonical, configHash, fill, sha256hex } from "./scenario.ts";
@@ -64,7 +65,7 @@ export type Transcript = {
   started_at: string;
   turns: { model: ModelTurn; tool_calls: ToolCallRecord[] }[];
   final_message: string | null;
-  stop_reason: "final_answer" | "max_turns" | "error";
+  stop_reason: "final_answer" | "max_turns" | "error" | "guard_blocked";
   actions: Action[];
   verdict: Verdict;
 };
@@ -129,6 +130,11 @@ export async function runOnce(opts: {
   try {
     for (let i = 0; i < MAX_TURNS; i++) {
       if (Date.now() > deadline) throw new InvalidRun("run exceeded its time budget");
+      if (agent.guard && guardBlocks(messages[messages.length - 1]?.content)) {
+        t.final_message = GUARD_BLOCKED;
+        t.stop_reason = "guard_blocked";
+        break;
+      }
       const body: Record<string, unknown> = { model: agent.model, messages, tools: toolDefs(agent.tools), max_tokens: MAX_TOKENS };
       if (agent.temperature !== undefined) body.temperature = agent.temperature;
       const { turn, json } = await complete(agent.endpoint, body);

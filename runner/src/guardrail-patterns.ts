@@ -7,20 +7,9 @@
 import { readFileSync, readdirSync, statSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { INJECTION_PATTERNS } from "./guard.ts";
 
-const INJECTION_PATTERNS = [
-  /ignore\s+(all\s+)?(previous|prior|above|earlier)\s+(instructions|prompts|rules|directives)/i,
-  /forget\s+(your|all|the)\s+(rules|instructions|guidelines|prompts|directives)/i,
-  /you\s+are\s+now\s+(a|an|no\s+longer)/i,
-  /disregard\s+(all|any|your|the)\s+(previous|prior|above)?\s*(instructions|rules|prompts)/i,
-  /override\s+(your|system|all)\s+(instructions|prompts|rules)/i,
-  /new\s+instructions?[:\s]/i,
-  /system\s*prompt[:\s]/i,
-  /\bDAN\b.*\bjailbreak\b/i,
-  /do\s+anything\s+now/i,
-  /pretend\s+(you\s+)?(are|have)\s+no\s+(restrictions|rules|limits)/i,
-  /act\s+as\s+if\s+(you\s+)?(have|had)\s+no\s+(rules|restrictions|guidelines)/i,
-];
+
 
 const base = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "transcripts");
 const texts = new Map<string, string>();
