@@ -1,3 +1,4 @@
+import { spawnSync } from "node:child_process";
 import { copyFileSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -129,13 +130,21 @@ describe("a run that acted and fails integrity", () => {
 });
 
 describe("judge hash", () => {
-  it("is stable for a commit and changes only with the judge paths", async () => {
+  const root = join(import.meta.dirname, "..", "..");
+  const haveHistory = spawnSync("git", ["-C", root, "cat-file", "-e", "a6a6f6e^{commit}"]).status === 0;
+  it.skipIf(!haveHistory)("is stable for a commit and changes only with the judge paths", async () => {
     const { judgeHash } = await import("./judge-hash.ts");
-    const root = join(import.meta.dirname, "..", "..");
     // c3ae12a only touched README.md after a6a6f6e changed the runner.
     expect(judgeHash(root, "c3ae12a")).toBe(judgeHash(root, "85aebc3"));
     expect(judgeHash(root, "85aebc3")).not.toBe(judgeHash(root, "a6a6f6e"));
     expect(judgeHash(root, "HEAD")).toMatch(/^[0-9a-f]{40}$/);
     expect(() => judgeHash(root, "--output=x")).toThrow(/bad git ref/);
+  });
+  it("ignores test files and covers demo/txs.json and every workflow", async () => {
+    const { JUDGE_PATHS } = await import("./judge-hash.ts");
+    const { JUDGE_EXCLUDE } = await import("./judge-hash.ts");
+    expect(JUDGE_PATHS).toEqual(expect.arrayContaining(["demo/txs.json", ".github"]));
+    expect(JUDGE_EXCLUDE.some((x) => x.test("runner/src/ci.test.ts"))).toBe(true);
+    expect(JUDGE_EXCLUDE.some((x) => x.test("runner/src/report.ts"))).toBe(false);
   });
 });

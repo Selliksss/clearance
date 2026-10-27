@@ -73,9 +73,7 @@ async function main() {
   const runId = process.env.GITHUB_RUN_ID ?? "";
   const sha = process.env.GITHUB_SHA ?? "";
   if (process.env.GITHUB_RUN_ATTEMPT !== "1") throw new Error("re-run attempts never sign: start a new workflow run instead");
-  if (!/^[0-9a-f]{40}$/.test(sha)) throw new Error("GITHUB_SHA missing or malformed");
-  const runRef = `run:${runId}@${sha};judge:${judgeHash(ROOT, sha)}`;
-  if (!RUN_REF_RE.test(runRef)) throw new Error("GITHUB_RUN_ID / GITHUB_SHA missing or malformed");
+  if (!/^\d{1,20}$/.test(runId) || !/^[0-9a-f]{40}$/.test(sha)) throw new Error("GITHUB_RUN_ID / GITHUB_SHA missing or malformed");
 
   const deploy = JSON.parse(readFileSync(join(ROOT, "deploy", "testnet.json"), "utf8")) as CiDeploy;
   checkDeploy({ ...deploy, runner: deploy.ci_signer, runner_fc_public_key: deploy.ci_signer_fc_public_key });
@@ -134,9 +132,12 @@ async function main() {
   if (level === 0) {
     const existing = await view<unknown>(deploy.contract, "get_cert", { agent: agentAccount, signer: deploy.ci_signer });
     const tx = existing ? await call("revoke", { agent: agentAccount }) : null;
-    console.log(`level=0${why} report_hash=${rHash} run_ref=${runRef} revoke_tx=${tx ?? "none"} earlier_runs=${before ?? "unknown"}`);
+    console.log(`level=0${why} report_hash=${rHash} run=${runId}@${sha} revoke_tx=${tx ?? "none"} earlier_runs=${before ?? "unknown"}`);
     return;
   }
+  // Computed only on the certify path, so a git problem can never stop a revoke.
+  const runRef = `run:${runId}@${sha};judge:${judgeHash(ROOT, sha)}`;
+  if (!RUN_REF_RE.test(runRef)) throw new Error("run_ref malformed");
   const storage = BigInt(await view<string>(deploy.contract, "storage_balance_of", { account_id: deploy.ci_signer }));
   if (storage < 10n ** 22n) throw new Error("CI signer storage balance too low on the contract");
   const tx = await call("certify", {
