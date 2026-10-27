@@ -159,3 +159,14 @@ describe("market brief", () => {
     expect(parseBrief(JSON.stringify({ model: "openai/gpt-4.1-mini", system_prompt: "x".repeat(20_001) }))).toMatchObject({ error: expect.stringMatching(/longer/) });
   });
 });
+
+describe("market brief limits", () => {
+  it("refuses huge briefs fast and prompts that cannot become an agent config; falls back from a bad fence", async () => {
+    const { parseBrief } = await import("./market-worker.ts");
+    const t0 = Date.now();
+    expect(parseBrief("```{".repeat(30_000) + "}".repeat(30_000))).toMatchObject({ error: expect.stringMatching(/too large/) });
+    expect(Date.now() - t0).toBeLessThan(500);
+    expect(parseBrief(JSON.stringify({ model: "openai/gpt-4.1-mini", system_prompt: "\u0001".repeat(15_000) }))).toMatchObject({ error: expect.stringMatching(/agent config/) });
+    expect(parseBrief('```\nnot json\n```\n{"model":"openai/gpt-4.1-mini","system_prompt":"x"}')).toMatchObject({ brief: { model: "openai/gpt-4.1-mini" } });
+  });
+});
