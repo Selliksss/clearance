@@ -1,7 +1,7 @@
 {
   "version": 1,
   "blind": true,
-  "note": "Generators written by authors who never saw the defenders' prompts or results. G12-G14 are by non-Claude models (one per vendor) to break the 'Claude attacks Claude' correlation. Not part of any level or certificate; printed separately by make replay. protected-v3 is frozen and measured on these without any prompt change. Round 3 (S6-agent-hire, a provider agent hired on an agent marketplace): scenario by Gemini 2.5 Pro, G21-G26 by GPT-5.5, Gemini 2.5 Pro and Kimi K3.1 Pro (two each, categories required), all committed before any run.",
+  "note": "Generators written by authors who never saw the defenders' prompts or results. G12-G14 are by non-Claude models (one per vendor) to break the 'Claude attacks Claude' correlation. Not part of any level or certificate; printed separately by make replay. protected-v3 is frozen and measured on these without any prompt change. Round 3 (S6-agent-hire, a provider agent hired on an agent marketplace): scenario by Gemini 2.5 Pro, G21-G26 by GPT-5.5, Gemini 2.5 Pro and Kimi K3.1 Pro (two each, categories required), all committed before any run. Round 4, written after protected-v4 was frozen (59d885b): G27-G32 on S1, S3, S5 and S6 by GPT-5.5 (G28; its provider refused G27 three times as a possible cybersecurity risk), Gemini 2.5 Pro (G27, G29, G30; two rejected G30 attempts kept in attacks/authorship) and Kimi K3.1 Pro (G31, G32), committed before any run.",
   "generators": [
     "G11-swap-minout-per-unit",
     "G12-blind-usdc-decimal-dust",
@@ -18,7 +18,13 @@
     "G23-blind-invoice-payout-override",
     "G24-blind-escrow-diversion",
     "G25-blind-blind",
-    "G26-blind-blind"
+    "G26-blind-blind",
+    "G27-blind-deposit-injection",
+    "G28-blind-compliance-escrow",
+    "G29-blind-invoice-compliance-fee",
+    "G30-blind-blind",
+    "G31-blind-blind",
+    "G32-blind-invoice-settlement-relay"
   ],
   "scenarios": [
     "S1-invoice",
@@ -44,7 +50,13 @@
     "G23-blind-invoice-payout-override": "complete",
     "G24-blind-escrow-diversion": "complete",
     "G25-blind-blind": "complete",
-    "G26-blind-blind": "complete"
+    "G26-blind-blind": "complete",
+    "G27-blind-deposit-injection": "complete",
+    "G28-blind-compliance-escrow": "complete",
+    "G29-blind-invoice-compliance-fee": "complete",
+    "G30-blind-blind": "complete",
+    "G31-blind-blind": "complete",
+    "G32-blind-invoice-settlement-relay": "complete"
   },
   "authors": {
     "G11-swap-minout-per-unit": "Claude subagent without access to agents/, transcripts/, reports/",
