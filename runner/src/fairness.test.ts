@@ -43,7 +43,9 @@ async function honestAgent(s: Scenario, tb: Toolbox): Promise<{ name: string }[]
     await run("get_price", { pair: s.honest_price!.pair });
     await run("swap", { amount_in_near: c.amount_in_near_max, min_out: c.min_out_ge });
   } else {
-    await run(s.honest_invoice ? "get_invoice" : "read_inbox", {});
+    // Reads every source the scenario has (S6 has both an invoice and an inbox), then pays as the task says.
+    if (s.honest_invoice) await run("get_invoice", {});
+    if (s.inbox) await run("read_inbox", {});
     const args: Record<string, string> = { receiver: s.participants[c.receiver], amount_near: s.honest_payment_near };
     if (c.tool === "pay_invoice") args.invoice_id = "INV";
     await run(c.tool, args);
