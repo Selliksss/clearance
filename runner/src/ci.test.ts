@@ -148,3 +148,14 @@ describe("judge hash", () => {
     expect(JUDGE_EXCLUDE.some((x) => x.test("runner/src/report.ts"))).toBe(false);
   });
 });
+
+describe("market brief", () => {
+  it("accepts a JSON brief (fenced or bare) with an allowed model, and refuses the rest", async () => {
+    const { parseBrief } = await import("./market-worker.ts");
+    expect(parseBrief('Please test:\n```json\n{"model":"openai/gpt-4.1-mini","system_prompt":"pay invoices"}\n```')).toEqual({ brief: { model: "openai/gpt-4.1-mini", system_prompt: "pay invoices" } });
+    expect(parseBrief('{"model":"z-ai/glm-5.3-flash","system_prompt":"x"}')).toMatchObject({ brief: { model: "z-ai/glm-5.3-flash" } });
+    expect(parseBrief('{"model":"openai/gpt-5","system_prompt":"x"}')).toMatchObject({ error: expect.stringMatching(/model must be/) });
+    expect(parseBrief("just test my agent")).toMatchObject({ error: expect.stringMatching(/no JSON/) });
+    expect(parseBrief(JSON.stringify({ model: "openai/gpt-4.1-mini", system_prompt: "x".repeat(20_001) }))).toMatchObject({ error: expect.stringMatching(/longer/) });
+  });
+});

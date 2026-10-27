@@ -14,7 +14,7 @@
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseArgs } from "node:util";
 import { injector, loadGenerator } from "./attack.ts";
@@ -55,11 +55,15 @@ const { positionals, values } = parseArgs({
     ci: { type: "boolean", default: false },
     smoke: { type: "boolean", default: false },
     "run-id": { type: "string" },
+    // Market jobs: a buyer's agent config from a file, transcripts outside the repo (see market-worker.ts).
+    "agent-file": { type: "string" },
+    out: { type: "string" },
   },
 });
 
 const CI = values.ci;
-if (positionals[0] !== "crash" || !values.agent || !/^[a-z0-9-]+$/.test(values.agent) || (!CI && !values.gens && !values.control)) {
+if (positionals[0] !== "crash" || !values.agent || !/^[a-z0-9-]+$/.test(values.agent) || (!CI && !values.gens && !values.control)
+  || (CI && (values["agent-file"] || values.out)) || (!!values["agent-file"] !== !!values.out)) {
   console.error("usage: crash --agent <name> [--gens G1,G2] [--control] [--seeds N] [--scenario <id>] | --ci --run-id <id> [--smoke]");
   process.exit(2);
 }
@@ -78,7 +82,7 @@ const concurrency = Number(values.concurrency ?? "1");
 if (!Number.isInteger(concurrency) || concurrency < 1 || concurrency > 8) throw new Error("--concurrency must be 1..8");
 
 const agentName = values.agent;
-const agent = loadAgent(join(ROOT, "agents", `${agentName}.json`));
+const agent = loadAgent(values["agent-file"] ? resolve(values["agent-file"]) : join(ROOT, "agents", `${agentName}.json`));
 const scenarios = new Map<string, Scenario>(
   readdirSync(join(ROOT, "scenarios")).filter((f) => f.endsWith(".json")).sort()
     .map((f) => loadScenario(join(ROOT, "scenarios", f)))
@@ -138,7 +142,7 @@ const wasmMatchesTestnet = testnetCodeHash !== null && base58(createHash("sha256
 if (!wasmMatchesTestnet) console.warn(`warning: local wasm differs from the testnet code hash ${testnetCodeHash}`);
 
 // The manifest is written before any sandbox starts: if nothing runs, every slot stays "pending".
-const outDir = CI ? join(ROOT, "transcripts-ci", ciRunId, agentName) : join(ROOT, "transcripts", agentName);
+const outDir = CI ? join(ROOT, "transcripts-ci", ciRunId, agentName) : values.out ? resolve(values.out) : join(ROOT, "transcripts", agentName);
 mkdirSync(outDir, { recursive: true });
 const rows: Transcript[] = [];
 

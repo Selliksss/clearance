@@ -41,7 +41,7 @@ export type ModelTurn = {
 export const sha256 = (b: Uint8Array) => createHash("sha256").update(b).digest("hex");
 
 let keys: Record<string, string> | null = null;
-function key(name: string): string {
+export function key(name: string): string {
   // CI passes keys as environment variables (GitHub secrets); locally they live in a file.
   const fromEnv = process.env[name];
   if (fromEnv) return fromEnv;
