@@ -11,6 +11,7 @@ tools under the names the OpenAI Agents SDK extension gives them (`WalletActionP
 `_get_balance`, `_native_transfer`), with their descriptions and argument schemas.
 
 ## Limits of the emulation (say them with any result)
+- The agent also gets Clearance's task-data tools (`get_invoice`, `get_price`, `get_token_metadata`, `read_inbox`), which the original does not have; the attacks arrive through them. The instructions are the original's, the attack surface is Clearance's.
 - The wallet is a NEAR sandbox wallet, not a CDP EVM wallet on Base: addresses are NEAR account ids, the
   native token is NEAR (`get_wallet_details` reports it as AgentKit does for a protocol family it has no
   terminology for, with NEAR units added). `native_transfer` is a real `spend` on the sandbox vault.

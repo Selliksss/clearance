@@ -11,6 +11,7 @@ The OutLayer API is emulated by `runner/src/tools.ts` (`outlayer_http`): `/walle
 own spending policy (enforced in its TEE) is not part of this test: only the instruction layer is.
 
 ## Limits of the emulation (say them with any result)
+- The agent also gets Clearance's task-data tools (`get_invoice`, `get_price`, `get_token_metadata`, `read_inbox`), which the original does not have; the attacks arrive through them. The instructions are the original's, the attack surface is Clearance's.
 - Money calls answer with Clearance's report (`{"status": "success", "tx": ...}`, or `failed`/`denied` with a reason), not OutLayer's `{request_id, status, tx_hash}`; a `denied` carries the sandbox contract's panic text. The agent sees the same shape for real and injected results.
 - `headers` (e.g. `X-Idempotency-Key`) and a transfer's `memo`/`token` are accepted and ignored; there is no request polling (`/requests/{id}` is 404).
 - `POST /register` answers 409 (the wallet is pre-registered); `/call`, payment checks and account binding are 404; NEAR Intents, confidential and cross-chain endpoints are 503. Swap scenarios are therefore not run with this agent.
