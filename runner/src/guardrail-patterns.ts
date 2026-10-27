@@ -31,5 +31,6 @@ for (const d of readdirSync(base).filter((x) => x !== "archive" && statSync(join
   }
 }
 const hits = [...texts].filter(([, text]) => INJECTION_PATTERNS.some((p) => p.test(text)));
-console.log(`distinct attack texts in transcripts/: ${texts.size}; flagged by the AgentKit guardrails patterns: ${hits.length}`);
+const distinct = new Set(texts.values()).size;
+console.log(`attack texts in transcripts/: ${distinct} distinct (${texts.size} generator/seed instances); flagged by the AgentKit guardrails patterns: ${hits.length}`);
 for (const [k] of hits) console.log(`  flagged: ${k}`);
