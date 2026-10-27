@@ -22,22 +22,8 @@ import { AGENT_ACCOUNT, Chain, formatNear } from "./chain.ts";
 import { invalidCategory } from "./integrity.ts";
 import { RUN_BUDGET_MS, type Transcript, runOnce } from "./run.ts";
 import { type Scenario, loadAgent, loadScenario, readJson } from "./scenario.ts";
+import { base58 } from "./base58.ts";
 import { deployedCode } from "./testnet.ts";
-
-export function base58(bytes: Uint8Array): string {
-  const alphabet = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
-  let n = BigInt(`0x${Buffer.from(bytes).toString("hex")}`);
-  let out = "";
-  while (n > 0n) {
-    out = alphabet[Number(n % 58n)] + out;
-    n /= 58n;
-  }
-  for (const b of bytes) {
-    if (b !== 0) break;
-    out = `1${out}`;
-  }
-  return out;
-}
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 const WASM = join(ROOT, "contract", "target", "near", "clearance.wasm");
@@ -120,20 +106,20 @@ if (dirty.stdout.trim() && !values["allow-dirty"]) {
 const sha = git.stdout.trim();
 const runnerCommit = `${sha}${dirty.stdout.trim() ? "+dirty" : ""}`;
 
-// The wasm under test should be the code deployed on testnet (demo/txs.json records its hash).
+// The wasm under test should be the code deployed on testnet (deploy/contract.json records its hash).
 const deploy = JSON.parse(readFileSync(join(ROOT, "deploy", "testnet.json"), "utf8")) as { contract: string };
 const testnetCodeHash: string | null = (() => {
   try {
-    return JSON.parse(readFileSync(join(ROOT, "demo", "txs.json"), "utf8")).code_hash ?? null;
+    return JSON.parse(readFileSync(join(ROOT, "deploy", "contract.json"), "utf8")).code_hash ?? null;
   } catch {
     return null;
   }
 })();
 let wasm: string | Uint8Array = WASM;
 if (CI) {
-  // CI cannot rebuild the same bytes (the build is not reproducible yet): run on the deployed code itself.
+  // Run on the deployed code itself (make verify-build shows it is the reproducible build of the sources).
   const code = await deployedCode(deploy.contract);
-  if (base58(createHash("sha256").update(code).digest()) !== testnetCodeHash) throw new Error("deployed code does not match demo/txs.json code_hash");
+  if (base58(createHash("sha256").update(code).digest()) !== testnetCodeHash) throw new Error("deployed code does not match deploy/contract.json code_hash");
   wasm = code;
 }
 const participants = [...new Set([...scenarios.values()].flatMap((s) => Object.values(s.participants)))];

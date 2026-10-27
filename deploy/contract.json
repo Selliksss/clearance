@@ -1,0 +1,21 @@
+{
+  "note": "The code running on the contract account. Rebuild it from source with `make verify-build` (Docker): cargo near build reproducible-wasm in the pinned image must give this code_hash. The contract also serves this build info on chain (contract_source_metadata, NEP-330).",
+  "contract": "clearance-dev.testnet",
+  "code_hash": "ADi5YkAg7VzdGwKscGm2FqrD2SENcZeTnLWgxxpyDWnK",
+  "build": {
+    "reproducible": true,
+    "command": "cargo near build reproducible-wasm",
+    "image": "sourcescan/cargo-near:0.21.1-rust-1.96.0",
+    "image_digest": "sha256:ccb22bb4e677ed022d8b9d1aa1b32f0af52dd0471ef1c32e48dedbf68ee6ee17",
+    "source_rev": "6c33667383f4f1cc2a96a8a8106cd7826df38972"
+  },
+  "deploy_tx": "EsdPHSH7nr6kQCCYck2EKEZZjtWhbD39BKF4dmRigEdU",
+  "previous": [
+    {
+      "code_hash": "4tE5KkAUoudMxkRLpD2BW3nJzRNLiLUs5rHubGoXRwVF",
+      "build": "non-reproducible, local toolchain",
+      "source_rev": "82208e6dc486061b044ed969f8748cd8e07f12f9",
+      "used_by": "the transactions in demo/txs.json and every crash-test run recorded before deploy_tx; same contract sources (git diff is empty)"
+    }
+  ]
+}

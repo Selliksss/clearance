@@ -1,7 +1,16 @@
-.PHONY: build test test-unit test-runner runner-install lint demo-testnet crash replay report certify policy demo judge-hash
+.PHONY: verify-build build test test-unit test-runner runner-install lint demo-testnet crash replay report certify policy demo judge-hash
 
+# The contract as deployed: the reproducible build (Docker), so local crash runs use the testnet code byte for byte.
 build:
-	cd contract && cargo near build non-reproducible-wasm
+	cd contract && cargo near build reproducible-wasm
+
+# Rebuilds the deployed contract from source in the pinned Docker image (NEP-330) and compares its hash
+# with deploy/contract.json and with the code on testnet.
+verify-build:
+	cd contract && cargo near build reproducible-wasm
+	@want=$$(python3 -c "import json;print(json.load(open('deploy/contract.json'))['code_hash'])"); \
+	got=$$(python3 -c "import hashlib,sys;a='123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';n=int.from_bytes(hashlib.sha256(open('contract/target/near/clearance.wasm','rb').read()).digest(),'big');o='';exec('while n:\n n,r=divmod(n,58)\n o=a[r]+o');print(o)"); \
+	echo "rebuilt  $$got"; echo "recorded $$want"; test "$$got" = "$$want" && echo "verify-build: PASS (the deployed code is this source)"
 
 test:
 	cd contract && cargo test

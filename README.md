@@ -1,6 +1,6 @@
 # Clearance
 
-**Status:** work in progress for NEAR Hackathon (Nov 2026), started Oct 26, 2026. Working: the on-chain vault + certificate registry (testnet), the crash-test runner with 8 attack generators + 2 holdout + 22 blind, reports and levels, a level-2 certificate on testnet, OutLayer policy export, and `make demo` (one command for judges). Built but not yet active: the CI signer (it signs only from the public repo). Planned for Nov 1–14: the CI-signed certificate, the attack bounty, the final keyless deployment.
+**Status:** work in progress for NEAR Hackathon (Nov 2026), started Oct 26, 2026. Working: the on-chain vault + certificate registry (testnet), the crash-test runner with 8 attack generators + 2 holdout + 22 blind, reports and levels, a level-2 certificate on testnet, OutLayer policy export, and `make demo` (one command for judges). Built but not yet active: the CI signer (it signs only from the public repo). Planned for Nov 1–14: the CI-signed certificate, the attack bounty, deleting the contract account's keys (keyless).
 
 Clearance crash-tests AI agents that hold money. It measures how easily an agent is tricked into paying the wrong party, records the result as a certificate on NEAR, and caps the agent's spending by that result — in its own vault contract, or as an OutLayer Agent Custody policy.
 
@@ -18,7 +18,7 @@ docker build -t clearance-demo -f Dockerfile.demo .
 docker run --rm --network none clearance-demo make demo ARGS=--offline
 ```
 
-The last line should read `all steps PASS (40 pass; testnet evidence: 22 live, 0 cached)` (offline: `0 live, 22 cached`). It checks every transcript (hashes, TEE signatures, history, verdicts), that each report rebuilds byte for byte, the contract's code on testnet now and at the blocks of the recorded transactions, that the contract sources are unchanged since the commit that built that code, that the live certificate carries the `report_hash` the transcripts rebuild, the OutLayer policy, and 13 recorded transactions on testnet.
+The last line should read `all steps PASS (41 pass; testnet evidence: 22 live, 0 cached)` (offline: `0 live, 22 cached`). It checks every transcript (hashes, TEE signatures, history, verdicts), that each report rebuilds byte for byte, the contract's code on testnet now and at the blocks of the recorded transactions, that the contract sources are unchanged since the commit that built that code, that the live certificate carries the `report_hash` the transcripts rebuild, the OutLayer policy, and 13 recorded transactions on testnet.
 
 ## What the crash test found
 <!-- RESULTS:BEGIN -->
@@ -82,12 +82,12 @@ Anyone can run the crash test on their own agent: [`market.near.ai/a/clearance`]
 - **Usage so far:** one job, our own test hire (delivered in 32 s). No outside orders yet; runs we do for free on invitation are labelled as such, not counted as orders.
 
 ## What is proven and what is trusted
-- **Proven by the repo and testnet:** every transcript's hashes, verdicts and attack text reproduce (`make replay`); each report rebuilds byte for byte; the certificate on testnet carries that report's hash; the recorded demo transactions ended as recorded; the contract's code hash is the one the runs used.
+- **Proven by the repo and testnet:** every transcript's hashes, verdicts and attack text reproduce (`make replay`); each report rebuilds byte for byte; the certificate on testnet carries that report's hash; the recorded demo transactions ended as recorded; the contract's code hash is the one the runs used. The deployed contract is the reproducible build of this source (NEP-330): `make verify-build` rebuilds it in the pinned Docker image and gets the same code hash as testnet (`ADi5YkAg…`, deployed in `EsdPHSH7…`), and the contract serves its source commit and build image on chain (`contract_source_metadata`). The recorded demo transactions and every crash-test run before that deploy ran on the previous, non-reproducible build of the same sources (`4tE5KkAU…`, `deploy/contract.json`).
 - **Trusted, not proven:**
   - The TEE signatures are checked against the signing address stored in the transcript, and `make certify` / the CI signer refuse an Attested report whose signers are not pinned in `deploy/tee-signers.json`. Pinning stops a transcript from claiming an arbitrary address; it does not prove that the pinned address belongs to an attested NEAR AI enclave (the full Intel TDX + NVIDIA attestation was checked separately in GitHub Actions during the spikes, not on these runs).
   - The runner writes the transcripts, so offline checks cannot show that unfavourable runs were not discarded, or that a tool result matches the chain. Runs cut off mid-way are kept. The CI signer below takes the author's machine out of that loop once the repo is public — not the author: the code that judges a CI run is whatever the author committed (see the judge hash below).
   - The runner signs certificates with a function-call key limited to `certify`/`revoke` on the contract; that limits the runner process, not the author, whose runner account also holds a full-access key. (A second function-call key on that account, `CebzmHhj…`, is limited to the old spike contract `vault-spike.lt-dopusk-owner.testnet` and cannot call this one.)
-  - The wasm is built non-reproducibly, so its hash cannot be rebuilt from source yet; the final contract will use a reproducible build (NEP-330).
+  - The contract account still holds a full-access key, so its code could be replaced; the plan is to delete it (the contract has no admin or upgrade method, so nothing depends on it). Until then, check the code hash: `make demo` compares it with `deploy/contract.json`.
 
 ## CI signer (`.github/workflows/ci-signer.yml`)
 The crash test also runs in GitHub Actions. Once the sign job is on (see the last item), a certificate from the CI account will not depend on the author's machine.
@@ -115,6 +115,7 @@ make runner-install # npm ci --ignore-scripts (0 known vulnerabilities)
 make test-runner    # runner: judge, attack format, fairness, reports, certify/policy logic, signature checks
 make replay         # every transcript and report, plus the results table above
 make demo           # see "Check it in one command"
+make verify-build   # Docker: rebuild the contract reproducibly and compare with the code on testnet
 ```
 
 `make crash AGENT=naive ARGS="--gens G1 --seeds 1"` makes real model calls and needs your own NEAR AI key.

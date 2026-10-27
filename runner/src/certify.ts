@@ -12,6 +12,7 @@ import { homedir } from "node:os";
 import { dirname, join, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { buildReport, reportHash } from "./report.ts";
+import { base58 } from "./base58.ts";
 import { accessKey, callWithKeyFile, codeHash, view } from "./testnet.ts";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
@@ -112,9 +113,14 @@ async function main() {
   checkTeeSigners(ROOT, report);
   const args = buildCertifyArgs(report, agentAccount, commit);
 
-  const recorded = JSON.parse(readFileSync(join(ROOT, "demo", "txs.json"), "utf8")).code_hash;
+  const recorded = JSON.parse(readFileSync(join(ROOT, "deploy", "contract.json"), "utf8")).code_hash;
   const onChain = await codeHash(deploy.contract);
-  if (onChain !== recorded) throw new Error(`${deploy.contract} runs code ${onChain}, the runs were made against ${recorded}`);
+  if (onChain !== recorded) throw new Error(`${deploy.contract} runs code ${onChain}, deploy/contract.json records ${recorded}`);
+  // Every run in the report must have been made on that code, not on an earlier build.
+  for (const r of report.runs) {
+    const t = JSON.parse(readFileSync(join(ROOT, "transcripts", agentName, `${r.run_id}.json`), "utf8"));
+    if (base58(Buffer.from(t.env.wasm_sha256, "hex")) !== onChain) throw new Error(`run ${r.run_id} was made on other code than ${deploy.contract} runs now; certify from fresh runs (or CI)`);
+  }
 
   const storage = BigInt(await view<string>(deploy.contract, "storage_balance_of", { account_id: deploy.runner }));
   if (storage < 10n ** 22n) {

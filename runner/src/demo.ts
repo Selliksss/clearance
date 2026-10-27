@@ -116,6 +116,7 @@ async function main() {
   console.log(`Clearance demo${OFFLINE ? " (offline: testnet answers come from demo/rpc-cache/)" : ""}\n`);
   const deploy = JSON.parse(readFileSync(join(ROOT, "deploy", "testnet.json"), "utf8"));
   const txs = JSON.parse(readFileSync(join(ROOT, "demo", "txs.json"), "utf8"));
+const build = JSON.parse(readFileSync(join(ROOT, "deploy", "contract.json"), "utf8")) as { code_hash: string; build: { source_rev: string; image: string } };
   const readme = readFileSync(join(ROOT, "README.md"), "utf8");
   const nowNs = BigInt(Date.now()) * 1_000_000n;
 
@@ -144,17 +145,21 @@ async function main() {
   // 2. Contract code: on testnet now, and the source it was built from.
   try {
     const acct = await rpc("query", { request_type: "view_account", finality: "final", account_id: deploy.contract });
-    step(acct.result.code_hash === txs.code_hash, acct, `${deploy.contract} runs code ${acct.result.code_hash.slice(0, 10)}…`, `recorded ${txs.code_hash.slice(0, 10)}…`);
+    step(acct.result.code_hash === build.code_hash, acct, `${deploy.contract} runs code ${acct.result.code_hash.slice(0, 10)}…`, `deploy/contract.json ${build.code_hash.slice(0, 10)}…`);
   } catch (e) {
     step(false, "LIVE", `${deploy.contract} code hash`, (e as Error).message);
   }
   // Everything the wasm is built from; unit tests (cfg(test)) are not part of it.
   const sources = ["contract/src", ":(exclude)contract/src/tests.rs", "contract/Cargo.toml", "contract/Cargo.lock", "contract/rust-toolchain.toml"];
-  const git = spawnSync("git", ["-C", ROOT, "diff", "--quiet", txs.commit, "--", ...sources], { encoding: "utf8" });
-  if (git.status === 0) step(true, "LOCAL", `the contract sources are unchanged since commit ${txs.commit.slice(0, 8)}, which built the recorded code`);
-  else if (git.status === 1) step(false, "LOCAL", `the contract sources changed since commit ${txs.commit.slice(0, 8)}, which built the recorded code`);
-  else info(`cannot compare contract sources with commit ${txs.commit.slice(0, 8)} (git missing, or a shallow clone without it: clone the full history)`);
-  info("the wasm is built non-reproducibly, so its hash cannot be rebuilt from source; the final contract will use a reproducible build (NEP-330)");
+  // The deployed code is the reproducible build of build.source_rev; the recorded transactions ran on the
+  // previous build, from the same sources.
+  for (const [rev, what] of [[build.build.source_rev, "the deployed reproducible build"], [txs.commit, "the build the recorded transactions ran on"]] as const) {
+    const git = spawnSync("git", ["-C", ROOT, "diff", "--quiet", rev, "--", ...sources], { encoding: "utf8" });
+    if (git.status === 0) step(true, "LOCAL", `the contract sources are unchanged since commit ${rev.slice(0, 8)} (${what})`);
+    else if (git.status === 1) step(false, "LOCAL", `the contract sources changed since commit ${rev.slice(0, 8)} (${what})`);
+    else info(`cannot compare contract sources with commit ${rev.slice(0, 8)} (git missing, or a shallow clone without it: clone the full history)`);
+  }
+  info(`rebuild the deployed code yourself (Docker): make verify-build -> ${build.code_hash.slice(0, 10)}… (${build.build.image})`);
 
   // 3. Certificates: the live one carries the report_hash its transcripts rebuild; level-0 agents hold none.
   for (const a of agents) {
