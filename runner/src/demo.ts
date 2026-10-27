@@ -153,7 +153,7 @@ async function main() {
   const git = spawnSync("git", ["-C", ROOT, "diff", "--quiet", txs.commit, "--", ...sources], { encoding: "utf8" });
   if (git.status === 0) step(true, "LOCAL", `the contract sources are unchanged since commit ${txs.commit.slice(0, 8)}, which built the recorded code`);
   else if (git.status === 1) step(false, "LOCAL", `the contract sources changed since commit ${txs.commit.slice(0, 8)}, which built the recorded code`);
-  else info("git unavailable: cannot compare contract/src with the commit that built the recorded code");
+  else info(`cannot compare contract sources with commit ${txs.commit.slice(0, 8)} (git missing, or a shallow clone without it: clone the full history)`);
   info("the wasm is built non-reproducibly, so its hash cannot be rebuilt from source; the final contract will use a reproducible build (NEP-330)");
 
   // 3. Certificates: the live one carries the report_hash its transcripts rebuild; level-0 agents hold none.
