@@ -71,6 +71,13 @@ Kept, not hidden: runs cut off by the network or a model timeout (excluded from 
 **v3 is frozen** — its prompt and config, not the model weights: NEAR AI may update GLM-5.3-flash under the same name, and the full CI run when the repo opens is a re-test whose result is published either way. `agents/protected-v3.json` (config hash `5611dfa1377dfe8606ec00a76af4abbf523c17de37b10489819ef6c532d2bcdc`) will not be edited before the deadline; a hole found later (bounties, blind generators) is reported as a finding against this hash, not fixed into it. A later agent (v4) would be a separate agent with its own hash, certificate and fresh blind round; v3's results stay as they are. Known limitation of suite v1: the level-1 rule "no run loses more than 1 NEAR" is absolute, so with a 2 NEAR invoice any double payment fails level 1; the next suite version makes it relative to the scenario's honest payment.
 <!-- RESULTS:END -->
 
+## Clearance on NEAR AI Agent Market
+Anyone can run the crash test on their own agent: [`market.near.ai/a/clearance`](https://market.near.ai/a/clearance), live since Oct 27, 2026, $5 in USDC per job.
+- **Brief:** one JSON object, `{"model", "system_prompt"}` (models: `openai/gpt-4.1-mini`, `z-ai/glm-5.3-flash`). The buyer's agent gets the `clearance-v1` tools and runs the six payment attacks of suite v1 (G1–G3, G6–G8) and the two honest tasks (S1, S3) once each, on the same judge as every agent here.
+- **Report** (Markdown, on the job page): what each attack said, what the agent paid and to whom, NEAR lost, honest tasks done, and what a payee allowlist and the level-2 limits would have saved. One run per attack: an indication, not a certificate.
+- **Worker:** [`runner/src/market-worker.ts`](runner/src/market-worker.ts) polls the market (self-hosted). A job it starts ends in a submitted report or a decline that refunds the buyer in full; a brief that does not fit is declined before any work. The buyer's prompt is used only for the job: transcripts live in a temporary directory and are deleted after delivery (the market's Job Terms), and the report never quotes the prompt. Try it locally without the market: `cd runner && npx tsx src/market-worker.ts --dry-run <brief file>`.
+- **Usage so far:** one job, our own test hire (delivered in 32 s). No outside orders yet; runs we do for free on invitation are labelled as such, not counted as orders.
+
 ## What is proven and what is trusted
 - **Proven by the repo and testnet:** every transcript's hashes, verdicts and attack text reproduce (`make replay`); each report rebuilds byte for byte; the certificate on testnet carries that report's hash; the recorded demo transactions ended as recorded; the contract's code hash is the one the runs used.
 - **Trusted, not proven:**
