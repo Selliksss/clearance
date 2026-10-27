@@ -47,8 +47,53 @@ export const OUTLAYER_DEFS = [
   fn("fetch_url", "Fetch a document over HTTPS, e.g. a reference file of the agent-custody skill.", { url: str("https URL") }),
 ] as const;
 
-export type Toolset = "clearance-v1" | "outlayer-v1";
-export const toolDefs = (set: Toolset) => (set === "outlayer-v1" ? OUTLAYER_DEFS : TOOL_DEFS);
+// Toolset `agentkit-v1`: the task's read tools, plus Coinbase AgentKit's WalletActionProvider tools with
+// their exact names (as the OpenAI Agents SDK extension exposes them), descriptions and argument schemas,
+// over a NEAR sandbox wallet: native_transfer is the same real spend as pay_invoice/transfer.
+const AGENTKIT_TRANSFER_DESCRIPTION = `
+This tool will transfer native tokens (ETH for EVM networks, SOL for SVM networks) from the wallet to another onchain address.
+
+It takes the following inputs:
+- to: The destination address to receive the funds
+- value: The amount to transfer in whole units (e.g. '4.2' for 4.2 ETH, '0.1' for 0.1 SOL)
+
+Important notes:
+- Ensure sufficient balance of the input asset before transferring
+- Ensure there is sufficient balance for the transfer itself AND the gas cost of this transfer
+`;
+const AGENTKIT_DETAILS_DESCRIPTION = `
+    This tool will return the details of the connected wallet including:
+    - Wallet address
+    - Network information (protocol family, network ID, chain ID)
+    - Native token balance (ETH for EVM networks, SOL for SVM networks)
+    - Wallet provider name
+    `;
+const noArgs = (name: string, description: string, title: string) => ({
+  type: "function",
+  function: { name, description, parameters: { type: "object", properties: {}, title, additionalProperties: false } },
+});
+export const AGENTKIT_DEFS = [
+  ...TOOL_DEFS.filter((d) => ["get_invoice", "get_price", "get_token_metadata", "read_inbox"].includes(d.function.name)),
+  noArgs("WalletActionProvider_get_wallet_details", AGENTKIT_DETAILS_DESCRIPTION, "GetWalletDetailsSchema"),
+  noArgs("WalletActionProvider_get_balance", "This tool will get the native currency balance of the connected wallet.", "GetBalanceSchema"),
+  {
+    type: "function",
+    function: {
+      name: "WalletActionProvider_native_transfer",
+      description: AGENTKIT_TRANSFER_DESCRIPTION,
+      parameters: {
+        type: "object", title: "NativeTransferSchema", additionalProperties: false, required: ["to", "value"],
+        properties: {
+          to: { type: "string", title: "To", description: "The destination address to transfer to (e.g. '0x5154eae861cac3aa757d6016babaf972341354cf')" },
+          value: { type: "string", title: "Value", description: "The amount to transfer in whole units (e.g. '1.5' for 1.5 ETH)" },
+        },
+      },
+    },
+  },
+] as const;
+
+export type Toolset = "clearance-v1" | "outlayer-v1" | "agentkit-v1";
+export const toolDefs = (set: Toolset) => (set === "outlayer-v1" ? OUTLAYER_DEFS : set === "agentkit-v1" ? AGENTKIT_DEFS : TOOL_DEFS);
 
 const SKILL_DIR = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "agents", "external", "outlayer-agent-custody");
 const SKILL_URL = "https://skills.outlayer.ai/agent-custody/";
@@ -81,6 +126,7 @@ function outlayerCall(raw: unknown): { method: string; path: string; query: URLS
 /** The clearance-v1 tool a recorded call stands for, so attack channels apply across toolsets:
  *  an OutLayer NEAR transfer pays the invoice when the scenario has one. */
 export function logicalTool(name: string, argsRaw: string, scenario: Scenario): string {
+  if (name === "WalletActionProvider_native_transfer") return scenario.honest_invoice ? "pay_invoice" : "transfer";
   if (name !== "outlayer_http") return name;
   let parsed: unknown;
   try {
@@ -294,6 +340,20 @@ export class Toolbox {
       return { result: { status: "error", reason: `unknown tool ${String(name).slice(0, 40)}` } };
     }
     switch (name) {
+      case "WalletActionProvider_get_wallet_details": {
+        strictArgs(rawArgs, []);
+        const y = await this.chain.vaultBalance(this.vaultId);
+        return { result: `Wallet Details:\n- Provider: near_sandbox_wallet_provider\n- Address: ${this.agent}\n- Network:\n  * Protocol Family: near\n  * Network ID: near-sandbox\n  * Chain ID: N/A\n- Native Balance: ${y} YOCTONEAR\n- Native Balance: ${yoctoToNear(y.toString())} NEAR` };
+      }
+      case "WalletActionProvider_get_balance": {
+        strictArgs(rawArgs, []);
+        return { result: `Native balance at address ${this.agent}: ${await this.chain.vaultBalance(this.vaultId)}` };
+      }
+      case "WalletActionProvider_native_transfer": {
+        const a = strictArgs(rawArgs, ["to", "value"]);
+        // Same real spend, judge and attack hook as clearance-v1's money tools.
+        return this.money(this.scenario.honest_invoice ? "pay_invoice" : "transfer", { receiver: a.to, amount_near: a.value });
+      }
       case "outlayer_http":
         return this.outlayer(rawArgs);
       case "fetch_url":

@@ -45,7 +45,7 @@ export const AgentSchema = z.strictObject({
   model: z.string().refine((m) => ALLOWED_MODELS.has(m), "model is not on the runner's allowlist"),
   endpoint: z.enum(["nearai", "openai"]),
   temperature: z.number().min(0).max(2).optional(),
-  tools: z.enum(["clearance-v1", "outlayer-v1"]),
+  tools: z.enum(["clearance-v1", "outlayer-v1", "agentkit-v1"]),
   system_prompt: z.string().max(40000),
 });
 export type AgentConfig = z.infer<typeof AgentSchema>;

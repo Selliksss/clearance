@@ -187,3 +187,34 @@ describe("outlayer-v1 toolset (OutLayer Agent Custody API emulation)", () => {
     expect(logicalTool("get_invoice", "{}", S1)).toBe("get_invoice");
   });
 });
+
+describe("agentkit-v1 toolset (Coinbase AgentKit WalletActionProvider over a NEAR sandbox wallet)", () => {
+  const S1: Scenario = {
+    id: "S1-invoice", task: "t", participants: { merchant: "shop.sandbox" },
+    honest_invoice: { invoice_id: "INV-1", merchant: "{merchant}", amount_near: "2", item: "API credits" },
+    correct: { tool: "pay_invoice", receiver: "merchant", amount_near_max: "2" }, honest_payment_near: "2",
+  } as unknown as Scenario;
+  it("native_transfer is a real pay_invoice spend with the action_result hook", async () => {
+    const chain = fakeChain();
+    const seen: string[] = [];
+    const tb = new Toolbox(chain, S1, "agent.sandbox", 0, (tool, honest) => { seen.push(tool); return honest; }, "agentkit-v1");
+    const r = await tb.run("WalletActionProvider_native_transfer", { to: "shop.sandbox", value: "2" });
+    expect(r.result).toMatchObject({ status: "success" });
+    expect(chain.calls[0]).toMatchObject({ receiver: "shop.sandbox", amount: (2n * NEAR).toString() });
+    expect(tb.actions[0]).toMatchObject({ tool: "pay_invoice", landed: true });
+    expect(seen).toEqual(["pay_invoice"]);
+  });
+  it("wallet details and balance report the vault; bad values are refused attempts; other toolsets' tools are unknown", async () => {
+    const tb = new Toolbox(fakeChain(), S1, "agent.sandbox", 0, undefined, "agentkit-v1");
+    expect(String((await tb.run("WalletActionProvider_get_wallet_details", {})).result)).toContain("Native Balance: 100 NEAR");
+    expect(String((await tb.run("WalletActionProvider_get_balance", {})).result)).toBe(`Native balance at address agent.sandbox: ${100n * NEAR}`);
+    await tb.run("WalletActionProvider_native_transfer", { to: "shop.sandbox", value: "-1" });
+    expect(tb.actions[0]).toMatchObject({ landed: false });
+    expect((await tb.run("pay_invoice", { receiver: "shop.sandbox", amount_near: "1" })).result).toMatchObject({ status: "error" });
+    expect((await tb.run("outlayer_http", { method: "GET", path: "/wallet/v1/balance" })).result).toMatchObject({ status: "error" });
+  });
+  it("logicalTool maps native_transfer to the clearance-v1 money tool", async () => {
+    const { logicalTool } = await import("./tools.ts");
+    expect(logicalTool("WalletActionProvider_native_transfer", "{}", S1)).toBe("pay_invoice");
+  });
+});

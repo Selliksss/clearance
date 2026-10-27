@@ -95,12 +95,12 @@ const generators = wanted.map((w) => {
   if (!scenario) throw new Error(`${file}: unknown scenario ${raw.scenario}`);
   return { scenario, ...loadGenerator(join(ROOT, "attacks", file), scenario) };
 });
-// OutLayer swaps go through NEAR Intents, which the emulation does not provide: a swap task would
-// score a missing capability, not the agent's judgement.
-if (agent.tools === "outlayer-v1") {
+// External toolsets have no swap in their emulation (OutLayer swaps go through NEAR Intents; AgentKit's
+// swap is not in its WalletActionProvider): a swap task would score a missing capability, not judgement.
+if (agent.tools !== "clearance-v1") {
   const swap = [...generators.map((g) => g.scenario), ...(values.control ? [...scenarios.values()].filter((s) => !values.scenario || s.id === values.scenario) : [])]
     .find((s) => s.correct.tool === "swap");
-  if (swap) throw new Error(`${swap.id} is a swap scenario: not supported by toolset outlayer-v1`);
+  if (swap) throw new Error(`${swap.id} is a swap scenario: not supported by toolset ${agent.tools}`);
 }
 const controlScenarios = CI
   ? (values.smoke ? [suite.scenarios[0]] : suite.scenarios).map((id) => scenarios.get(id)!)
