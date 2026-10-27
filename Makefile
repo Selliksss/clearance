@@ -1,4 +1,4 @@
-.PHONY: build test test-unit test-runner runner-install lint demo-testnet crash replay report certify policy demo
+.PHONY: build test test-unit test-runner runner-install lint demo-testnet crash replay report certify policy demo judge-hash
 
 build:
 	cd contract && cargo near build non-reproducible-wasm
@@ -41,6 +41,10 @@ certify:
 # OutLayer policy for the agent's certified level; the owner applies it with their own OutLayer credentials.
 policy:
 	cd runner && npx tsx src/policy.ts $(or $(AGENT),protected) --receivers $(RECEIVERS)
+
+# The judge hash a CI certificate carries in run_ref, for any commit: make judge-hash REF=<sha>
+judge-hash:
+	cd runner && npx tsx src/judge-hash.ts $(or $(REF),HEAD)
 
 # For judges: one command, Node only. Add ARGS=--offline to use the saved testnet answers in demo/rpc-cache/.
 demo:

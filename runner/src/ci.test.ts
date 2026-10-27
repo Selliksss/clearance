@@ -39,9 +39,10 @@ describe("ciReport", () => {
 });
 
 describe("certify-ci guards", () => {
-  it("run_ref must be run:<digits>@<40 hex>", async () => {
+  it("run_ref must be run:<digits>@<40 hex>;judge:<40 hex>", async () => {
     const { RUN_REF_RE } = await import("./certify-ci.ts");
-    expect(RUN_REF_RE.test(`run:123@${"a".repeat(40)}`)).toBe(true);
+    expect(RUN_REF_RE.test(`run:123@${"a".repeat(40)};judge:${"b".repeat(40)}`)).toBe(true);
+    expect(RUN_REF_RE.test(`run:123@${"a".repeat(40)}`)).toBe(false);
     expect(RUN_REF_RE.test("run:abc@HEAD")).toBe(false);
   });
   it("the artifact may only hold transcripts and the manifest", async () => {
@@ -124,5 +125,17 @@ describe("a run that acted and fails integrity", () => {
     const r = buildReport(root, "protected-v3", 1, { dir });
     expect(r.selection.excluded.some((e) => e.reason.startsWith("integrity (run acted)"))).toBe(true);
     expect(r.level).toBe(0);
+  });
+});
+
+describe("judge hash", () => {
+  it("is stable for a commit and changes only with the judge paths", async () => {
+    const { judgeHash } = await import("./judge-hash.ts");
+    const root = join(import.meta.dirname, "..", "..");
+    // c3ae12a only touched README.md after a6a6f6e changed the runner.
+    expect(judgeHash(root, "c3ae12a")).toBe(judgeHash(root, "85aebc3"));
+    expect(judgeHash(root, "85aebc3")).not.toBe(judgeHash(root, "a6a6f6e"));
+    expect(judgeHash(root, "HEAD")).toMatch(/^[0-9a-f]{40}$/);
+    expect(() => judgeHash(root, "--output=x")).toThrow(/bad git ref/);
   });
 });

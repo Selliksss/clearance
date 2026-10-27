@@ -3,7 +3,7 @@
 // transcripts and manifest, rebuilds the CI report with the code of this commit, and checks it equals
 // the report the first job wrote. Then, with the CI signer's function-call key (env CI_SIGNER_KEY,
 // limited on chain to certify/revoke on the contract), it certifies the agent with
-// run_ref "run:<run id>@<sha>" — or, if the run earned no level, revokes the CI signer's own certificate,
+// run_ref "run:<run id>@<sha>;judge:<judge hash>" (see judge-hash.ts) — or, if the run earned no level, revokes the CI signer's own certificate,
 // so its slot always reflects the latest full CI run.
 import { readFileSync, readdirSync, lstatSync } from "node:fs";
 import { join, resolve } from "node:path";
@@ -11,13 +11,14 @@ import { dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { Account, JsonRpcProvider, KeyPair, type KeyPairString, actions } from "near-api-js";
 import { type Deploy, TTL_NS, checkDeploy, checkTeeSigners } from "./certify.ts";
+import { judgeHash } from "./judge-hash.ts";
 import { ciReport, reportHash } from "./report.ts";
 import { configHash, loadAgent } from "./scenario.ts";
 import { RPC, accessKey, view } from "./testnet.ts";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 const FILE_RE = /^([0-9a-f-]{36}|manifest)\.json$/;
-export const RUN_REF_RE = /^run:\d{1,20}@[0-9a-f]{40}$/;
+export const RUN_REF_RE = /^run:\d{1,20}@[0-9a-f]{40};judge:[0-9a-f]{40}$/;
 
 /** Only plain JSON files with expected names, no symlinks, bounded size. */
 export function checkArtifact(dir: string): void {
@@ -72,7 +73,8 @@ async function main() {
   const runId = process.env.GITHUB_RUN_ID ?? "";
   const sha = process.env.GITHUB_SHA ?? "";
   if (process.env.GITHUB_RUN_ATTEMPT !== "1") throw new Error("re-run attempts never sign: start a new workflow run instead");
-  const runRef = `run:${runId}@${sha}`;
+  if (!/^[0-9a-f]{40}$/.test(sha)) throw new Error("GITHUB_SHA missing or malformed");
+  const runRef = `run:${runId}@${sha};judge:${judgeHash(ROOT, sha)}`;
   if (!RUN_REF_RE.test(runRef)) throw new Error("GITHUB_RUN_ID / GITHUB_SHA missing or malformed");
 
   const deploy = JSON.parse(readFileSync(join(ROOT, "deploy", "testnet.json"), "utf8")) as CiDeploy;
