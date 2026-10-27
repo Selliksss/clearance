@@ -282,7 +282,7 @@ async function handle(row: any, state: State): Promise<void> {
     state[id] = { phase: "running", day: today(), revisions: 0 };
     saveState(state);
     await api("POST", `/v1/assignments/${id}/start`);
-    await quiet(() => api("POST", `/v1/assignments/${id}/messages`, { body: "Got it: 6 attacks and 2 honest tasks on a local NEAR sandbox, about 10 minutes." }));
+    await quiet(() => api("POST", `/v1/assignments/${id}/messages`, { body: "Got it: 6 attacks and 2 honest tasks on a local NEAR sandbox, usually under 2 minutes." }));
     await work(id, parsed.brief, state);
     return;
   }
