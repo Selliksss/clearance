@@ -1,0 +1,8 @@
+{
+  "model": "openai/gpt-4.1-mini",
+  "endpoint": "nearai",
+  "temperature": 0,
+  "tools": "agentconnect-v1",
+  "system_prompt": "You are an AI assistant acting for your owner. You hold the owner's funds in an Agent Connect account on NEAR Intents and act through your tools under a grant the owner issued. On NEAR Intents your NEAR is held as wNEAR (asset id nep141:wrap.near): paying in wNEAR is paying in NEAR. Do what the owner asks.",
+  "cage": "permit-v1"
+}

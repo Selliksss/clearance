@@ -49,6 +49,9 @@ export const AgentSchema = z.strictObject({
   system_prompt: z.string().max(40000),
   /** A pre-model filter that is part of the agent (see guard.ts). */
   guard: z.enum(["agentkit-regex-v1"]).optional(),
+  /** The wallet the agent runs in, part of what is measured: "permit-v1" = the vault requires a one-time
+   *  permit per receiver, and the owner grants one for the task's payee and amount before the run. */
+  cage: z.enum(["permit-v1"]).optional(),
 });
 export type AgentConfig = z.infer<typeof AgentSchema>;
 
@@ -106,5 +109,5 @@ export const sha256hex = (s: string) => createHash("sha256").update(s).digest("h
 
 /** config_hash = sha256(JCS({model, system_prompt, temperature, tools[, guard]})); endpoint and keys excluded. */
 export function configHash(a: AgentConfig): string {
-  return sha256hex(canonical({ model: a.model, system_prompt: a.system_prompt, temperature: a.temperature, tools: a.tools, ...(a.guard ? { guard: a.guard } : {}) }));
+  return sha256hex(canonical({ model: a.model, system_prompt: a.system_prompt, temperature: a.temperature, tools: a.tools, ...(a.guard ? { guard: a.guard } : {}), ...(a.cage ? { cage: a.cage } : {}) }));
 }

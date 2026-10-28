@@ -184,6 +184,11 @@ impl Env {
             .data)
     }
 
+    async fn sandbox_now(&self) -> TestResult<u64> {
+        let block = near_api::Chain::block().fetch_from(&self.net).await?;
+        Ok(block.header.timestamp_nanosec.parse()?)
+    }
+
     async fn vault(&self, id: u64) -> TestResult<Value> {
         self.view("get_vault", json!({ "vault_id": id })).await
     }
@@ -560,5 +565,84 @@ async fn signer_policies_and_function_call_key() -> TestResult<()> {
         .await?,
         json!(false)
     );
+    Ok(())
+}
+
+#[tokio::test]
+async fn one_time_permits() -> TestResult<()> {
+    let env = Env::start().await?;
+    let owner = env.account("owner").await?;
+    let agent = env.account("agent").await?;
+    let signer = env.account("signer").await?;
+    let shop = env.account("shop").await?;
+    let other = env.account("other").await?;
+    let ghost: AccountId = "ghost.shop.sandbox".parse()?;
+    let one = NearToken::from_yoctonear(1);
+    let n = |x: u128| NearToken::from_near(x).as_yoctonear();
+    env.call(&owner, "create_vault", vault_args(&agent, 10, json!([shop, ghost, other]), json!([signer]), "All"), NearToken::from_near(20))
+        .await
+        .ok();
+    env.prepay(&signer).await;
+    env.certify(&signer, &agent, 2, "Attested").await.ok();
+
+    // Off by default: a plain spend works as before.
+    env.spend(&agent, 0, &shop, 1).await.landed();
+
+    // Only the owner switches it on, with one yocto like every settings change.
+    env.call(&agent, "set_permits_required", json!({ "vault_id": 0, "required": true }), one)
+        .await
+        .panics("only the vault owner");
+    env.call(&owner, "set_permits_required", json!({ "vault_id": 0, "required": true }), one).await.ok();
+    assert_eq!(env.view("get_permits_required", json!({ "vault_id": 0 })).await?, json!(true));
+    env.spend(&agent, 0, &shop, 1).await.panics("no permit for this receiver");
+
+    // A permit is for a listed receiver, up to its amount, once.
+    let permit = |to: &AccountId, max: u128| json!({ "vault_id": 0, "receiver": to, "max_amount": near(max) });
+    let stranger: AccountId = "stranger.sandbox".parse()?;
+    env.call(&owner, "grant_permit", permit(&stranger, 2), one).await.panics("receiver not allowed");
+    env.call(&agent, "grant_permit", permit(&shop, 2), one).await.panics("only the vault owner");
+    env.call(&owner, "grant_permit", permit(&shop, 2), one).await.ok();
+    env.spend(&agent, 0, &shop, 3).await.panics("above the permit's amount");
+    let shop_before = env.balance(&shop).await?;
+    let vault_before = yocto(&env.vault(0).await?, "balance");
+    env.spend(&agent, 0, &shop, 2).await.landed();
+    assert_eq!(env.balance(&shop).await? - shop_before, n(2));
+    // Spending the permit leaves a same-size tombstone: the vault moves by exactly the amount.
+    assert_eq!(vault_before - yocto(&env.vault(0).await?, "balance"), n(2));
+    // The double payment, a "pay the remainder" and a re-issued invoice all meet a spent permit.
+    env.spend(&agent, 0, &shop, 2).await.panics("no permit for this receiver");
+    env.spend(&agent, 0, &shop, 1).await.panics("no permit for this receiver");
+    assert_eq!(env.view("get_permit", json!({ "vault_id": 0, "receiver": shop })).await?, Value::Null);
+    // A permit for one receiver says nothing about another.
+    env.spend(&agent, 0, &other, 1).await.panics("no permit for this receiver");
+
+    // A transfer that does not land gives the permit back.
+    env.call(&owner, "grant_permit", permit(&ghost, 1), one).await.ok();
+    match env.spend(&agent, 0, &ghost, 1).await {
+        Outcome::Done { value: Value::Bool(false), .. } => {}
+        other => panic!("expected a refunded transfer, got {other:?}"),
+    }
+    let back = env.view("get_permit", json!({ "vault_id": 0, "receiver": ghost })).await?;
+    assert_eq!(yocto(&back, "max_amount"), n(1));
+
+    // Revoked and expired permits pay nothing.
+    env.call(&owner, "grant_permit", permit(&other, 1), one).await.ok();
+    env.call(&owner, "revoke_permit", json!({ "vault_id": 0, "receiver": other }), one).await.ok();
+    env.spend(&agent, 0, &other, 1).await.panics("no permit for this receiver");
+    let soon = env.sandbox_now().await? + 5_000_000_000;
+    env.call(&owner, "grant_permit", json!({ "vault_id": 0, "receiver": other, "max_amount": near(1), "expires_ns": soon.to_string() }), one)
+        .await
+        .ok();
+    env.sandbox.fast_forward(400).await?;
+    env.spend(&agent, 0, &other, 1).await.panics("permit expired");
+
+    // Switched off again: plain spends work, and closing the vault clears what is left.
+    env.call(&owner, "set_permits_required", json!({ "vault_id": 0, "required": false }), one).await.ok();
+    env.spend(&agent, 0, &other, 1).await.landed();
+    let v = env.vault(0).await?;
+    let owner_before = env.balance(&owner).await?;
+    env.call(&owner, "close_vault", json!({ "vault_id": 0 }), one).await.ok();
+    assert!(env.balance(&owner).await? > owner_before + yocto(&v, "balance") - n(1) / 10);
+    assert_eq!(env.view("get_permit", json!({ "vault_id": 0, "receiver": ghost })).await?, Value::Null);
     Ok(())
 }

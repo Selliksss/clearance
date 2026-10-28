@@ -2,6 +2,14 @@
 // An agent spends from its vault only while every trusted signer (policy All) or
 // at least one (policy Any) holds a live certificate for it; the cap is
 // min(owner cap, level cap) over a rolling 24-bucket window.
+//
+// One-time permits (optional, per vault): with `set_permits_required` on, a spend
+// also needs a permit the owner granted for that receiver (`grant_permit`, up to a
+// maximum amount, optionally until a deadline). The spend consumes it, so a second
+// payment, a "pay the remainder" or a re-issued invoice to the same receiver is
+// refused until the owner grants another. Permits live under their own storage keys
+// (prefixes P and Q), so vaults and certificates stored before this feature read as
+// before.
 use near_sdk::json_types::{U64, U128};
 use near_sdk::serde_json::{Value, json};
 use near_sdk::store::{IterableMap, LookupMap};
@@ -34,6 +42,42 @@ pub enum EndpointClass {
     Allowlist,
     Attested,
     Foreign,
+}
+
+/// A one-time permission to pay one receiver up to `max_amount`.
+#[near(serializers = [borsh, json])]
+#[derive(Clone, Debug)]
+pub struct Permit {
+    pub max_amount: U128,
+    pub expires_ns: Option<U64>,
+}
+
+fn permit_key(vault_id: u64, receiver: &AccountId) -> Vec<u8> {
+    [b"P".as_slice(), &vault_id.to_le_bytes(), receiver.as_bytes()].concat()
+}
+
+fn required_key(vault_id: u64) -> Vec<u8> {
+    [b"Q".as_slice(), &vault_id.to_le_bytes()].concat()
+}
+
+/// The stored value, including a spent permit (a tombstone with `max_amount` 0).
+fn read_permit_raw(vault_id: u64, receiver: &AccountId) -> Option<Permit> {
+    env::storage_read(&permit_key(vault_id, receiver))
+        .and_then(|b| near_sdk::borsh::from_slice::<Permit>(&b).ok())
+}
+
+/// A usable permit: present and not spent.
+fn read_permit(vault_id: u64, receiver: &AccountId) -> Option<Permit> {
+    read_permit_raw(vault_id, receiver).filter(|p| p.max_amount.0 > 0)
+}
+
+fn write_permit(vault_id: u64, receiver: &AccountId, p: &Permit) {
+    let bytes = near_sdk::borsh::to_vec(p).unwrap_or_else(|_| fail("permit encoding"));
+    env::storage_write(&permit_key(vault_id, receiver), &bytes);
+}
+
+fn permits_required(vault_id: u64) -> bool {
+    env::storage_has_key(&required_key(vault_id))
 }
 
 #[near(serializers = [borsh])]
@@ -348,7 +392,73 @@ impl Contract {
     #[payable]
     pub fn set_receivers(&mut self, vault_id: u64, receivers: Vec<AccountId>) {
         validate_receivers(&receivers);
-        self.update_settings(vault_id, |v| v.receivers = receivers);
+        self.update_settings(vault_id, |v| {
+            // A permit only makes sense for a listed receiver; drop those of removed ones.
+            for r in v.receivers.iter().filter(|r| !receivers.contains(r)) {
+                env::storage_remove(&permit_key(vault_id, r));
+            }
+            v.receivers = receivers;
+        });
+    }
+
+    /// Owner: require a one-time permit for every spend from this vault (or stop requiring it).
+    #[payable]
+    pub fn set_permits_required(&mut self, vault_id: u64, required: bool) {
+        self.update_settings(vault_id, |_| {
+            if required {
+                env::storage_write(&required_key(vault_id), &[1]);
+            } else {
+                env::storage_remove(&required_key(vault_id));
+            }
+        });
+        emit(
+            "permits_required",
+            json!({ "vault_id": vault_id, "required": required }),
+        );
+    }
+
+    /// Owner: allow one payment to `receiver` of at most `max_amount`, optionally until
+    /// `expires_ns`. Replaces an unused permit for the same receiver.
+    #[payable]
+    pub fn grant_permit(
+        &mut self,
+        vault_id: u64,
+        receiver: AccountId,
+        max_amount: U128,
+        expires_ns: Option<U64>,
+    ) {
+        require!(max_amount.0 > 0, "max_amount must be positive");
+        if let Some(e) = expires_ns {
+            require!(e.0 > env::block_timestamp(), "permit already expired");
+        }
+        let permit = Permit {
+            max_amount,
+            expires_ns,
+        };
+        self.update_settings(vault_id, |v| {
+            require!(v.receivers.contains(&receiver), "receiver not allowed");
+            write_permit(vault_id, &receiver, &permit);
+        });
+        emit(
+            "permit_granted",
+            json!({ "vault_id": vault_id, "receiver": receiver, "max_amount": max_amount, "expires_ns": expires_ns }),
+        );
+    }
+
+    /// Owner: withdraw an unused permit.
+    #[payable]
+    pub fn revoke_permit(&mut self, vault_id: u64, receiver: AccountId) {
+        self.update_settings(vault_id, |_| {
+            require!(
+                read_permit(vault_id, &receiver).is_some(),
+                "no permit for this receiver"
+            );
+            env::storage_remove(&permit_key(vault_id, &receiver));
+        });
+        emit(
+            "permit_revoked",
+            json!({ "vault_id": vault_id, "receiver": receiver }),
+        );
     }
 
     #[payable]
@@ -415,6 +525,10 @@ impl Contract {
         require!(v.pending == 0, "transfers still pending");
         let owner = v.owner.clone();
         let amount = v.balance + v.storage_paid;
+        for r in v.receivers.clone() {
+            env::storage_remove(&permit_key(vault_id, &r));
+        }
+        env::storage_remove(&required_key(vault_id));
         self.vaults.remove(&vault_id);
         emit(
             "vault_closed",
@@ -463,6 +577,19 @@ impl Contract {
             .unwrap_or_else(|| fail("no valid certificate"));
         let cap = v.owner_cap.min(self.level_caps[usize::from(level) - 1]);
 
+        let permit = if permits_required(vault_id) {
+            let p = read_permit(vault_id, &receiver)
+                .unwrap_or_else(|| fail("no permit for this receiver"));
+            require!(
+                p.expires_ns.is_none_or(|e| e.0 > now_ns),
+                "permit expired"
+            );
+            require!(amount <= p.max_amount.0, "above the permit's amount");
+            Some(p)
+        } else {
+            None
+        };
+
         let v = self.vault_mut(vault_id);
         let spent = v.buckets.window_sum(now_bucket);
         require!(
@@ -470,6 +597,24 @@ impl Contract {
             "over window cap"
         );
         require!(v.balance >= amount, "insufficient vault balance");
+
+        if let Some(p) = &permit {
+            // Spent now: overwritten by a tombstone of the same size, so storage does not change and
+            // the vault balance moves by exactly `amount`. The callback restores it only if the
+            // tombstone is still there (not re-granted, not removed with its receiver).
+            write_permit(
+                vault_id,
+                &receiver,
+                &Permit {
+                    max_amount: U128(0),
+                    expires_ns: p.expires_ns,
+                },
+            );
+            emit(
+                "permit_used",
+                json!({ "vault_id": vault_id, "receiver": receiver, "amount": U128(amount) }),
+            );
+        }
 
         let owner = v.owner.clone();
         // Effects before the interaction; the callback undoes them on failure.
@@ -480,12 +625,19 @@ impl Contract {
             "spend",
             json!({ "vault_id": vault_id, "receiver": receiver, "amount": U128(amount), "bucket": now_bucket, "level": level, "memo": memo }),
         );
+        let receiver_for_callback = receiver.clone();
         Promise::new(receiver)
             .transfer(NearToken::from_yoctonear(amount))
             .then(
                 Self::ext(env::current_account_id())
                     .with_static_gas(CALLBACK_GAS)
-                    .on_transfer_done(vault_id, owner, now_bucket, U128(amount)),
+                    .on_transfer_done(
+                        vault_id,
+                        owner,
+                        now_bucket,
+                        U128(amount),
+                        permit.map(|p| (receiver_for_callback, p)),
+                    ),
             )
     }
 
@@ -499,6 +651,7 @@ impl Contract {
         owner: AccountId,
         bucket: u64,
         amount: U128,
+        permit: Option<(AccountId, Permit)>,
     ) -> bool {
         let ok = env::promise_result_checked(0, 0).is_ok();
         match self.vaults.get_mut(&vault_id) {
@@ -507,6 +660,14 @@ impl Contract {
                 if !ok {
                     v.balance = v.balance.saturating_add(amount.0);
                     v.buckets.unrecord(bucket, amount.0);
+                    // The payment did not happen, so its permit is given back, but only over its own
+                    // tombstone: a receiver removed meanwhile, or a newer grant, wins.
+                    if let Some((receiver, p)) = &permit {
+                        let spent = read_permit_raw(vault_id, receiver).is_some_and(|t| t.max_amount.0 == 0);
+                        if spent && v.receivers.contains(receiver) {
+                            write_permit(vault_id, receiver, p);
+                        }
+                    }
                 }
             }
             // Unreachable while close_vault requires pending == 0; never lose the money.
@@ -707,6 +868,14 @@ impl Contract {
     pub fn effective_level(&self, vault_id: u64) -> Option<u8> {
         let v = self.vaults.get(&vault_id)?;
         self.level_of(v, env::block_timestamp())
+    }
+
+    pub fn get_permit(&self, vault_id: u64, receiver: AccountId) -> Option<Permit> {
+        read_permit(vault_id, &receiver)
+    }
+
+    pub fn get_permits_required(&self, vault_id: u64) -> bool {
+        permits_required(vault_id)
     }
 
     pub fn get_cert(&self, agent: AccountId, signer: AccountId) -> Option<Cert> {

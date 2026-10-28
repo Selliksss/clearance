@@ -162,6 +162,14 @@ export class Chain {
     return created.value as number;
   }
 
+  /** The owner switches the vault to one-time permits and grants one: `receiver`, at most `max` yocto. */
+  async grantPermit(vaultId: number, receiver: string, max: bigint): Promise<void> {
+    const req = await this.call(OWNER, "set_permits_required", { vault_id: vaultId, required: true }, 1n);
+    if (!req.ok) throw new Error(`set_permits_required failed: ${req.panic}`);
+    const g = await this.call(OWNER, "grant_permit", { vault_id: vaultId, receiver, max_amount: max.toString() }, 1n);
+    if (!g.ok) throw new Error(`grant_permit failed: ${g.panic}`);
+  }
+
   /** near-sandbox's own stop() waits for an "exit" event after SIGTERM and can hang forever
    *  (the node sometimes ignores SIGTERM); give it 10 s, then SIGKILL. */
   async stop(): Promise<void> {

@@ -625,7 +625,7 @@ fn failed_transfer_restores_balance_and_window() {
     spend(&mut c, id, 3);
     let bucket = 10 * DAY / H;
     callback_env(PromiseResult::Failed);
-    assert!(!c.on_transfer_done(id, owner(), bucket, U128(3 * NEAR)));
+    assert!(!c.on_transfer_done(id, owner(), bucket, U128(3 * NEAR), None));
     let v = c.get_vault(id).unwrap();
     assert_eq!(v.balance.0, before);
     assert_eq!(v.window_spent.0, 0);
@@ -639,7 +639,7 @@ fn successful_transfer_keeps_debit() {
     certify(&mut c, 2);
     spend(&mut c, id, 3);
     callback_env(PromiseResult::Successful(vec![]));
-    assert!(c.on_transfer_done(id, owner(), 10 * DAY / H, U128(3 * NEAR)));
+    assert!(c.on_transfer_done(id, owner(), 10 * DAY / H, U128(3 * NEAR), None));
     let v = c.get_vault(id).unwrap();
     assert_eq!(v.window_spent.0, 3 * NEAR);
     assert_eq!(v.pending, 0);
@@ -943,7 +943,7 @@ fn zero_deposit_rejected() {
 fn failed_transfer_for_removed_vault_credits_owner() {
     let mut c = contract();
     callback_env(PromiseResult::Failed);
-    assert!(!c.on_transfer_done(42, owner(), 0, U128(NEAR)));
+    assert!(!c.on_transfer_done(42, owner(), 0, U128(NEAR), None));
     let bal = c.storage_balance_of(owner()).0;
     assert!(bal > 0 && bal < NEAR);
 }
@@ -996,4 +996,68 @@ fn agent_listed_as_signer_never_counts() {
     assert_eq!(c.effective_level(id), Some(1)); // Any: the agent's own level 2 is skipped
     c.vaults.get_mut(&id).unwrap().policy = Policy::All;
     assert_eq!(c.effective_level(id), None); // All: the agent's slot blocks
+}
+
+// One-time permits: a spent permit leaves a same-size tombstone, so a failed transfer can give it
+// back, but never over a newer grant and never to a receiver removed meanwhile.
+fn permit_vault(c: &mut Contract) -> u64 {
+    let id = vault(c);
+    certify(c, 2);
+    set(&owner(), 1);
+    c.set_permits_required(id, true);
+    set(&owner(), 1);
+    c.grant_permit(id, shop(), U128(NEAR), None);
+    id
+}
+
+#[test]
+fn spent_permit_is_not_revived_for_a_receiver_removed_in_flight() {
+    let mut c = contract();
+    let id = permit_vault(&mut c);
+    set(&agent(), 0);
+    let _ = c.spend(id, shop(), U128(NEAR), None);
+    set(&owner(), 1);
+    c.set_receivers(id, vec![acc("other.near")]);
+    callback_env(PromiseResult::Failed);
+    let p = Permit { max_amount: U128(NEAR), expires_ns: None };
+    assert!(!c.on_transfer_done(id, owner(), 10 * DAY / H, U128(NEAR), Some((shop(), p))));
+    assert!(c.get_permit(id, shop()).is_none());
+    set(&owner(), 1);
+    c.set_receivers(id, vec![shop()]);
+    assert!(c.get_permit(id, shop()).is_none(), "stale permit revived");
+}
+
+#[test]
+fn failed_transfer_gives_the_permit_back_over_its_tombstone_only() {
+    let mut c = contract();
+    let id = permit_vault(&mut c);
+    let balance = c.get_vault(id).unwrap().balance.0;
+    set(&agent(), 0);
+    let _ = c.spend(id, shop(), U128(NEAR), None);
+    assert_eq!(c.get_vault(id).unwrap().balance.0, balance - NEAR, "the vault moves by exactly the amount");
+    assert!(c.get_permit(id, shop()).is_none());
+    let p = Permit { max_amount: U128(NEAR), expires_ns: None };
+    callback_env(PromiseResult::Failed);
+    assert!(!c.on_transfer_done(id, owner(), 10 * DAY / H, U128(NEAR), Some((shop(), p.clone()))));
+    assert_eq!(c.get_permit(id, shop()).unwrap().max_amount.0, NEAR);
+
+    // Spent again, then re-granted by the owner while in flight: the newer grant wins.
+    set(&agent(), 0);
+    let _ = c.spend(id, shop(), U128(NEAR), None);
+    set(&owner(), 1);
+    c.grant_permit(id, shop(), U128(NEAR / 2), None);
+    callback_env(PromiseResult::Failed);
+    assert!(!c.on_transfer_done(id, owner(), 10 * DAY / H, U128(NEAR), Some((shop(), p))));
+    assert_eq!(c.get_permit(id, shop()).unwrap().max_amount.0, NEAR / 2);
+}
+
+#[test]
+#[should_panic(expected = "no permit for this receiver")]
+fn a_spent_permit_cannot_be_revoked_or_spent_twice() {
+    let mut c = contract();
+    let id = permit_vault(&mut c);
+    set(&agent(), 0);
+    let _ = c.spend(id, shop(), U128(NEAR), None);
+    set(&owner(), 1);
+    c.revoke_permit(id, shop());
 }

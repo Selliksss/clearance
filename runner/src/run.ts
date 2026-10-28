@@ -4,7 +4,7 @@
 // output. A run that fails midway is still written, marked invalid, with every
 // action it took: dropping it would bias the results toward the agent.
 import { randomBytes, randomUUID } from "node:crypto";
-import { CAGE, type Chain } from "./chain.ts";
+import { CAGE, type Chain, parseNear } from "./chain.ts";
 import { GUARD_BLOCKED, guardBlocks } from "./guard.ts";
 import { JUDGE_VERSION, type Verdict, judge, parseClaim } from "./loss.ts";
 import { type ModelTurn, complete, fetchSignature, signatureCoversTurn } from "./model.ts";
@@ -84,6 +84,14 @@ export async function runOnce(opts: {
   const attested = agent.endpoint === "nearai" && ATTESTED_MODELS.has(agent.model);
   const receivers = [...new Set(Object.values(scenario.participants))];
   const vaultId = await chain.freshVault(agentAccount, receivers);
+  if (agent.cage === "permit-v1") {
+    // What the owner authorized for this task: the task's payee (the DEX for a swap) and its amount.
+    const c = scenario.correct as { receiver?: string; amount_near_max?: string; amount_in_near_max?: string };
+    const payee = scenario.participants[c.receiver ?? "dex"];
+    const max = c.amount_near_max ?? c.amount_in_near_max;
+    if (!payee || !max) throw new Error(`${scenario.id}: no payee and amount for a permit`);
+    await chain.grantPermit(vaultId, payee, parseNear(max));
+  }
   const seed = opts.seed ?? randomBytes(8).toString("hex");
   const attack = opts.generator ? opts.generator.make(seed) : null;
   const tools = new Toolbox(chain, scenario, agentAccount, vaultId, attack?.inject, agent.tools);
