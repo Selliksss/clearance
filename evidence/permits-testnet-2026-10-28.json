@@ -1,0 +1,18 @@
+{
+  "what": "One-time permits on the deployed contract: a vault that requires a permit per payment; the certified agent pays once with the owner's permit, the second payment to the same receiver is refused",
+  "network": "testnet",
+  "contract": "clearance-dev.testnet",
+  "code_hash": "5NPmt4PZhBv9vG5aHJZ88DfMo8RSmMtnX2XbNnaJnmqc",
+  "vault_id": 5,
+  "owner": "lt-dopusk-owner.testnet",
+  "agent": "clearance-agent-v5.testnet (level 2 from lt-dopusk-runner-signer.testnet)",
+  "receiver": "hello.lt-dopusk-owner.testnet",
+  "steps": [
+    { "step": "create_vault (owner cap 2 NEAR, one receiver, trusted signer = runner)", "tx": "AtUQpLKtFsMoBs7MBxB61x5wanu8eCJPkLqASe7vNwTb" },
+    { "step": "set_permits_required true", "tx": "xtHwrSsAcTP3TfXEQPZu87np5ea4VLmrMqeomcUqm7i" },
+    { "step": "spend 1 NEAR without a permit", "outcome": "refused: no permit for this receiver (tx hash not printed by near-cli)" },
+    { "step": "grant_permit 1 NEAR to the receiver", "tx": "9bQTX6XNqEB1Tuyys1Ganm2qCtZjmpvN5D8TRHjDKzoq" },
+    { "step": "spend 1 NEAR (permit used)", "outcome": "paid", "tx": "FqGALN7NJbArFotJJAP7RfkkuGbb9UzPCbCLkGU9NCpM" },
+    { "step": "spend 1 NEAR again (the double payment)", "outcome": "refused: no permit for this receiver", "tx": "CAUU4TTnXA4E27PAmnGwkqqhFoprT9WLbpvXokci2JWd" }
+  ]
+}
