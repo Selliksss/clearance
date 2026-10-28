@@ -1,0 +1,17 @@
+{
+  "what": "A third-party contract (examples/clearance-gate) reading the Clearance registry across contracts before each payout",
+  "network": "testnet",
+  "registry": "clearance-dev.testnet",
+  "trusted_signer": "lt-dopusk-runner-signer.testnet",
+  "code_sha256_base58": "Bv7ZCmMbsFjkZ1mGp2uRGk3ncpo3qp4NwuGLGEwwutg3",
+  "build": "cargo near build non-reproducible-wasm (examples/clearance-gate)",
+  "gates": {
+    "gate-v5.lt-dopusk-owner.testnet": { "agent": "clearance-agent-v5.testnet", "allowance_near": "4", "deploy_tx": "467uftavJfZkQbWDvYNQ3mT7ioGCgUsmqiy6DEafomGB", "init_tx": "23yUdeo24waLbfQV5njarp7nMF531ngNMksJWnt6sSoJ" },
+    "gate-v3.lt-dopusk-owner.testnet": { "agent": "clearance-agent-v3.testnet", "allowance_near": "1", "deploy_tx": "GosApEReCQxqbhGWTzDjMJ7WQG6YG8yaSjYqdexNeNBV", "init_tx": "ofJVwwQkCFykmzazvwx3t6eQpd6sCPbAaMCTTWmPKAm" }
+  },
+  "results": [
+    { "agent": "clearance-agent-v5.testnet", "certificate": "level 2, live", "amount_near": "1", "outcome": "paid", "log": "paid 1000000000000000000000000 yocto to hello.lt-dopusk-owner.testnet under a level-2 certificate", "tx": "3QfdxQrhD5BTwsqgsxmWVNsrYLyvQWW6CW3McJ4c8kuG" },
+    { "agent": "clearance-agent-v5.testnet", "certificate": "level 2, live", "amount_near": "4", "outcome": "refused", "log": "refused: above the per-payout cap for the agent's level", "tx": "3S9aNcyNGgK5WUq8hNUhHWwtKGoUxQp3A7jwcyby4DNX" },
+    { "agent": "clearance-agent-v3.testnet", "certificate": "revoked (tx 6tU8jvrkjHsb6239WD2G2wKHd8bdmgq6kvQNQjYdWNnY)", "amount_near": "0.5", "outcome": "refused", "log": "refused: no certificate from the trusted signer (never issued or revoked)", "tx": "4D6a5mqtC2WEkuFh8SBEQok51bXV3qwawErRpdr7zbyb" }
+  ]
+}

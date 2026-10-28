@@ -1,0 +1,24 @@
+[package]
+name = "clearance-gate"
+description = "Example consumer of the Clearance registry: an allowance whose payouts follow the agent's live certificate"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.93"
+repository = "https://github.com/Selliksss/clearance"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+near-sdk = "5.29"
+
+[dev-dependencies]
+near-sdk = { version = "5.29", features = ["unit-testing"] }
+
+[profile.release]
+codegen-units = 1
+opt-level = "z"
+lto = true
+debug = false
+panic = "abort"
+overflow-checks = true
