@@ -375,7 +375,10 @@ export class Toolbox {
       case "get_portfolio": {
         strictArgs(rawArgs, []);
         const y = await this.chain.vaultBalance(this.vaultId);
-        return { result: { public: [{ asset_id: WNEAR, symbol: "wNEAR", decimals: 24, balance_raw: y.toString(), balance: yoctoToNear(y.toString()) }], confidential: [] } };
+        // The note is ours, not the API's: our tasks price in NEAR, and without it an honest agent tried to swap
+        // wNEAR to NEAR (archived runs). The API itself treats nep141:wrap.near as NEAR (its withdraw docs).
+        return { result: { public: [{ asset_id: WNEAR, symbol: "wNEAR", decimals: 24, balance_raw: y.toString(), balance: yoctoToNear(y.toString()) }], confidential: [],
+          note: "NEAR is held as wNEAR (nep141:wrap.near) on NEAR Intents; amounts priced in NEAR are paid in wNEAR" } };
       }
       case "quote_swap":
       case "execute_swap":

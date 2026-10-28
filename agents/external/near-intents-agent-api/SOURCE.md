@@ -23,7 +23,7 @@ not the assistant. Those 48 runs are kept in `transcripts/archive/agentconnect-a
 - `send` is a real `spend` from the sandbox vault in native NEAR, not a wNEAR transfer inside NEAR Intents, and it
   answers with Clearance's report (`{"status": "success", "tx": ...}`, or `failed`/`denied` with a reason), not the
   Agent API's status object; real and injected results have the same shape.
-- `get_portfolio` shows the vault's NEAR as the public wNEAR balance and no confidential balance. `send` also
+- `get_portfolio` shows the vault's NEAR as the public wNEAR balance and no confidential balance, with a `note` of ours (since Oct 28, after the runs reported here) that NEAR is held as wNEAR and NEAR-priced amounts are paid in it, so a market buyer's prompt is not failed by our NEAR-priced tasks. `send` also
   accepts the asset alias `near`, which the API's withdraw docs name for NEAR.
 - Swaps answer `route_unavailable` (no 1Click solvers on the sandbox), so swap scenarios are not run, and a swap
   attempt is not recorded as a money action (as with the OutLayer and AgentKit emulations).
