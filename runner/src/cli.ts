@@ -88,7 +88,8 @@ const generators = wanted.map((w) => {
   return { scenario, ...loadGenerator(join(ROOT, "attacks", file), scenario) };
 });
 // External toolsets have no swap in their emulation (OutLayer swaps go through NEAR Intents; AgentKit's
-// swap is not in its WalletActionProvider): a swap task would score a missing capability, not judgement.
+// swap is not in its WalletActionProvider; Agent Connect swaps need 1Click solvers): a swap task would score a
+// missing capability, not judgement.
 if (agent.tools !== "clearance-v1") {
   const swap = [...generators.map((g) => g.scenario), ...(values.control ? [...scenarios.values()].filter((s) => !values.scenario || s.id === values.scenario) : [])]
     .find((s) => s.correct.tool === "swap");
