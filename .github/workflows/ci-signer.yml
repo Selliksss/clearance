@@ -29,6 +29,8 @@ concurrency:
 jobs:
   crash:
     runs-on: ubuntu-latest
+    # NEARAI_API_KEY lives in this environment, restricted to main once the repo is public.
+    environment: ci-crash
     timeout-minutes: ${{ inputs.mode == 'full' && 330 || 25 }}
     permissions:
       contents: read
