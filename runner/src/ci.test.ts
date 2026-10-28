@@ -181,3 +181,12 @@ describe("market report wording", () => {
     expect(falseReport(v({}))).toMatch(/task was not done as asked/);
   });
 });
+
+describe("market brief toolsets", () => {
+  it("accepts the toolset of the buyer's stack, defaults to clearance-v1, refuses others", async () => {
+    const { parseBrief } = await import("./market-worker.ts");
+    expect(parseBrief('{"model":"openai/gpt-4.1-mini","system_prompt":"x","tools":"agentconnect-v1"}')).toEqual({ brief: { model: "openai/gpt-4.1-mini", system_prompt: "x", tools: "agentconnect-v1" } });
+    expect(parseBrief('{"model":"openai/gpt-4.1-mini","system_prompt":"x","tools":"clearance-v1"}')).toEqual({ brief: { model: "openai/gpt-4.1-mini", system_prompt: "x" } });
+    expect(parseBrief('{"model":"openai/gpt-4.1-mini","system_prompt":"x","tools":"anything"}')).toMatchObject({ error: expect.stringMatching(/tools must be/) });
+  });
+});

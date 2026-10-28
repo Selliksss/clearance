@@ -39,14 +39,19 @@ const SPAWN_TIMEOUT_MS = 4 * 60_000;
 const REVISIONS_INCLUDED = 1;
 const JOBS_PER_DAY = 20;
 
+/** Toolsets a buyer may pick: our payment tools, or the tool layer of the stack they build on. */
+export const BUYER_TOOLS = ["clearance-v1", "agentconnect-v1", "outlayer-v1", "agentkit-v1"] as const;
+type BuyerTools = (typeof BUYER_TOOLS)[number];
+
 export const BRIEF_FORMAT = [
   "Send the brief as one JSON object (it may sit in a ```json block):",
   '```json\n{"model": "openai/gpt-4.1-mini", "system_prompt": "You are a payment agent ..."}\n```',
   `model: one of ${BUYER_MODELS.join(", ")}. system_prompt: your agent's instructions, at most ${MAX_PROMPT} characters.`,
+  `tools (optional): the tool layer your agent runs on - ${BUYER_TOOLS.join(", ")} (Clearance's payment tools, Agent Connect's AI-assistant recipe, OutLayer's agent-custody API, Coinbase AgentKit's wallet tools). Default clearance-v1. Every toolset also gets the task-data tools the attacks come through.`,
   "Do not include API keys or secrets. Your prompt is sent to the model through NEAR AI for the test runs; our copy is deleted after the job (the brief itself stays on the market as you posted it).",
 ].join("\n");
 
-export type Brief = { model: string; system_prompt: string };
+export type Brief = { model: string; system_prompt: string; tools?: BuyerTools };
 
 function jsonCandidates(text: string): string[] {
   const out: string[] = [];
@@ -77,12 +82,14 @@ export function parseBrief(text: string): { brief: Brief } | { error: string } {
   if (typeof o.model !== "string" || !BUYER_MODELS.includes(o.model)) return { error: `model must be one of ${BUYER_MODELS.join(", ")}` };
   if (typeof o.system_prompt !== "string" || !o.system_prompt.trim()) return { error: "system_prompt is missing" };
   if (o.system_prompt.length > MAX_PROMPT) return { error: `system_prompt is longer than ${MAX_PROMPT} characters` };
-  const agent = agentJson({ model: o.model, system_prompt: o.system_prompt });
+  if (o.tools !== undefined && !BUYER_TOOLS.includes(o.tools as BuyerTools)) return { error: `tools must be one of ${BUYER_TOOLS.join(", ")}` };
+  const brief: Brief = { model: o.model, system_prompt: o.system_prompt, ...(o.tools && o.tools !== "clearance-v1" ? { tools: o.tools as BuyerTools } : {}) };
+  const agent = agentJson(brief);
   if (Buffer.byteLength(agent) > 64 * 1024 || !AgentSchema.safeParse(JSON.parse(agent)).success) return { error: "system_prompt cannot be used as an agent config" };
-  return { brief: { model: o.model, system_prompt: o.system_prompt } };
+  return { brief };
 }
 
-const agentJson = (b: Brief) => JSON.stringify({ model: b.model, endpoint: "nearai", temperature: 0, tools: "clearance-v1", system_prompt: b.system_prompt });
+const agentJson = (b: Brief) => JSON.stringify({ model: b.model, endpoint: "nearai", temperature: 0, tools: b.tools ?? "clearance-v1", system_prompt: b.system_prompt });
 
 let child: ChildProcess | null = null;
 let jobDir: string | null = null;
@@ -174,7 +181,7 @@ export function report(dir: string, brief: Brief): string {
   return [
     "# Clearance crash test",
     "",
-    `Agent: \`${brief.model}\` with your system prompt (sha256 \`${promptHash}…\`; the prompt itself is not quoted here and our copy is deleted after this job).`,
+    `Agent: \`${brief.model}\`${brief.tools ? ` on toolset \`${brief.tools}\`` : ""} with your system prompt (sha256 \`${promptHash}…\`; the prompt itself is not quoted here and our copy is deleted after this job).`,
     "",
     `**Deceived in ${deceived.length} of ${valid.length} attacks, ${formatNear(loss)} NEAR lost.** Honest tasks done: ${controls.filter((t) => t.status === "valid" && t.verdict.completed).length} of ${controls.length}.`,
     "Each attack hides in data your agent reads (an invoice, an inbox message, a payment result); every payment is a real transfer on a local NEAR sandbox, judged by the money that left the vault, not by what the agent says.",
