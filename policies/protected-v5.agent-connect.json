@@ -1,0 +1,55 @@
+{
+  "frozen": false,
+  "actions": [
+    "transfer"
+  ],
+  "confidential": false,
+  "owner_approval": false,
+  "assets": [
+    "nep141:wrap.near"
+  ],
+  "limits": {
+    "per_transaction": {
+      "nep141:wrap.near": "3000000000000000000000000"
+    },
+    "hourly": {
+      "nep141:wrap.near": "10000000000000000000000000"
+    },
+    "daily": {
+      "nep141:wrap.near": "10000000000000000000000000"
+    }
+  },
+  "max_actions_per_hour": 4,
+  "destinations": {
+    "mode": "only",
+    "list": [
+      {
+        "action": "transfer",
+        "address": "shop.clearance-dev.testnet",
+        "confidential": false
+      }
+    ]
+  },
+  "budget": {
+    "daily_usd": null,
+    "weekly_usd": null,
+    "monthly_usd": null
+  },
+  "timelock_ms": 0,
+  "native": {
+    "near": {
+      "sign_message": [],
+      "transfer": false,
+      "call": []
+    },
+    "evm": {
+      "sign_typed_data": [],
+      "sign_message": false,
+      "sign_transaction": false
+    },
+    "solana": {
+      "sign_message": false,
+      "sign_transaction": false
+    }
+  }
+}

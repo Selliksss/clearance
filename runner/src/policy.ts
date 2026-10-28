@@ -10,6 +10,9 @@
 //   level 2: <= 3 NEAR per transaction, <= 10 NEAR per day
 // per_transaction is enforced exactly inside OutLayer's TEE; daily limits are
 // best-effort under concurrency (their docs), so per_transaction is the hard stop.
+// The same level is also written as an Agent Connect policy (NEAR Intents Agent API,
+// which runs on OutLayer custody on mainnet); the owner signs that one with
+// generate-intent -> their wallet -> submit-intent.
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -67,14 +70,18 @@ export function buildPolicy(level: 1 | 2, receivers: string[], agentAccount: str
   };
 }
 
+function newAjv() {
+  // ajv ships CommonJS; under nodenext the default import is the module namespace.
+  const Ajv = (AjvModule as unknown as { default: typeof AjvModule }).default ?? AjvModule;
+  return new (Ajv as unknown as new (o: object) => import("ajv").default)({ strict: false, allErrors: true });
+}
+
 /** Validates a policy against the pinned OutLayer schemas (PolicyRules + Capabilities). */
 export function validatePolicy(policy: ReturnType<typeof buildPolicy>, schemaPath = join(ROOT, SCHEMA_FILE)): string[] {
   const bytes = readFileSync(schemaPath);
   if (createHash("sha256").update(bytes).digest("hex") !== SCHEMA_SHA256) return ["pinned OutLayer schema file changed"];
   const pinned = JSON.parse(bytes.toString());
-  // ajv ships CommonJS; under nodenext the default import is the module namespace.
-  const Ajv = (AjvModule as unknown as { default: typeof AjvModule }).default ?? AjvModule;
-  const ajv = new (Ajv as unknown as new (o: object) => import("ajv").default)({ strict: false, allErrors: true });
+  const ajv = newAjv();
   const defs = Object.fromEntries(Object.entries(pinned.schemas).map(([k, v]) => [k, v]));
   const wrap = (name: string) => ({ $id: `ol:${name}`, components: { schemas: defs }, $ref: `#/components/schemas/${name}` });
   const errors: string[] = [];
@@ -94,6 +101,65 @@ export function validatePolicy(policy: ReturnType<typeof buildPolicy>, schemaPat
   if (!Object.values(policy.capabilities).every((c) => c.allowed === false)) errors.push("every capability must be denied");
   const per = BigInt(r.limits.per_transaction.native);
   if (per > LIMITS[2].per_transaction || BigInt(r.limits.daily.native) > LIMITS[2].daily) errors.push("limits above level 2");
+  return errors;
+}
+
+export const AC_SCHEMA_FILE = "policies/agent-connect-policy-schema.1.0.0.json";
+/** sha256 of the pinned Agent Connect schema file as reviewed; a changed file is refused. */
+export const AC_SCHEMA_SHA256 = "4b8c912d8a27a652587f162c5bb3c11ef5e3484c726c77e5f63dd7f7ba8e3f4e";
+const WNEAR = "nep141:wrap.near";
+
+/**
+ * The same level as an Agent Connect policy. NEAR moves as wNEAR through a NEAR Intents
+ * transfer, where `destinations` applies. Native NEAR transfer stays off: their spec says
+ * destinations, budget, timelock and owner approval do not apply to it, so allowing it
+ * would let the agent pay any account despite the whitelist. The USD budget is left unset
+ * because the level is in NEAR and a USD cap would drift with the price.
+ */
+export function buildAgentConnectPolicy(level: 1 | 2, receivers: string[], agentAccount: string) {
+  const ol = buildPolicy(level, receivers, agentAccount);
+  const l = LIMITS[level];
+  return {
+    frozen: false,
+    actions: ["transfer"],
+    confidential: false,
+    owner_approval: false,
+    assets: [WNEAR],
+    limits: {
+      per_transaction: { [WNEAR]: l.per_transaction.toString() },
+      hourly: { [WNEAR]: l.daily.toString() },
+      daily: { [WNEAR]: l.daily.toString() },
+    },
+    max_actions_per_hour: ol.rules.rate_limit.max_per_hour,
+    destinations: { mode: "only", list: ol.rules.addresses.list.map((address) => ({ action: "transfer", address, confidential: false })) },
+    budget: { daily_usd: null, weekly_usd: null, monthly_usd: null },
+    timelock_ms: 0,
+    native: {
+      near: { sign_message: [] as string[], transfer: false, call: [] as string[] },
+      evm: { sign_typed_data: [] as object[], sign_message: false, sign_transaction: false },
+      solana: { sign_message: false, sign_transaction: false },
+    },
+  };
+}
+
+/** Validates an Agent Connect policy against the pinned Policy schema and asserts it is restrictive. */
+export function validateAgentConnectPolicy(policy: ReturnType<typeof buildAgentConnectPolicy>, schemaPath = join(ROOT, AC_SCHEMA_FILE)): string[] {
+  const bytes = readFileSync(schemaPath);
+  if (createHash("sha256").update(bytes).digest("hex") !== AC_SCHEMA_SHA256) return ["pinned Agent Connect schema file changed"];
+  const validate = newAjv().compile(JSON.parse(bytes.toString()).schemas.Policy);
+  const errors: string[] = validate(policy)
+    ? []
+    : (validate.errors ?? []).map((e: { instancePath: string; message?: string }) => `Policy${e.instancePath}: ${e.message}`);
+  if (JSON.stringify(policy.actions) !== JSON.stringify(["transfer"])) errors.push("only transfer may be allowed");
+  if (JSON.stringify(policy.assets) !== JSON.stringify([WNEAR])) errors.push("only wNEAR may be allowed");
+  const d = policy.destinations;
+  if (d.mode !== "only" || d.list.length === 0 || d.list.some((x) => x.action !== "transfer")) errors.push("destinations must be a transfer whitelist");
+  const n = policy.native;
+  if (n.near.transfer || n.near.call.length || n.near.sign_message.length || n.evm.sign_typed_data.length || n.evm.sign_message
+    || n.evm.sign_transaction || n.solana.sign_message || n.solana.sign_transaction) errors.push("every native action must be off");
+  const per = BigInt(policy.limits.per_transaction[WNEAR] ?? "0");
+  const daily = BigInt(policy.limits.daily[WNEAR] ?? "0");
+  if (per === 0n || daily === 0n || per > LIMITS[2].per_transaction || daily > LIMITS[2].daily) errors.push("limits missing or above level 2");
   return errors;
 }
 
@@ -129,9 +195,14 @@ async function main() {
   if (errors.length) throw new Error(`policy does not match OutLayer's schema:\n  ${errors.join("\n  ")}`);
   mkdirSync(join(ROOT, "policies"), { recursive: true });
   writeFileSync(join(ROOT, "policies", `${agentName}.outlayer.json`), `${JSON.stringify(policy, null, 2)}\n`);
+  const acPolicy = buildAgentConnectPolicy(level, policy.rules.addresses.list, agentAccount);
+  const acErrors = validateAgentConnectPolicy(acPolicy);
+  if (acErrors.length) throw new Error(`policy does not match Agent Connect's schema:\n  ${acErrors.join("\n  ")}`);
+  writeFileSync(join(ROOT, "policies", `${agentName}.agent-connect.json`), `${JSON.stringify(acPolicy, null, 2)}\n`);
   const link = { agent: agentAccount, level, agent_config_hash: report.agent_config_hash, report_hash: rHash, suite_hash: report.suite_hash,
     certificate: { contract: deploy.contract, signer: deploy.runner, expires_ns: cert!.expires_ns } };
   writeFileSync(join(ROOT, "policies", `${agentName}.clearance.json`), `${JSON.stringify(link, null, 2)}\n`);
+  console.log(`policies/${agentName}.agent-connect.json: the same limits for Agent Connect (wNEAR, native NEAR transfer off)`);
   console.log(`policies/${agentName}.outlayer.json: level ${level}, per transaction ${level === 2 ? 3 : 1} NEAR, daily ${level === 2 ? 10 : 3} NEAR, ${policy.rules.addresses.list.length} receiver(s)`);
 }
 
