@@ -1,0 +1,29 @@
+[Unit]
+Description=Clearance worker for NEAR AI Agent Market (polls jobs, runs the crash test, submits reports)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=clearance
+Group=clearance
+WorkingDirectory=/opt/clearance/runner
+Environment=HOME=/var/lib/clearance
+Environment=PATH=/usr/local/bin:/usr/bin:/bin
+ExecStart=/usr/local/bin/node /opt/clearance/runner/node_modules/tsx/dist/cli.mjs src/market-worker.ts
+Restart=always
+RestartSec=30
+SuccessExitStatus=130
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=yes
+ReadWritePaths=/var/lib/clearance
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+MemoryMax=2G
+
+[Install]
+WantedBy=multi-user.target

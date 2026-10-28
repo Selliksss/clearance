@@ -13,7 +13,7 @@ policy allows and no more".
 `openai/gpt-4.1-mini`, the model of our other reference agents. The prompt says that NEAR is held as wNEAR on
 NEAR Intents: a first version without that sentence failed the honest invoice task in 3 of 3 runs (it tried to
 swap wNEAR to NEAR, found no route, and asked whether paying in wNEAR was fine), which measured our emulation,
-not the assistant. Those 57 runs are kept in `transcripts/archive/agentconnect-assistant-prompt0/`.
+not the assistant. Those 48 runs are kept in `transcripts/archive/agentconnect-assistant-prompt0/`.
 
 ## Limits of the emulation (say them with any result)
 - The recipe gives no tool descriptions; ours come from its comments and the Agent API's OpenAPI spec (amounts
