@@ -77,7 +77,7 @@ function newAjv() {
 }
 
 /** Validates a policy against the pinned OutLayer schemas (PolicyRules + Capabilities). */
-export function validatePolicy(policy: ReturnType<typeof buildPolicy>, schemaPath = join(ROOT, SCHEMA_FILE)): string[] {
+export function validatePolicy(policy: ReturnType<typeof buildPolicy>, level: 1 | 2, schemaPath = join(ROOT, SCHEMA_FILE)): string[] {
   const bytes = readFileSync(schemaPath);
   if (createHash("sha256").update(bytes).digest("hex") !== SCHEMA_SHA256) return ["pinned OutLayer schema file changed"];
   const pinned = JSON.parse(bytes.toString());
@@ -100,7 +100,7 @@ export function validatePolicy(policy: ReturnType<typeof buildPolicy>, schemaPat
   if (JSON.stringify(r.allowed_tokens) !== JSON.stringify(["native"])) errors.push("only native NEAR may be allowed");
   if (!Object.values(policy.capabilities).every((c) => c.allowed === false)) errors.push("every capability must be denied");
   const per = BigInt(r.limits.per_transaction.native);
-  if (per > LIMITS[2].per_transaction || BigInt(r.limits.daily.native) > LIMITS[2].daily) errors.push("limits above level 2");
+  if (per > LIMITS[level].per_transaction || BigInt(r.limits.daily.native) > LIMITS[level].daily) errors.push(`limits above level ${level}`);
   return errors;
 }
 
@@ -130,7 +130,7 @@ export function buildAgentConnectPolicy(level: 1 | 2, receivers: string[], agent
       hourly: { [WNEAR]: l.daily.toString() },
       daily: { [WNEAR]: l.daily.toString() },
     },
-    max_actions_per_hour: ol.rules.rate_limit.max_per_hour,
+    max_actions_per_hour: ol.rules.rate_limit.max_per_hour as number | null,
     destinations: { mode: "only", list: ol.rules.addresses.list.map((address) => ({ action: "transfer", address, confidential: false })) },
     budget: { daily_usd: null, weekly_usd: null, monthly_usd: null },
     timelock_ms: 0,
@@ -143,7 +143,7 @@ export function buildAgentConnectPolicy(level: 1 | 2, receivers: string[], agent
 }
 
 /** Validates an Agent Connect policy against the pinned Policy schema and asserts it is restrictive. */
-export function validateAgentConnectPolicy(policy: ReturnType<typeof buildAgentConnectPolicy>, schemaPath = join(ROOT, AC_SCHEMA_FILE)): string[] {
+export function validateAgentConnectPolicy(policy: ReturnType<typeof buildAgentConnectPolicy>, level: 1 | 2, schemaPath = join(ROOT, AC_SCHEMA_FILE)): string[] {
   const bytes = readFileSync(schemaPath);
   if (createHash("sha256").update(bytes).digest("hex") !== AC_SCHEMA_SHA256) return ["pinned Agent Connect schema file changed"];
   const validate = newAjv().compile(JSON.parse(bytes.toString()).schemas.Policy);
@@ -154,12 +154,17 @@ export function validateAgentConnectPolicy(policy: ReturnType<typeof buildAgentC
   if (JSON.stringify(policy.assets) !== JSON.stringify([WNEAR])) errors.push("only wNEAR may be allowed");
   const d = policy.destinations;
   if (d.mode !== "only" || d.list.length === 0 || d.list.some((x) => x.action !== "transfer")) errors.push("destinations must be a transfer whitelist");
+  if (policy.confidential || d.list.some((x) => x.confidential)) errors.push("confidential transfers must be off");
   const n = policy.native;
   if (n.near.transfer || n.near.call.length || n.near.sign_message.length || n.evm.sign_typed_data.length || n.evm.sign_message
     || n.evm.sign_transaction || n.solana.sign_message || n.solana.sign_transaction) errors.push("every native action must be off");
+  const l = LIMITS[level];
   const per = BigInt(policy.limits.per_transaction[WNEAR] ?? "0");
   const daily = BigInt(policy.limits.daily[WNEAR] ?? "0");
-  if (per === 0n || daily === 0n || per > LIMITS[2].per_transaction || daily > LIMITS[2].daily) errors.push("limits missing or above level 2");
+  const hourly = BigInt(policy.limits.hourly[WNEAR] ?? "0");
+  if (per === 0n || daily === 0n || per > l.per_transaction || daily > l.daily || hourly === 0n || hourly > daily) errors.push(`limits missing or above level ${level}`);
+  const maxTx = Number((l.daily + l.per_transaction - 1n) / l.per_transaction);
+  if (policy.max_actions_per_hour === null || policy.max_actions_per_hour > maxTx) errors.push(`at most ${maxTx} actions an hour`);
   return errors;
 }
 
@@ -191,12 +196,12 @@ async function main() {
   const cert = await viewTwice<OnChainCert>(deploy.contract, "get_cert", { agent: agentAccount, signer: deploy.runner });
   const level = policyLevel(report, rHash, cert, BigInt(Date.now()) * 1_000_000n);
   const policy = buildPolicy(level, values.receivers.split(",").map((s) => s.trim()), agentAccount);
-  const errors = validatePolicy(policy);
+  const errors = validatePolicy(policy, level);
   if (errors.length) throw new Error(`policy does not match OutLayer's schema:\n  ${errors.join("\n  ")}`);
   mkdirSync(join(ROOT, "policies"), { recursive: true });
   writeFileSync(join(ROOT, "policies", `${agentName}.outlayer.json`), `${JSON.stringify(policy, null, 2)}\n`);
   const acPolicy = buildAgentConnectPolicy(level, policy.rules.addresses.list, agentAccount);
-  const acErrors = validateAgentConnectPolicy(acPolicy);
+  const acErrors = validateAgentConnectPolicy(acPolicy, level);
   if (acErrors.length) throw new Error(`policy does not match Agent Connect's schema:\n  ${acErrors.join("\n  ")}`);
   writeFileSync(join(ROOT, "policies", `${agentName}.agent-connect.json`), `${JSON.stringify(acPolicy, null, 2)}\n`);
   const link = { agent: agentAccount, level, agent_config_hash: report.agent_config_hash, report_hash: rHash, suite_hash: report.suite_hash,

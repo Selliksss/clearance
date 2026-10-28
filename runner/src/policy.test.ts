@@ -18,7 +18,7 @@ describe("OutLayer policy export", () => {
   it("level 1 and level 2 policies pass OutLayer's schema and carry the right limits", () => {
     for (const level of [1, 2] as const) {
       const p = buildPolicy(level, ["shop.testnet"], "agent.testnet");
-      expect(validatePolicy(p)).toEqual([]);
+      expect(validatePolicy(p, level)).toEqual([]);
       const per = BigInt(p.rules.limits.per_transaction.native);
       expect(per).toBe((level === 1 ? 1n : 3n) * NEAR);
     }
@@ -27,7 +27,7 @@ describe("OutLayer policy export", () => {
     const p = buildPolicy(2, ["shop.testnet"], "agent.testnet");
     (p.rules.addresses as { mode: string }).mode = "blacklist";
     (p.capabilities as Record<string, { allowed: boolean }>).swap = { allowed: true };
-    const errors = validatePolicy(p);
+    const errors = validatePolicy(p, 2);
     expect(errors).toContain("addresses must be a whitelist");
     expect(errors).toContain("every capability must be denied");
   });
@@ -60,7 +60,7 @@ describe("Agent Connect policy export", () => {
   it("level 1 and level 2 pass Agent Connect's schema with the same NEAR limits as the OutLayer policy", () => {
     for (const level of [1, 2] as const) {
       const p = buildAgentConnectPolicy(level, ["shop.near", "api.near"], "agent.near");
-      expect(validateAgentConnectPolicy(p)).toEqual([]);
+      expect(validateAgentConnectPolicy(p, level)).toEqual([]);
       const ol = buildPolicy(level, ["shop.near", "api.near"], "agent.near");
       expect(p.limits.per_transaction[W]).toBe(ol.rules.limits.per_transaction.native);
       expect(p.limits.daily[W]).toBe(ol.rules.limits.daily.native);
@@ -75,20 +75,33 @@ describe("Agent Connect policy export", () => {
     const p = buildAgentConnectPolicy(2, ["shop.near"], "agent.near");
     expect(p.native.near.transfer).toBe(false);
     p.native.near.transfer = true;
-    expect(validateAgentConnectPolicy(p)).toContain("every native action must be off");
+    expect(validateAgentConnectPolicy(p, 2)).toContain("every native action must be off");
   });
   it("the restrictive fields are asserted, not just the schema shape", () => {
     const p = buildAgentConnectPolicy(2, ["shop.near"], "agent.near");
     p.destinations.mode = "any";
     p.actions = ["transfer", "withdraw"];
     p.limits.per_transaction[W] = (4n * NEAR).toString();
-    const errors = validateAgentConnectPolicy(p);
+    const errors = validateAgentConnectPolicy(p, 2);
     expect(errors).toContain("destinations must be a transfer whitelist");
     expect(errors).toContain("only transfer may be allowed");
     expect(errors).toContain("limits missing or above level 2");
   });
+  it("limits are checked against the agent's own level, and every cap must be set", () => {
+    const p = buildAgentConnectPolicy(1, ["shop.near"], "agent.near");
+    p.limits.per_transaction[W] = (3n * NEAR).toString();
+    p.max_actions_per_hour = null;
+    p.confidential = true;
+    const errors = validateAgentConnectPolicy(p, 1);
+    expect(errors).toContain("limits missing or above level 1");
+    expect(errors).toContain("at most 3 actions an hour");
+    expect(errors).toContain("confidential transfers must be off");
+    const o = buildPolicy(1, ["shop.near"], "agent.near");
+    o.rules.limits.per_transaction.native = (3n * NEAR).toString();
+    expect(validatePolicy(o, 1)).toContain("limits above level 1");
+  });
   it("a field Agent Connect does not know is refused by the pinned schema", () => {
     const p = { ...buildAgentConnectPolicy(2, ["shop.near"], "agent.near"), extra: true };
-    expect(validateAgentConnectPolicy(p as never).some((e) => e.includes("additional properties"))).toBe(true);
+    expect(validateAgentConnectPolicy(p as never, 2).some((e) => e.includes("additional properties"))).toBe(true);
   });
 });

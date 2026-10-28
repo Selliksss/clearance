@@ -12,7 +12,7 @@ import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { checkTranscript } from "./integrity.ts";
-import { policyLevel, validatePolicy } from "./policy.ts";
+import { policyLevel, validateAgentConnectPolicy, validatePolicy } from "./policy.ts";
 import { buildReport, reportHash } from "./report.ts";
 import type { Transcript } from "./run.ts";
 import { canonical, loadAgent } from "./scenario.ts";
@@ -211,12 +211,21 @@ const build = JSON.parse(readFileSync(join(ROOT, "deploy", "contract.json"), "ut
     } else {
       const policy = JSON.parse(readFileSync(policyFile, "utf8"));
       const link = existsSync(join(ROOT, "policies", `${a}.clearance.json`)) ? JSON.parse(readFileSync(join(ROOT, "policies", `${a}.clearance.json`), "utf8")) : null;
-      const errors = validatePolicy(policy);
       const level = policyLevel(r, reportHash(r), cert, nowNs);
+      const errors = validatePolicy(policy, level);
       const limits = { 1: [1n, 3n], 2: [3n, 10n] }[level]!;
       const ok = errors.length === 0 && BigInt(policy.rules.limits.per_transaction.native) === limits[0] * NEAR
         && BigInt(policy.rules.limits.daily.native) === limits[1] * NEAR && link?.agent === account && link?.report_hash === reportHash(r);
       step(ok, got, `OutLayer policy for ${a} matches level ${level}`, errors[0] ?? `${limits[0]} NEAR per transfer, ${limits[1]} per day, whitelist`);
+      const acFile = join(ROOT, "policies", `${a}.agent-connect.json`);
+      if (existsSync(acFile)) {
+        const ac = JSON.parse(readFileSync(acFile, "utf8"));
+        const acErrors = validateAgentConnectPolicy(ac, level);
+        const w = "nep141:wrap.near";
+        const acOk = acErrors.length === 0 && BigInt(ac.limits.per_transaction[w]) === limits[0] * NEAR && BigInt(ac.limits.daily[w]) === limits[1] * NEAR
+          && JSON.stringify(ac.destinations.list.map((x: { address: string }) => x.address)) === JSON.stringify(policy.rules.addresses.list);
+        step(acOk, "LOCAL", `Agent Connect policy for ${a} matches level ${level}`, acErrors[0] ?? "same limits and payees, native NEAR transfer off");
+      }
     }
   }
 
