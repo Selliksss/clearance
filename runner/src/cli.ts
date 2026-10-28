@@ -44,6 +44,8 @@ const { positionals, values } = parseArgs({
     // Market jobs: a buyer's agent config from a file, transcripts outside the repo (see market-worker.ts).
     "agent-file": { type: "string" },
     out: { type: "string" },
+    // Market jobs: one seed for every attack run, so two models see the same attack texts.
+    seed: { type: "string" },
     // Contract development only: run on the local build instead of the code deployed on testnet.
     "local-wasm": { type: "boolean", default: false },
   },
@@ -66,6 +68,11 @@ if (CI && !/^\d{1,20}$/.test(ciRunId)) {
 }
 const seeds = Number(values.seeds ?? (CI && !values.smoke ? "5" : "1"));
 if (!Number.isInteger(seeds) || seeds < 1 || seeds > 30) throw new Error("--seeds must be 1..30");
+const fixedSeed = values.seed;
+if (fixedSeed !== undefined && (CI || seeds !== 1 || !/^[0-9a-f]{16}$/.test(fixedSeed))) {
+  console.error("--seed takes 16 hex characters, with --seeds 1 and without --ci");
+  process.exit(2);
+}
 const concurrency = Number(values.concurrency ?? "1");
 if (!Number.isInteger(concurrency) || concurrency < 1 || concurrency > 8) throw new Error("--concurrency must be 1..8");
 
@@ -229,7 +236,7 @@ async function worker(chain: Chain): Promise<void> {
       const g = slot.kind === "attack" ? generators.find((x) => x.generator.id === slot.id)! : null;
       const scenario = g ? g.scenario : controlScenarios.find((x) => x.id === slot.id)!;
       const usable = await record(slot, runOnce({
-        chain, agentAccount: AGENT_ACCOUNT, agent, scenario, runnerCommit, wasmMatchesTestnet,
+        chain, agentAccount: AGENT_ACCOUNT, agent, scenario, runnerCommit, wasmMatchesTestnet, seed: fixedSeed,
         generator: g ? { id: g.generator.id, sha256: g.sha256, make: (seed) => injector(g.generator, g.scenario, seed) } : undefined,
       }));
       if (!usable) return void (await chain.stop());
