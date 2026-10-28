@@ -362,16 +362,19 @@ async function cmdCheck() {
   const applied = await requireOurPolicy(s.agent_id!, policy);
   const perTx = BigInt(policy.limits.per_transaction[WNEAR]);
   const over = perTx + NEAR;
+  const already = Object.values(s.check ?? {}).filter((c) => c.result).length === 3;
   const balance = await agentBalance(s.agent_id!);
-  need(balance >= over + parseNear("0.2"), `agent holds ${formatNear(balance)} wNEAR; it needs ${formatNear(over + parseNear("0.2"))} so case 1 can only be refused by the policy`);
+  need(already || balance >= over + parseNear("0.2"), `agent holds ${formatNear(balance)} wNEAR; it needs ${formatNear(over + parseNear("0.2"))} so case 1 can only be refused by the policy`);
   const cases = [
-    { id: "over-limit", name: "over the per-transfer limit, to the whitelisted payee", recipient: k.payee.account_id, amount: over, expect: "policy_limit_exceeded" },
-    { id: "not-listed", name: "to an account not on the whitelist", recipient: k.outsider.account_id, amount: parseNear("0.1"), expect: "policy_destination_denied" },
-    { id: "allowed", name: "within the limit, to the whitelisted payee", recipient: k.payee.account_id, amount: parseNear("0.1"), expect: "SUCCESS" },
+    // Their errors.md: a per-asset limit is refused either by the API (policy_limit_exceeded, 403) or by the
+    // provider, OutLayer's own enforcement of the stored policy (policy_denied, 409). Either one is the limit holding.
+    { id: "over-limit", name: "over the per-transfer limit, to the whitelisted payee", recipient: k.payee.account_id, amount: over, expect: ["policy_limit_exceeded", "policy_denied"] },
+    { id: "not-listed", name: "to an account not on the whitelist", recipient: k.outsider.account_id, amount: parseNear("0.1"), expect: ["policy_destination_denied"] },
+    { id: "allowed", name: "within the limit, to the whitelisted payee", recipient: k.payee.account_id, amount: parseNear("0.1"), expect: ["SUCCESS"] },
   ];
-  for (const c of cases) console.log(`will send ${formatNear(c.amount)} wNEAR to ${c.recipient} (${c.name}); expected ${c.expect}`);
-  need(YES, "rerun with --yes to send them");
+  for (const c of cases) console.log(`will send ${formatNear(c.amount)} wNEAR to ${c.recipient} (${c.name}); expected ${c.expect.join(" or ")}`);
   const saved = { ...(s.check ?? {}) };
+  need(YES || cases.every((c) => saved[c.id]?.result), "rerun with --yes to send them");
   for (const c of cases) {
     if (saved[c.id]?.result) continue;
     saved[c.id] = saved[c.id] ?? { idem: randomUUID() };
@@ -400,21 +403,27 @@ async function cmdCheck() {
       return;
     }
     const failure = String(details.failure_code ?? "");
-    const pass = c.expect === "SUCCESS" ? outcome === "SUCCESS" : outcome.split(",").includes(c.expect) || failure === c.expect;
+    const pass = c.expect.some((e) => outcome.split(",").includes(e) || failure === e);
     const d = (details.details ?? {}) as Record<string, unknown>;
     saved[c.id].result = { case: c.name, amount_near: formatNear(c.amount), recipient: c.recipient, http_status: http || null, outcome, failure_code: failure || null,
-      expected: c.expect, pass, correlation_id: saved[c.id].correlation_id ?? null, tx_hash: d.tx_hash ?? d.intent_hash ?? null, at };
+      expected: c.expect.join(" or "), pass, correlation_id: saved[c.id].correlation_id ?? null, tx_hash: d.tx_hash ?? d.intent_hash ?? null, at };
     patch({ check: saved });
-    console.log(`${pass ? "PASS" : "FAIL"}  ${c.name}: ${outcome}${failure ? ` (${failure})` : ""} (expected ${c.expect})`);
+    console.log(`${pass ? "PASS" : "FAIL"}  ${c.name}: ${outcome}${failure ? ` (${failure})` : ""} (expected ${c.expect.join(" or ")})`);
   }
-  const results = cases.map((c) => saved[c.id].result);
+  // Results already recorded are re-judged against the expectations above (nothing is resent).
+  const results = cases.map((c) => {
+    const r = saved[c.id].result as Record<string, unknown>;
+    const outcome = String(r.outcome), failure = String(r.failure_code ?? "");
+    return { ...r, expected: c.expect.join(" or "), pass: c.expect.some((e) => outcome.split(",").includes(e) || failure === e) };
+  });
   const evidence = {
     what: "Live check of the level-2 Agent Connect policy written by `make policy`, on the Agent Connect API",
     api: API, network: "mainnet", contract: CONTRACT, agent_id: s.agent_id,
     local_policy_sha256: policyHash(policy), applied_policy_identical: true, policy_status: applied.status, policy_revision: applied.revision ?? null,
     policy_hash: applied.policy_hash ?? null, policy_transaction_hash: applied.transaction_hash ?? null,
     owner: k.owner.account_id, payee: k.payee.account_id, outsider: k.outsider.account_id,
-    all_pass: results.every((r) => r?.pass === true), results,
+    all_pass: results.every((r) => r.pass === true), results,
+    note: "Expected codes follow the API's errors.md: a per-asset limit is refused by the API (policy_limit_exceeded) or by the provider's own enforcement of the stored policy (policy_denied). An earlier evidence file from the same run judged case 1 against policy_limit_exceeded only.",
   };
   mkdirSync(join(ROOT, "evidence"), { recursive: true });
   const out = join(ROOT, "evidence", `agent-connect-live-${new Date().toISOString().replace(/[:.]/g, "-")}.json`);

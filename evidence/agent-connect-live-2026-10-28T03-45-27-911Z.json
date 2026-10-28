@@ -1,0 +1,59 @@
+{
+  "what": "Live check of the level-2 Agent Connect policy written by `make policy`, on the Agent Connect API",
+  "api": "https://api.demo.agentsonintents.com",
+  "network": "mainnet",
+  "contract": "outlayer.near",
+  "agent_id": "7384e8eb0062078a7474ec8188f642dac7ea01a5f5d49645aa9a8dd1d7f10d58",
+  "local_policy_sha256": "0b63e337d91cd98e737b4c477437547755c06b0e96b49b194544630ae4aa4f60",
+  "applied_policy_identical": true,
+  "policy_status": "APPLIED",
+  "policy_revision": 1,
+  "policy_hash": "12f81129c1209248cfa0670c03821ce24e2e6d92205ab05e3f49cd851601c93d",
+  "policy_transaction_hash": "6nc7A8Pmw8s7A8QnnEBxqXji3XxWxXqrvcy9k454F6LL",
+  "owner": "5d53602ae5c85306ddc746f912c6a004085849424e1537def6926007d02372f1",
+  "payee": "3cbd3b21d4cccab897f1fea82e1dfc8c145100fda3e0ce8bf0195a8eac0afc88",
+  "outsider": "0166c6e9943214b8294cbd5c93dcec9bba7000992286c0f7c3547650e6864f56",
+  "all_pass": true,
+  "results": [
+    {
+      "case": "over the per-transfer limit, to the whitelisted payee",
+      "amount_near": "4",
+      "recipient": "3cbd3b21d4cccab897f1fea82e1dfc8c145100fda3e0ce8bf0195a8eac0afc88",
+      "http_status": 409,
+      "outcome": "policy_denied",
+      "failure_code": null,
+      "expected": "policy_limit_exceeded or policy_denied",
+      "pass": true,
+      "correlation_id": null,
+      "tx_hash": null,
+      "at": "2026-10-28T03:44:24.872Z"
+    },
+    {
+      "case": "to an account not on the whitelist",
+      "amount_near": "0.1",
+      "recipient": "0166c6e9943214b8294cbd5c93dcec9bba7000992286c0f7c3547650e6864f56",
+      "http_status": 403,
+      "outcome": "policy_destination_denied",
+      "failure_code": null,
+      "expected": "policy_destination_denied",
+      "pass": true,
+      "correlation_id": null,
+      "tx_hash": null,
+      "at": "2026-10-28T03:44:25.923Z"
+    },
+    {
+      "case": "within the limit, to the whitelisted payee",
+      "amount_near": "0.1",
+      "recipient": "3cbd3b21d4cccab897f1fea82e1dfc8c145100fda3e0ce8bf0195a8eac0afc88",
+      "http_status": 202,
+      "outcome": "SUCCESS",
+      "failure_code": null,
+      "expected": "SUCCESS",
+      "pass": true,
+      "correlation_id": "op_jt-0kjAIfw_sW1ZIKfj1Lc_SsVhNgpHbXpanqlpk8tQ",
+      "tx_hash": "E5jx5yGDxfBoQZkicpKU6TBbEc87nh9QgPDZx5nzeanS",
+      "at": "2026-10-28T03:44:26.178Z"
+    }
+  ],
+  "note": "Expected codes follow the API's errors.md: a per-asset limit is refused by the API (policy_limit_exceeded) or by the provider's own enforcement of the stored policy (policy_denied). An earlier evidence file from the same run judged case 1 against policy_limit_exceeded only."
+}
