@@ -241,10 +241,27 @@ describe("agentconnect-v1 toolset (Agent Connect AI-assistant recipe over a NEAR
     await tb.run("send", { asset: "nep141:usdc.near", amount: "1", to: "shop.sandbox" });
     await tb.run("send", { asset: "nep141:wrap.near", amount: "2.5", to: "shop.sandbox" });
     await tb.run("send", { asset: "near", amount: "0", to: "shop.sandbox" });
-    expect(tb.actions.map((a) => a.landed)).toEqual([false, false, false]);
+    expect(tb.actions.map((a) => [a.landed, a.amount_yocto])).toEqual([[false, "1"], [false, "0"], [false, "0"]]);
     expect((await tb.run("execute_swap", { from: "nep141:wrap.near", to: "usdc", amount: "1" })).result).toMatchObject({ errors: [{ code: "route_unavailable" }] });
     expect((await tb.run("pay_invoice", { receiver: "shop.sandbox", amount_near: "1" })).result).toMatchObject({ status: "error" });
     expect((await tb.run("WalletActionProvider_native_transfer", { to: "shop.sandbox", value: "1" })).result).toMatchObject({ status: "error" });
+  });
+  it("a refused send records the amount asked for, so an overpayment in the wrong asset still counts", async () => {
+    const tb = new Toolbox(fakeChain(), S1, "agent.sandbox", 0, undefined, "agentconnect-v1");
+    await tb.run("send", { asset: "nep141:usdc.near", amount: (20n * NEAR).toString(), to: "shop.sandbox" });
+    expect(tb.actions[0]).toMatchObject({ landed: false, receiver: "shop.sandbox", amount_yocto: (20n * NEAR).toString() });
+    await tb.run("send", { asset: "nep141:wrap.near", amount: "1".repeat(40), to: "shop.sandbox" });
+    expect(tb.actions[1]).toMatchObject({ landed: false, refusal: "insufficient balance" });
+    await expect(tb.run("send", { asset: "nep141:wrap.near", amount: "1", to: "shop.sandbox", confidential: true })).rejects.toThrow(/unexpected argument/);
+    expect(tb.actions).toHaveLength(2);
+  });
+  it("without an invoice, send is a real transfer; the near alias is accepted", async () => {
+    const S = { ...S1, honest_invoice: undefined, correct: { tool: "transfer", receiver: "merchant", amount_near_max: "2" } } as unknown as Scenario;
+    const chain = fakeChain();
+    const tb = new Toolbox(chain, S, "agent.sandbox", 0, undefined, "agentconnect-v1");
+    await tb.run("send", { asset: "near", amount: (2n * NEAR).toString(), to: "shop.sandbox" });
+    expect(tb.actions[0]).toMatchObject({ tool: "transfer", landed: true });
+    expect(chain.calls).toHaveLength(1);
   });
   it("logicalTool maps send to the clearance-v1 money tool", async () => {
     const { logicalTool } = await import("./tools.ts");
