@@ -151,6 +151,14 @@ The crash test also runs in GitHub Actions. Once the sign job is on (see the las
 - **Today the CI account also holds a full-access key** (the author's, used to set it up), so a certificate from it does not yet prove that CI produced it. It will be deleted before the sign job is turned on; check with `view_access_key_list` for `lt-dopusk-ci-signer.testnet`, where only the function-call key should remain.
 - **Not active yet.** Job 2 runs only in the public repo and on `main`. Still to do when the repo opens: a `ci-signer` environment restricted to `main` holding `CI_SIGNER_KEY`, branch protection on `main`, and moving `NEARAI_API_KEY` from a repo secret into the `ci-crash` environment restricted to `main`, where job 1 already runs (today a collaborator could run a modified workflow from another branch and read it; the key has a $5 spending cap). Until then the live certificate is the one signed from the author's machine, described above.
 
+## Built with
+Everything in this repository was written during the hackathon (first commit Oct 26, 2026); there is no pre-hackathon code. Most of the code was written with Claude Code at the author's direction. License: MIT ([`LICENSE`](LICENSE)).
+- Contract: Rust, near-sdk 5.29; tests on near-sandbox 0.3, near-api 0.8, cargo-near-build, tokio and proptest.
+- Runner: TypeScript on Node 24, near-api-js 7.3, near-sandbox 0.3, @noble/curves and @noble/hashes (signature checks), ajv and zod (schemas), vitest and tsx.
+- Models: agents under test run on NEAR AI Cloud (gpt-4.1-mini, z-ai/glm-5.3-flash); blind attack generators by other vendors' models, with their prompts in the repo.
+- Services: NEAR testnet, GitHub Actions (CI signer), NEAR AI Agent Market (paid runs), one VPS for the market worker.
+- Third-party files, vendored in `agents/external/` with their licenses and source commits: OutLayer's agent-custody skill (MIT/Apache-2.0) and the Coinbase AgentKit examples (Apache-2.0), copied unchanged. Agent Connect's recipe has no license, so its tools are reproduced with no code copied. These files keep their own licenses; MIT covers the rest.
+
 ## Related work, and a name clash
 - **[Agentic Commerce Bench](https://github.com/BuildWithGordonAI/agentcommercebench)** (Gordon AI, Apache-2.0) is the closest: 20 fraud classes for agents with spend authority, including payee substitution, overcharge and retry farming, the same families as our G2, G1 and G6. Its pipeline is offline on synthetic traffic with no chain and no account. Clearance judges real transfers by the balance that left the vault, adds blind generators by other vendors' models, and issues a revocable certificate on NEAR.
 - **[AgentDojo](https://github.com/ethz-spylab/agentdojo)** (ETH Zurich, MIT) measures indirect prompt injection in tool outputs; its Banking environment is the general-purpose ancestor of this setting, with simulated tools and no chain.
