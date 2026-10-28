@@ -116,7 +116,7 @@ async function main() {
   console.log(`Clearance demo${OFFLINE ? " (offline: testnet answers come from demo/rpc-cache/)" : ""}\n`);
   const deploy = JSON.parse(readFileSync(join(ROOT, "deploy", "testnet.json"), "utf8"));
   const txs = JSON.parse(readFileSync(join(ROOT, "demo", "txs.json"), "utf8"));
-const build = JSON.parse(readFileSync(join(ROOT, "deploy", "contract.json"), "utf8")) as { code_hash: string; build: { source_rev: string; image: string } };
+const build = JSON.parse(readFileSync(join(ROOT, "deploy", "contract.json"), "utf8")) as { code_hash: string; build: { source_rev: string; image: string }; previous?: { code_hash: string; build: string; source_rev: string }[] };
   const readme = readFileSync(join(ROOT, "README.md"), "utf8");
   const nowNs = BigInt(Date.now()) * 1_000_000n;
 
@@ -151,13 +151,21 @@ const build = JSON.parse(readFileSync(join(ROOT, "deploy", "contract.json"), "ut
   }
   // Everything the wasm is built from; unit tests (cfg(test)) are not part of it.
   const sources = ["contract/src", ":(exclude)contract/src/tests.rs", "contract/Cargo.toml", "contract/Cargo.lock", "contract/rust-toolchain.toml"];
-  // The deployed code is the reproducible build of build.source_rev; the recorded transactions ran on the
-  // previous build, from the same sources.
-  for (const [rev, what] of [[build.build.source_rev, "the deployed reproducible build"], [txs.commit, "the build the recorded transactions ran on"]] as const) {
+  // The deployed code is the reproducible build of build.source_rev.
+  {
+    const rev = build.build.source_rev;
     const git = spawnSync("git", ["-C", ROOT, "diff", "--quiet", rev, "--", ...sources], { encoding: "utf8" });
-    if (git.status === 0) step(true, "LOCAL", `the contract sources are unchanged since commit ${rev.slice(0, 8)} (${what})`);
-    else if (git.status === 1) step(false, "LOCAL", `the contract sources changed since commit ${rev.slice(0, 8)} (${what})`);
+    if (git.status === 0) step(true, "LOCAL", `the contract sources are unchanged since commit ${rev.slice(0, 8)} (the deployed reproducible build)`);
+    else if (git.status === 1) step(false, "LOCAL", `the contract sources changed since commit ${rev.slice(0, 8)} (the deployed reproducible build)`);
     else info(`cannot compare contract sources with commit ${rev.slice(0, 8)} (git missing, or a shallow clone without it: clone the full history)`);
+  }
+  // The recorded transactions ran on an earlier build: it must be in the deploy history with its source
+  // commit, and that commit must be in git (the code at their blocks is checked against it below).
+  {
+    const prev = (build.previous ?? []).find((p) => p.source_rev === txs.commit);
+    const has = spawnSync("git", ["-C", ROOT, "cat-file", "-e", `${txs.commit}^{commit}`]).status === 0;
+    step(!!prev && has, "LOCAL", `the recorded transactions' build is in deploy/contract.json history with its source commit ${txs.commit.slice(0, 8)}`,
+      prev ? `${prev.code_hash.slice(0, 10)}…, ${prev.build}` : "missing from deploy/contract.json previous");
   }
   info(`rebuild the deployed code yourself (Docker): make verify-build -> ${build.code_hash.slice(0, 10)}… (${build.build.image})`);
 

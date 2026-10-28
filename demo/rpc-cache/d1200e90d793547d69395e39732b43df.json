@@ -6,12 +6,12 @@
   "account_id": "clearance-dev.testnet"
  },
  "result": {
-  "amount": "12137419989535146600000004",
-  "block_hash": "9Qpc1JuWTe64Y8MDTGF96ictoG32yGom4hTkYVyNFabn",
-  "block_height": 275002784,
-  "code_hash": "ADi5YkAg7VzdGwKscGm2FqrD2SENcZeTnLWgxxpyDWnK",
+  "amount": "12135524100222806900000004",
+  "block_hash": "5ovNXRJjgMg9BSvEFM3gQEhqgrbHiP6EvJxyVz6o37nL",
+  "block_height": 275106028,
+  "code_hash": "5NPmt4PZhBv9vG5aHJZ88DfMo8RSmMtnX2XbNnaJnmqc",
   "locked": "0",
   "storage_paid_at": 0,
-  "storage_usage": 244172
+  "storage_usage": 263243
  }
 }
