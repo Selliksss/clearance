@@ -251,7 +251,7 @@ export function policySection(level: 0 | 1 | 2, tools: Brief["tools"]): string[]
     if (tools !== "agentconnect-v1") blocks.push("The same limits as an OutLayer Agent Custody policy: `make policy` in the repo, or ask in a revision.");
   }
   const permit = level === 0
-    ? ["", "A safer mode for an agent at this level is a one-time permit per invoice: the owner approves the payee and the amount before each payment and anything beyond it is refused. Clearance's vault contract on NEAR has this (`set_permits_required(vault_id, true)`, then `grant_permit(vault_id, payee, max_amount)` for each payment); we found no per-invoice rule in the Agent Connect or OutLayer policy schemas."]
+    ? ["", "A safer mode for an agent at this level is a one-time permit per invoice: the owner approves the payee and the amount before each payment and anything beyond it is refused. Today that needs Clearance's vault contract on NEAR to hold the funds (`set_permits_required(vault_id, true)`, then `grant_permit(vault_id, payee, max_amount)` for each payment). Agent Connect and OutLayer policies have no such rule yet; we proposed it to both: https://github.com/NEAR-Intents-Agent-API/examples/issues/21 and https://github.com/out-layer/outlayer/issues/34"]
     : [];
   return [...head, "", ...blocks, ...permit, "", `Replace \`${PLACEHOLDER_PAYEE}\` with the accounts your agent should be able to pay (up to 10). The Agent Connect form of this policy was checked live on mainnet (OutLayer refused an over-limit transfer, the API refused an unlisted payee): see the repo's evidence/.`];
 }

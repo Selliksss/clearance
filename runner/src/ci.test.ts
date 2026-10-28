@@ -275,7 +275,7 @@ describe("market report: two models", () => {
   });
   it("level 0 policy offers the one-time permit as the safer mode", async () => {
     const { policySection } = await import("./market-worker.ts");
-    expect(policySection(0, undefined).join("\n")).toMatch(/grant_permit\(vault_id, payee, max_amount\)/);
+    expect(policySection(0, undefined).join("\n")).toMatch(/needs Clearance's vault contract.*grant_permit\(vault_id, payee, max_amount\).*examples\/issues\/21.*outlayer\/issues\/34/s);
     expect(policySection(2, undefined).join("\n")).not.toMatch(/grant_permit/);
   });
   it("a tie at level 0 still says neither model is ready", async () => {
