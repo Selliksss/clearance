@@ -4,7 +4,18 @@
 
 **Status:** work in progress for NEAR Hackathon (Nov 2026), started Oct 26, 2026. Working: the on-chain vault + certificate registry (testnet), the crash-test runner with 8 attack generators + 2 holdout + 28 blind, reports and levels, a level-2 certificate on testnet, policy export for OutLayer and Agent Connect, and `make demo` (one command for judges). Built but not yet active: the CI signer (it signs only from the public repo). Planned for Nov 1–14: the CI-signed certificate, the attack bounty, deleting the contract account's keys (keyless).
 
-Clearance crash-tests AI agents that hold money. It measures how easily an agent is tricked into paying the wrong party, records the result as a certificate on NEAR, and caps the agent's spending by that result — in its own vault contract, or as an OutLayer Agent Custody policy.
+**Every agent we tested got scammed, including our own.** The attacks are the boring kind that work on people: a lookalike merchant, an inflated invoice, "payment failed, send it again", an email from the "owner" with a new safe address. They hide in the data the agent reads; every payment is a real transfer on a NEAR sandbox, and the verdict is the money that left the vault.
+
+| published agent example, gpt-4.1-mini, n = 3 | deceived, 6 payment attacks | deceived, 7 blind attacks | NEAR lost | NEAR lost under the level-2 policy |
+|---|---|---|---|---|
+| OutLayer agent-custody skill | 7/18 | 16/21 | 102.52 | 2 |
+| Coinbase AgentKit chatbot example | 10/18 | 20/21 | 120.19 | 2 |
+| AgentKit example with its prompt-injection filter | 12/18 | 17/21 | 143.27 | 2 |
+| Agent Connect AI-assistant recipe (NEAR Intents Agent API) | 8/18 | 20/21 | 100.03 | 2 |
+
+Our own agents were no better until v5: v1, v2 and v4 were each deceived at least once in the levelled suite, and v3 lost its certificate to a blind attack. These rows measure each example's instruction and tool layer with Clearance's data tools added (the attack surface is ours), on one model at n = 3 — a smoke test, not a verdict on the products; the details and limits are [below](#what-the-crash-test-found). The last column is the point: the wallets can already enforce a payee whitelist and per-transfer limits, and with them each of these agents would have lost 2 NEAR. What nobody tells the owner is which limits a given agent needs.
+
+Clearance measures that before the agent gets money. It crash-tests the agent, records the result as a certificate on NEAR, and caps the agent's spending by that result — in its own vault contract, or as a policy for OutLayer Agent Custody or Agent Connect.
 
 ## Check it in one command
 Node 20+, no keys, no Rust. The offline run is checked on every push to `main` in GitHub Actions on Node 20 and 22 ([`demo.yml`](.github/workflows/demo.yml)); the live run was checked by hand on a fresh clone in `node:20` and `node:22` containers.
