@@ -13,7 +13,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { checkTranscript } from "./integrity.ts";
 import { policyLevel, validateAgentConnectPolicy, validatePolicy } from "./policy.ts";
-import { buildReport, committedJudgeVersion, reportHash } from "./report.ts";
+import { buildReport, ciReport, committedJudgeVersion, reportHash } from "./report.ts";
 import type { Transcript } from "./run.ts";
 import { canonical, loadAgent } from "./scenario.ts";
 
@@ -109,7 +109,7 @@ function depositYocto(d: string | undefined): string {
   return (BigInt(w) * NEAR + BigInt(f.padEnd(24, "0"))).toString();
 }
 
-type Cert = { level: number; report_hash: string; config_hash: string; suite_hash: string; expires_ns: string } | null;
+type Cert = { level: number; report_hash: string; config_hash: string; suite_hash: string; expires_ns: string; run_ref?: string } | null;
 
 async function main() {
   if (Number(process.versions.node.split(".")[0]) < 20) throw new Error(`Node >= 20 required, found ${process.versions.node}`);
@@ -234,6 +234,32 @@ const build = JSON.parse(readFileSync(join(ROOT, "deploy", "contract.json"), "ut
           && JSON.stringify(ac.destinations.list.map((x: { address: string }) => x.address)) === JSON.stringify(policy.rules.addresses.list);
         step(acOk, "LOCAL", `Agent Connect policy for ${a} matches level ${level}`, acErrors[0] ?? "same limits and payees, native NEAR transfer off");
       }
+    }
+  }
+
+  // 3b. The CI signer's certificate: it must carry the report rebuilt from a CI run archived in transcripts-ci/.
+  if (deploy.ci_signer) {
+    for (const a of agents) {
+      const account = deploy.agents[a];
+      if (!account) continue;
+      const runs = existsSync(join(ROOT, "transcripts-ci"))
+        ? readdirSync(join(ROOT, "transcripts-ci")).filter((id) => /^\d+$/.test(id) && existsSync(join(ROOT, "transcripts-ci", id, a, "manifest.json"))
+          && JSON.parse(readFileSync(join(ROOT, "transcripts-ci", id, a, "manifest.json"), "utf8")).mode === "full")
+        : [];
+      if (!runs.length) continue;
+      let got: Answer & { value: Cert };
+      try {
+        got = await view<Cert>(deploy.contract, "get_cert", { agent: account, signer: deploy.ci_signer });
+      } catch (e) {
+        step(false, "LIVE", `${a}: certificate from ${deploy.ci_signer}`, (e as Error).message);
+        continue;
+      }
+      const cert = got.value;
+      const runId = cert?.run_ref?.match(/^run:(\d+)@/)?.[1];
+      const r = runId && runs.includes(runId) ? ciReport(ROOT, a, join(ROOT, "transcripts-ci", runId, a)) : null;
+      const ok = !!cert && !!r && cert.report_hash === reportHash(r) && cert.level === r.level && cert.config_hash === r.agent_config_hash && cert.suite_hash === r.suite_hash;
+      step(ok, got, `${a}: certificate from the CI signer ${deploy.ci_signer} = level ${cert?.level ?? "none"}; its report rebuilds from transcripts-ci/${runId ?? "?"}/`,
+        r ? `report_hash ${reportHash(r).slice(0, 12)}…, judge v${r.judge_version}` : "no archived CI run matches its run_ref");
     }
   }
 
