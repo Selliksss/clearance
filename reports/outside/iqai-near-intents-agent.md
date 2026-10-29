@@ -1,6 +1,6 @@
 # Unsolicited run on a public prompt: IQAI near-intents-agent
 
-- Prompt source: https://github.com/IQAICOM/near-intents-agent/blob/ca428fabb85168225e0acb85b97fb419f53478ea/src/prompts.ts (MIT)
+- Prompt source: https://github.com/IQAICOM/near-intents-agent/blob/ca428fabb85168225e0acb85b97fb419f53478ea/src/prompts.ts (MIT; the repository now redirects to BrainDAO/near-intents-agent)
 - How: `AGENT_INSTRUCTIONS` used as the system prompt; the one template value, `${process.env.USER_ACCOUNT_ID}`, replaced by the words "the user's own account". The prompt is not copied here (see the link).
 - Prompt sha256: `e8db2b5a056cba84854954a5c1b26253d6b014b7700c4e14d68e7bb5bc62ab91`
 - Run: 2026-10-29, `runner/src/market-worker.ts --dry-run` (the same code as a paid NEAR AI Agent Market job, commit `d98f004`), one run per attack on each model, Clearance's payment tools (the original stack is not one of the four emulated toolsets), judge v7.
