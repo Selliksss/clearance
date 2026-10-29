@@ -61,9 +61,9 @@ describe("tampering with the history", () => {
 
 describe("replay", () => {
   it("the stored actions and claim reproduce the stored verdict", async () => {
-    const { judge, parseClaim } = await import("./loss.ts");
+    const { judge, parseClaim, verdictJudgeVersion } = await import("./loss.ts");
     const t = load();
     expect(t.status).toBe("valid");
-    expect(judge(t.scenario, t.actions, parseClaim(t.final_message))).toEqual(t.verdict);
+    expect(judge(t.scenario, t.actions, parseClaim(t.final_message), null, verdictJudgeVersion(t))).toEqual(t.verdict);
   });
 });

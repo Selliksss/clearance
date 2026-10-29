@@ -19,7 +19,7 @@ import { join } from "node:path";
 import { loadGenerator } from "./attack.ts";
 import { checkTranscript, invalidCategory } from "./integrity.ts";
 import { NEAR, parseNear } from "./chain.ts";
-import { JUDGE_VERSION } from "./loss.ts";
+import { JUDGE_VERSION, judge, parseClaim, verdictJudgeVersion } from "./loss.ts";
 import type { Transcript } from "./run.ts";
 import { type AgentConfig, canonical, configHash, loadAgent, loadScenario, sha256hex } from "./scenario.ts";
 
@@ -39,7 +39,7 @@ export type Suite = {
 };
 
 /** `name` is a file in suites/ without .json: "v1" (the levelled suite) or "v1-holdout". */
-export function loadSuite(root: string, name: string | number): Suite {
+export function loadSuite(root: string, name: string | number, judgeVersion: number = JUDGE_VERSION): Suite {
   const file = typeof name === "number" ? `v${name}` : name;
   const manifest = JSON.parse(readFileSync(join(root, "suites", `${file}.json`), "utf8"));
   const version = manifest.version as number;
@@ -62,7 +62,7 @@ export function loadSuite(root: string, name: string | number): Suite {
     scenarios: scenarios.map((s) => [s.id, s.sha256]).sort(),
     hidden: [...(manifest.hidden as string[])].sort(),
     expected_under_attack: manifest.expected_under_attack ?? {},
-    judge_version: JUDGE_VERSION,
+    judge_version: judgeVersion,
   };
   return {
     defs,
@@ -71,7 +71,7 @@ export function loadSuite(root: string, name: string | number): Suite {
     scenarios: scenarios.map(({ id, sha256, honest_yocto }) => ({ id, sha256, honest_yocto })).sort((a, b) => (a.id < b.id ? -1 : 1)),
     hidden: body.hidden,
     expected_under_attack: body.expected_under_attack,
-    judge_version: JUDGE_VERSION,
+    judge_version: judgeVersion,
     hash: sha256hex(canonical(body)),
   };
 }
@@ -90,6 +90,8 @@ export type RunRow = {
   false_report: boolean;
   completed: boolean;
   typo: boolean;
+  /** Judge v7 and later only: the claim's tx was a mistyped copy of the correct payment's tx. */
+  claim_tx_typo?: boolean;
   loss_yocto: string;
   honest_yocto: string;
   attested_ok: boolean;
@@ -113,6 +115,7 @@ export function selectRuns(root: string, agent: AgentConfig, suite: Suite, files
       if (t.agent?.config_hash !== cfgHash) return "agent config changed since this run";
       const sc = suite.scenarios.find((s) => s.id === t.scenario?.id);
       if (!sc || sc.sha256 !== t.scenario_sha256) return "scenario not in suite at this hash";
+      if (verdictJudgeVersion(t) > suite.judge_version) return `judged by judge v${verdictJudgeVersion(t)}, newer than this report's v${suite.judge_version}`;
       if (t.kind === "attack") {
         const g = suite.generators.find((x) => x.id === t.generator);
         if (!g || g.sha256 !== t.generator_sha256) return "generator not in suite at this hash";
@@ -129,7 +132,8 @@ export function selectRuns(root: string, agent: AgentConfig, suite: Suite, files
       continue;
     }
     for (const s of check.signers) signers.add(s);
-    const v = t.verdict;
+    // Every run is judged by the report's judge version, whichever version wrote the stored verdict.
+    const v = judge(t.scenario, t.actions, parseClaim(t.final_message), check.injected, suite.judge_version);
     out.included.push({
       run_id: t.run_id,
       kind: t.kind,
@@ -143,6 +147,7 @@ export function selectRuns(root: string, agent: AgentConfig, suite: Suite, files
       false_report: v.false_report && !(t.status === "invalid" && v.claim_missing),
       completed: v.completed,
       typo: v.typo,
+      ...(suite.judge_version >= 7 ? { claim_tx_typo: v.claim_tx_typo === true } : {}),
       loss_yocto: v.loss_yocto,
       honest_yocto: suite.scenarios.find((s) => s.id === t.scenario.id)!.honest_yocto,
       attested_ok: t.agent.attested && t.turns.length > 0,
@@ -172,6 +177,8 @@ export type LevelResult = {
     controls_completed: number;
     deceived: number;
     false_reports: number;
+    /** Judge v7 and later only. */
+    claim_tx_typos?: number;
     loss_yocto: string;
     honest_yocto: string;
     max_run_loss_yocto: string;
@@ -214,6 +221,7 @@ export function computeLevel(rows: RunRow[], suite: Suite): LevelResult {
       controls_completed: completed,
       deceived: attacks.filter((r) => r.deceived).length,
       false_reports: rows.filter((r) => r.false_report).length,
+      ...(suite.judge_version >= 7 ? { claim_tx_typos: rows.filter((r) => r.claim_tx_typo).length } : {}),
       loss_yocto: loss.toString(),
       honest_yocto: honest.toString(),
       max_run_loss_yocto: maxLoss.toString(),
@@ -253,7 +261,7 @@ function assembleReport(agentName: string, agent: AgentConfig, suite: Suite, sel
     agent_config_hash: configHash(agent),
     model: agent.model,
     endpoint_class: attestedAll ? "Attested" : "Allowlist",
-    judge_version: JUDGE_VERSION,
+    judge_version: suite.judge_version,
     suite_version: suite.version,
     suite_hash: suite.hash,
     suite: { generators: suite.generators, scenarios: suite.scenarios, hidden: suite.hidden, judge_version: suite.judge_version },
@@ -273,15 +281,23 @@ function assembleReport(agentName: string, agent: AgentConfig, suite: Suite, sel
   };
 }
 
-export function buildReport(root: string, agentName: string, suiteName: string | number = 1, opts: { dir?: string } = {}) {
+/** The judge version of the committed report (reports/<agent>.json), so a check rebuilds what was
+ *  committed and certified; a new report (make report) uses the current judge. */
+export function committedJudgeVersion(root: string, agentName: string): number {
+  const f = join(root, "reports", `${agentName}.json`);
+  return existsSync(f) ? (JSON.parse(readFileSync(f, "utf8")).judge_version as number) : JUDGE_VERSION;
+}
+
+export function buildReport(root: string, agentName: string, suiteName: string | number = 1, opts: { dir?: string; judgeVersion?: number } = {}) {
   const agent = loadAgent(join(root, "agents", `${agentName}.json`));
-  const suite = loadSuite(root, suiteName);
+  const jv = opts.judgeVersion ?? JUDGE_VERSION;
+  const suite = loadSuite(root, suiteName, jv);
   const dir = opts.dir ?? join(root, "transcripts", agentName);
   const files = readdirSync(dir).filter((f) => f.endsWith(".json") && f !== "manifest.json").sort()
     .map((f) => ({ file: f, t: JSON.parse(readFileSync(join(dir, f), "utf8")) as Transcript }));
   let holdout: { suite: Suite; sel: Selection } | null = null;
   if (existsSync(join(root, "suites", `${typeof suiteName === "number" ? `v${suiteName}` : suiteName}-holdout.json`))) {
-    const hs = loadSuite(root, `${typeof suiteName === "number" ? `v${suiteName}` : suiteName}-holdout`);
+    const hs = loadSuite(root, `${typeof suiteName === "number" ? `v${suiteName}` : suiteName}-holdout`, jv);
     const holdoutIds = new Set(hs.generators.map((g) => g.id));
     const hsel = selectRuns(root, agent, hs, files.filter(({ t }) => t.kind === "attack" && holdoutIds.has(t.generator ?? "")));
     holdout = { suite: hs, sel: hsel };
@@ -297,10 +313,10 @@ export function buildReport(root: string, agentName: string, suiteName: string |
 export const reportHash = (r: unknown) => sha256hex(canonical(r));
 
 /** Results on generators written blind (suites/v1-blind.json): printed separately, never in a report or level. */
-export function blindResults(root: string, agentName: string) {
+export function blindResults(root: string, agentName: string, judgeVersion: number = JUDGE_VERSION) {
   if (!existsSync(join(root, "suites", "v1-blind.json"))) return [];
   const agent = loadAgent(join(root, "agents", `${agentName}.json`));
-  const bs = loadSuite(root, "v1-blind");
+  const bs = loadSuite(root, "v1-blind", judgeVersion);
   const ids = new Set(bs.generators.map((g) => g.id));
   const dir = join(root, "transcripts", agentName);
   const files = readdirSync(dir).filter((f) => f.endsWith(".json")).sort()
@@ -310,11 +326,11 @@ export function blindResults(root: string, agentName: string) {
 }
 
 /** Control runs on scenarios that only the blind suite uses (e.g. S4), so a blind attack has a baseline. */
-export function blindControls(root: string, agentName: string) {
+export function blindControls(root: string, agentName: string, judgeVersion: number = JUDGE_VERSION) {
   if (!existsSync(join(root, "suites", "v1-blind.json"))) return [];
   const agent = loadAgent(join(root, "agents", `${agentName}.json`));
-  const bs = loadSuite(root, "v1-blind");
-  const main = loadSuite(root, 1);
+  const bs = loadSuite(root, "v1-blind", judgeVersion);
+  const main = loadSuite(root, 1, judgeVersion);
   const only = new Set(bs.scenarios.map((s) => s.id).filter((id) => !main.scenarios.some((m) => m.id === id)));
   const dir = join(root, "transcripts", agentName);
   const files = readdirSync(dir).filter((f) => f.endsWith(".json")).sort()
@@ -337,7 +353,11 @@ export type CiManifest = {
 export function ciReport(root: string, agentName: string, dir: string) {
   const manifest = JSON.parse(readFileSync(join(dir, "manifest.json"), "utf8")) as CiManifest;
   if (manifest.agent !== agentName) throw new Error(`manifest is for ${manifest.agent}, not ${agentName}`);
-  const report = buildReport(root, agentName, 1, { dir });
+  // A CI run is judged by the judge of its own commit, which wrote every transcript's verdict.
+  const versions = new Set(readdirSync(dir).filter((f) => f.endsWith(".json") && f !== "manifest.json")
+    .map((f) => verdictJudgeVersion(JSON.parse(readFileSync(join(dir, f), "utf8")))));
+  if (versions.size > 1) throw new Error(`transcripts in ${dir} were judged by different judge versions`);
+  const report = buildReport(root, agentName, 1, { dir, judgeVersion: [...versions][0] ?? JUDGE_VERSION });
   const written = new Set(manifest.slots.filter((x) => x.status === "written").map((x) => x.run_id));
   const files = readdirSync(dir).filter((f) => f.endsWith(".json") && f !== "manifest.json").map((f) => f.slice(0, -5));
   const missing = manifest.slots.filter((x) => x.status !== "written").map((x) => `${x.kind}:${x.id}#${x.i}:${x.status}${x.category ? `(${x.category})` : ""}`);

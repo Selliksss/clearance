@@ -13,7 +13,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { checkTranscript } from "./integrity.ts";
 import { policyLevel, validateAgentConnectPolicy, validatePolicy } from "./policy.ts";
-import { buildReport, reportHash } from "./report.ts";
+import { buildReport, committedJudgeVersion, reportHash } from "./report.ts";
 import type { Transcript } from "./run.ts";
 import { canonical, loadAgent } from "./scenario.ts";
 
@@ -136,7 +136,7 @@ const build = JSON.parse(readFileSync(join(ROOT, "deploy", "contract.json"), "ut
   step(broken.length === 0, "LOCAL", `${transcripts} transcripts pass integrity (hashes, TEE signatures, history, verdicts)`, broken[0] ?? "");
   const reports: Record<string, ReturnType<typeof buildReport>> = {};
   for (const a of agents) {
-    const rebuilt = buildReport(ROOT, a);
+    const rebuilt = buildReport(ROOT, a, 1, { judgeVersion: committedJudgeVersion(ROOT, a) });
     reports[a] = rebuilt;
     const committed = existsSync(join(ROOT, "reports", `${a}.json`)) ? readFileSync(join(ROOT, "reports", `${a}.json`), "utf8") : "";
     step(committed === `${JSON.stringify(rebuilt, null, 2)}\n`, "LOCAL", `report ${a} rebuilds byte for byte: level ${rebuilt.level}`, `report_hash ${reportHash(rebuilt).slice(0, 12)}…`);

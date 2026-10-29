@@ -11,7 +11,7 @@ import { existsSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { dirname, join, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
-import { buildReport, reportHash } from "./report.ts";
+import { buildReport, committedJudgeVersion, reportHash } from "./report.ts";
 import { base58 } from "./base58.ts";
 import { accessKey, callWithKeyFile, codeHash, view } from "./testnet.ts";
 
@@ -107,7 +107,7 @@ async function main() {
   if (before.dirty) throw new Error("uncommitted changes: commit the transcripts and report first");
   const commit = before.commit;
 
-  const report = buildReport(ROOT, agentName);
+  const report = buildReport(ROOT, agentName, 1, { judgeVersion: committedJudgeVersion(ROOT, agentName) });
   const committed = readFileSync(join(ROOT, "reports", `${agentName}.json`), "utf8");
   if (committed !== `${JSON.stringify(report, null, 2)}\n`) throw new Error(`reports/${agentName}.json is stale; run make report AGENT=${agentName}`);
   checkTeeSigners(ROOT, report);

@@ -12,6 +12,7 @@ import { fileURLToPath } from "node:url";
 import { Account, JsonRpcProvider, KeyPair, type KeyPairString, actions } from "near-api-js";
 import { type Deploy, TTL_NS, checkDeploy, checkTeeSigners } from "./certify.ts";
 import { judgeHash } from "./judge-hash.ts";
+import { JUDGE_VERSION } from "./loss.ts";
 import { ciReport, reportHash } from "./report.ts";
 import { configHash, loadAgent } from "./scenario.ts";
 import { RPC, accessKey, view } from "./testnet.ts";
@@ -98,6 +99,10 @@ async function main() {
   // Nothing below may stop a level-0 run from revoking: only the certify path has extra preconditions.
   let level = report.level;
   let why = "";
+  if (level > 0 && report.judge_version !== JUDGE_VERSION) {
+    level = 0;
+    why = ` reason=judge_v${report.judge_version}_not_v${JUDGE_VERSION}`;
+  }
   if (level > 0) {
     try {
       checkTeeSigners(ROOT, report);

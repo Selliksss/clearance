@@ -11,7 +11,7 @@
 import { basename } from "node:path";
 import { join } from "node:path";
 import { type Generator, delivered, injectedFields, loadGenerator, resolveSlots } from "./attack.ts";
-import { judge, parseClaim } from "./loss.ts";
+import { judge, parseClaim, verdictJudgeVersion } from "./loss.ts";
 import type { Transcript } from "./run.ts";
 import { type AgentConfig, canonical, fill, loadScenario, sha256hex } from "./scenario.ts";
 import { guardProblems } from "./guard.ts";
@@ -95,7 +95,8 @@ export function checkTranscript(root: string, file: string, t: Transcript, agent
   }
 
   for (const c of verifyTranscript(t)) if (!c.ok) problems.push(`turn ${c.turn}: ${c.what}`);
-  const again = judge(t.scenario, t.actions, parseClaim(t.final_message), injected);
+  // A stored verdict is checked against the judge version that produced it; reports re-judge under their own.
+  const again = judge(t.scenario, t.actions, parseClaim(t.final_message), injected, verdictJudgeVersion(t));
   if (canonical(again) !== canonical(t.verdict)) problems.push("verdict differs from the current judge");
 
   const signers = [...new Set(t.turns.map((x) => x.model.signature?.signing_address?.toLowerCase()).filter((s): s is string => !!s))].sort();

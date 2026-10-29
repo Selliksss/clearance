@@ -20,7 +20,7 @@ import { parseArgs } from "node:util";
 import AjvModule from "ajv";
 import { NEAR } from "./chain.ts";
 import type { Deploy } from "./certify.ts";
-import { buildReport, reportHash } from "./report.ts";
+import { buildReport, committedJudgeVersion, reportHash } from "./report.ts";
 import { createHash } from "node:crypto";
 import { checkDeploy } from "./certify.ts";
 import { viewTwice } from "./testnet.ts";
@@ -190,7 +190,7 @@ async function main() {
   checkDeploy(deploy);
   const agentAccount = deploy.agents[agentName];
   if (!agentAccount) throw new Error(`deploy/testnet.json has no account for agent ${agentName}`);
-  const report = buildReport(ROOT, agentName);
+  const report = buildReport(ROOT, agentName, 1, { judgeVersion: committedJudgeVersion(ROOT, agentName) });
   const rHash = reportHash(report);
   // Two independent RPC providers must agree; no cached fallback. If testnet cannot be read, no policy.
   const cert = await viewTwice<OnChainCert>(deploy.contract, "get_cert", { agent: agentAccount, signer: deploy.runner });

@@ -12,7 +12,7 @@ import { fileURLToPath } from "node:url";
 import { formatNear } from "./chain.ts";
 import { checkTranscript } from "./integrity.ts";
 import { JUDGE_VERSION, judge, parseClaim } from "./loss.ts";
-import { blindControls, blindResults, buildReport, byGenerator, reportHash } from "./report.ts";
+import { blindControls, blindResults, buildReport, byGenerator, committedJudgeVersion, reportHash } from "./report.ts";
 import type { Transcript } from "./run.ts";
 import { loadAgent } from "./scenario.ts";
 
@@ -23,6 +23,7 @@ const dirs = readdirSync(base).filter((d) => d !== "archive" && statSync(join(ba
 const STALE = "verdict differs from the current judge";
 
 const problems: string[] = [];
+const changedUnderCurrent: string[] = [];
 let rescored = 0;
 let checked = 0;
 
@@ -64,8 +65,9 @@ console.log(`| agent | run | n | deceived | loss, NEAR | did what a correct agen
 console.log(`|---|---|---|---|---|---|---|`);
 for (const agentName of dirs) {
   let report;
+  const jv = committedJudgeVersion(ROOT, agentName);
   try {
-    report = buildReport(ROOT, agentName);
+    report = buildReport(ROOT, agentName, 1, { judgeVersion: jv });
   } catch (e) {
     problems.push(`report for ${agentName}: ${(e as Error).message.split("\n")[0]}`);
     continue;
@@ -81,8 +83,8 @@ for (const agentName of dirs) {
     console.log(`| ${agentName} | control ${scen} | ${rs.length} | | | ${rs.filter((r) => r.completed).length}/${rs.length} (complete) | ${fr(null, scen)} |`);
   }
   for (const g of report.holdout?.by_generator ?? []) if (g.runs) row(`holdout ${g.generator}`, g, "");
-  for (const g of blindResults(ROOT, agentName)) if (g.runs) row(`blind ${g.generator}`, g, "");
-  for (const c of blindControls(ROOT, agentName)) {
+  for (const g of blindResults(ROOT, agentName, jv)) if (g.runs) row(`blind ${g.generator}`, g, "");
+  for (const c of blindControls(ROOT, agentName, jv)) {
     if (c.runs) console.log(`| ${agentName} | blind control ${c.scenario} | ${c.runs} | | | ${c.completed}/${c.runs} (complete) | |`);
   }
   console.log(`| ${agentName} | **level ${report.level}** (${report.endpoint_class})${report.insufficient.length ? `, insufficient: ${report.insufficient.join(", ")}` : ""} | ${report.runs.length} | | | | excluded ${report.selection.excluded.length} |`);
@@ -94,6 +96,17 @@ for (const agentName of dirs) {
   if (committed !== null && committed !== `${JSON.stringify(report, null, 2)}\n`) {
     problems.push(`reports/${agentName}.json is stale (rebuild: ${reportHash(report)}); run make report AGENT=${agentName}`);
   }
+  if (jv !== JUDGE_VERSION) {
+    const now = buildReport(ROOT, agentName, 1, { judgeVersion: JUDGE_VERSION });
+    const frs = (r: typeof report) => r.runs.filter((x) => x.false_report).length;
+    if (now.level !== report.level || frs(now) !== frs(report)) {
+      changedUnderCurrent.push(`${agentName}: false reports ${frs(report)} -> ${frs(now)}, level ${report.level} -> ${now.level}`);
+    }
+  }
+}
+if (changedUnderCurrent.length) {
+  console.log(`\nReports above use the judge version they were committed and certified with. Under the current judge v${JUDGE_VERSION}:`);
+  for (const c of changedUnderCurrent) console.log(`- ${c}`);
 }
 
 // The README must name each agent's live certificate and may mention revoked ones only as revoked.
@@ -120,5 +133,5 @@ for (const agentName of dirs) {
 
 console.log(`\nchecked ${checked} transcripts${rescored ? `; rescored ${rescored} to judge v${JUDGE_VERSION} (originals kept)` : ""}`);
 for (const p of problems) console.log(`FAIL ${p}`);
-console.log(problems.length ? `${problems.length} problem(s)` : `all reproducible under judge v${JUDGE_VERSION}`);
+console.log(problems.length ? `${problems.length} problem(s)` : `all reproducible (each verdict under the judge version that wrote it; current judge v${JUDGE_VERSION})`);
 process.exit(problems.length ? 1 : 0);
