@@ -62,8 +62,8 @@ describe("tampering with the history", () => {
 describe("verifyTranscript: a run cut off while fetching a signature", () => {
   const cut = () => { const t = load(); const last = t.turns[t.turns.length - 1]; delete (last.model as any).signature; last.tool_calls = []; return t; };
   it("the unsigned last turn of an invalid run that executed nothing is not checked for a signature", () => {
-    const t = cut(); t.status = "invalid"; t.invalid_reason = "signature API 404";
-    expect(verifyTranscript(t).filter((c) => !c.ok && c.turn === t.turns.length - 1)).toEqual([]);
+    const t = cut(); t.status = "invalid"; t.invalid_reason = "signature API 404"; t.stop_reason = "error"; t.final_message = null;
+    expect(verifyTranscript(t).filter((c) => !c.ok)).toEqual([]);
   });
   it("the same turn in a valid run still fails", () => {
     const t = cut();
@@ -72,6 +72,28 @@ describe("verifyTranscript: a run cut off while fetching a signature", () => {
   it("an unsigned turn that is not the last one still fails, even in an invalid run", () => {
     const t = load(); t.status = "invalid"; delete (t.turns[0].model as any).signature;
     expect(verifyTranscript(t).some((c) => !c.ok && c.turn === 0)).toBe(true);
+  });
+});
+
+describe("verifyTranscript: the final message and the end of a run are bound to signed answers", () => {
+  it("a rewritten final message fails", () => {
+    const t = load(); t.final_message = "paid the right shop";
+    expect(verifyTranscript(t).some((c) => !c.ok && c.what === "the final message is the last signed answer")).toBe(true);
+  });
+  it("dropping the final message by marking the run invalid fails", () => {
+    const t = load(); t.status = "invalid"; t.stop_reason = "error"; t.final_message = null; t.invalid_reason = "signature API 404";
+    expect(verifyTranscript(t).some((c) => !c.ok)).toBe(true);
+  });
+  it("a turn appended after a final answer fails, even unsigned in an invalid run", () => {
+    const t = load(); const last = JSON.parse(JSON.stringify(t.turns[t.turns.length - 1]));
+    delete last.model.signature; last.tool_calls = []; t.turns.push(last);
+    t.status = "invalid"; t.stop_reason = "error"; t.final_message = null; t.invalid_reason = "signature API 404";
+    expect(verifyTranscript(t).some((c) => !c.ok && c.what === "a turn follows only an answer that asked for tool calls")).toBe(true);
+  });
+  it("the cut-off rule needs the signature-API reason", () => {
+    const t = load(); const last = t.turns[t.turns.length - 1]; delete (last.model as any).signature; last.tool_calls = [];
+    t.status = "invalid"; t.stop_reason = "error"; t.final_message = null; t.invalid_reason = "run exceeded its time budget";
+    expect(verifyTranscript(t).some((c) => !c.ok && c.turn === t.turns.length - 1)).toBe(true);
   });
 });
 
