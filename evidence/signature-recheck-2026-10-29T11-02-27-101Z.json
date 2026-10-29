@@ -1,0 +1,22 @@
+[
+  {
+    "transcript": "bda0daa1-1c9a-486b-9c33-e2f214549619.json",
+    "run_started_at": "2026-10-29T07:57:58.157Z",
+    "turn": 2,
+    "completion_id": "25be7f0c9dcc4e7cb318f78167a91a32",
+    "model": "z-ai/glm-5.3-flash",
+    "requested_at": "2026-10-29T11:02:26.377Z",
+    "status": 404,
+    "body": "{\"error\":{\"message\":\"Signature not found: 25be7f0c9dcc4e7cb318f78167a91a32:ecdsa\",\"type\":\"not_found_error\",\"param\":null,\"code\":null}}"
+  },
+  {
+    "transcript": "1740d8cf-d9c2-4cc6-884d-c48ba9b25f27.json",
+    "run_started_at": "2026-10-29T07:57:45.071Z",
+    "turn": 0,
+    "completion_id": "01f695a253284725a3c790ed6648f0c3",
+    "model": "z-ai/glm-5.3-flash",
+    "requested_at": "2026-10-29T11:02:26.943Z",
+    "status": 200,
+    "body": "{\"text\":\"z-ai/glm-5.3-flash:79d7f3cf7543c4120d372ddc491a233e05ce62011a194d22e329d08858640064:5a9dd99a1ee641e581f3cb73e1acdd101dc2b142bfa7f2b6507abe344ee91cb9\",\"signature\":\"0x4f309e46356c8469100b1d18a777d5d1148732810b3165742ea4c5daecdde3dc2e129f9e1997049997fb38fbb40a0850446db55b55fb907b9c59cc0ae9baf39f1c\",\"signing_address\":\"0x3b753b4406613c5e70ae640508632b600424fa0c\",\"signing_algo\":\"ecdsa\",\"signature_kind\":\"provider_tee\"}"
+  }
+]

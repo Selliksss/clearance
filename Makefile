@@ -1,4 +1,4 @@
-.PHONY: verify-build build test test-unit test-runner runner-install lint demo-testnet crash replay report certify policy demo judge-hash
+.PHONY: verify-build build test test-unit test-runner runner-install lint demo-testnet crash replay report certify policy demo judge-hash signature-recheck
 
 # Reproducible build (Docker) at the current commit; crash runs use the code deployed on testnet, not this build.
 build:
@@ -59,6 +59,10 @@ policy:
 # The judge hash a CI certificate carries in run_ref, for any commit: make judge-hash REF=<sha>
 judge-hash:
 	cd runner && npx tsx src/judge-hash.ts $(or $(REF),HEAD)
+
+# Asks NEAR AI again for the signature of the one cut-off run and of a neighbouring run (needs NEARAI_API_KEY; ARGS=--save writes evidence/).
+signature-recheck:
+	cd runner && npx tsx ../scripts/signature-recheck.mts $(ARGS)
 
 # For judges: one command, Node only. Add ARGS=--offline to use the saved testnet answers in demo/rpc-cache/.
 demo:
