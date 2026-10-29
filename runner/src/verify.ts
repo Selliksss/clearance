@@ -51,11 +51,14 @@ export function verifyTranscript(t: Transcript): Check[] {
     }
     const msg = JSON.parse(res.toString()).choices?.[0]?.message ?? {};
     previous = [...messages, { role: "assistant", content: msg.content ?? null, ...(msg.tool_calls ? { tool_calls: msg.tool_calls } : {}) }];
+    // A run cut off while fetching this turn's signature recorded the turn but never acted on it:
+    // it is the last turn of an invalid run, unsigned, with no tool call executed.
+    const cutOff = t.status === "invalid" && i === t.turns.length - 1 && !m.signature && records.length === 0;
     const asked = (msg.tool_calls ?? []).map((c: any) => [c.id, c.function?.name, c.function?.arguments]);
     const ran = records.map((r) => [r.id, r.name, r.arguments_raw]);
-    checks.push({ turn: i, ok: JSON.stringify(asked) === JSON.stringify(ran), what: "recorded tool calls equal the model's answer" });
+    if (!cutOff) checks.push({ turn: i, ok: JSON.stringify(asked) === JSON.stringify(ran), what: "recorded tool calls equal the model's answer" });
 
-    if (t.agent.attested) {
+    if (t.agent.attested && !cutOff) {
       const sig = m.signature;
       const expected = `${t.agent.model}:${sha256(req)}:${sha256(res)}`;
       checks.push({ turn: i, ok: sig?.text === expected, what: "signature text covers these bytes" });

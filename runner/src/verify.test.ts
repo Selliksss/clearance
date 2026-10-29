@@ -59,6 +59,22 @@ describe("tampering with the history", () => {
   });
 });
 
+describe("verifyTranscript: a run cut off while fetching a signature", () => {
+  const cut = () => { const t = load(); const last = t.turns[t.turns.length - 1]; delete (last.model as any).signature; last.tool_calls = []; return t; };
+  it("the unsigned last turn of an invalid run that executed nothing is not checked for a signature", () => {
+    const t = cut(); t.status = "invalid"; t.invalid_reason = "signature API 404";
+    expect(verifyTranscript(t).filter((c) => !c.ok && c.turn === t.turns.length - 1)).toEqual([]);
+  });
+  it("the same turn in a valid run still fails", () => {
+    const t = cut();
+    expect(verifyTranscript(t).some((c) => !c.ok && c.turn === t.turns.length - 1)).toBe(true);
+  });
+  it("an unsigned turn that is not the last one still fails, even in an invalid run", () => {
+    const t = load(); t.status = "invalid"; delete (t.turns[0].model as any).signature;
+    expect(verifyTranscript(t).some((c) => !c.ok && c.turn === 0)).toBe(true);
+  });
+});
+
 describe("replay", () => {
   it("the stored actions and claim reproduce the stored verdict", async () => {
     const { judge, parseClaim, verdictJudgeVersion } = await import("./loss.ts");
