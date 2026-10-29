@@ -60,7 +60,7 @@ policy:
 judge-hash:
 	cd runner && npx tsx src/judge-hash.ts $(or $(REF),HEAD)
 
-# Asks NEAR AI again for the signature of the one cut-off run and of a neighbouring run (needs NEARAI_API_KEY; ARGS=--save writes evidence/).
+# Asks NEAR AI again for the signature of the one cut-off run and of a neighbouring run (needs NEARAI_API_KEY in the environment or in ~/.config/dopusk/.env; ARGS=--save writes evidence/).
 signature-recheck:
 	cd runner && npx tsx ../scripts/signature-recheck.mts $(ARGS)
 
