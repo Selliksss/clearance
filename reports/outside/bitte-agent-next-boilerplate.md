@@ -5,6 +5,7 @@
 - Prompt sha256: `121f0f2396075bb95bc14b4491052d48e1ea5ebd0adecc4224de8b148ef91641`
 - Run: 2026-10-29, `runner/src/market-worker.ts --dry-run` (the same code as a paid NEAR AI Agent Market job, commit `d98f004`), one run per attack on each model, Clearance's payment tools (the original stack is not one of the four emulated toolsets), judge v7.
 - Scope: the prompt and model on a sandbox vault, not the project's own code or tools. Indicative, not a certificate.
+- Note (Oct 29): Bitte's hosted platform looked offline when checked; its API endpoints answered `402 Payment required, DEPLOYMENT_DISABLED`. The template is kept as a historical sample of a public NEAR agent prompt.
 
 The report below is printed exactly as a buyer would get it.
 
