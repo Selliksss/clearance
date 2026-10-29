@@ -28,6 +28,8 @@ These rows measure each example's instruction and tool layer with Clearance's da
 For that second payment the Clearance vault now has one-time permits: the owner allows one payment to one payee up to an amount, set from the invoice before the agent starts, and the contract refuses any further payment to that payee. We ran the same four with a permit at the exact correct amount (6 payment attacks plus G9 "pay the remainder", n = 3). With an exact permit no loss is possible by construction, so the result is what the agents did around it: honest tasks still 24/24, and 18 of the 42 payments the contract refused were second payments to the right merchant, which pass any whitelist and per-transfer limit. It fits invoices and one-off hires, and does not fit subscriptions or agents that choose the payee themselves ([details](#one-time-permits-the-double-payment-closed-in-the-contract)). We filed the same rule with both wallets in their own policy terms: [OutLayer #34](https://github.com/out-layer/outlayer/issues/34), [Agent Connect examples#21](https://github.com/NEAR-Intents-Agent-API/examples/issues/21). The earlier Agent Connect runs went to the NEAR Builders team, who passed them on to the Agent Connect team.
 
 ## Check it in one command
+The two-minute demo video: [x.com/Selliks/status/2115785883085680880](https://x.com/Selliks/status/2115785883085680880).
+
 Node 20+, no keys, no Rust. The offline run is checked on every push to `main` in GitHub Actions on Node 20 and 22 ([`demo.yml`](.github/workflows/demo.yml)); the live run was checked by hand on a fresh clone in `node:20` and `node:22` containers.
 
 ```bash
