@@ -10,7 +10,7 @@
 
 **Status:** hackathon build, started Oct 26, 2026. The CI signer certified v5 at level 2 on Oct 29, on its second, announced run (see [CI signer](#ci-signer-githubworkflowsci-signeryml)). Not active yet: the attack bounty (Nov 8–12) and the keyless contract account (its full-access key is to be deleted on Nov 14, after the bounty closes).
 
-**Try it on your own agent:** [`market.near.ai/a/clearance`](https://market.near.ai/a/clearance), $1 per job: your prompt on two models, and a policy for your wallet at the end. Free for hackathon teams: send the system prompt and model by DM on X [@Selliks](https://x.com/Selliks) or Telegram [@selliksss](https://t.me/selliksss).
+**Try it on your own agent:** [`market.near.ai/a/clearance`](https://market.near.ai/a/clearance), $1 per job: your prompt on two models, and a policy for your wallet at the end. Free from Telegram: paste the system prompt into [@clearance_crashtest_bot](https://t.me/clearance_crashtest_bot) and the same report comes back in a few minutes (3 runs per person per day; the prompt is deleted after the run; code in [`bot/`](bot/telegram.ts)).
 
 **The wallets already have the fix; what is missing is a measure of which setting a given agent needs.** Our own agents v1 to v4 got scammed, and so did every public agent prompt we ran at full scale, on our payment tools: four published examples, the elizaOS default character and IQAI's NEAR Intents agent. The attacks are the boring kind that work on people: a lookalike merchant, an inflated invoice, "payment failed, send it again", an email from the "owner" with a new safe address. They hide in the data the agent reads. Every payment is a real transfer on a NEAR sandbox, and the verdict is the money that left the vault.
 
