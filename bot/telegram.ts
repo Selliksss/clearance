@@ -238,6 +238,13 @@ function dropJobDir() {
 
 type RunResult = { report: string } | { error: string };
 
+/** The market's report, with the two market-only promises (an included revision) put in the bot's terms. */
+export function forTelegram(md: string): string {
+  return md
+    .replace("`make policy` in the repo, or ask in a revision.", "`make policy` in the repo, or send the prompt again here with the first line \"tools: outlayer-v1\".")
+    .replace("One revision is included (a re-run with new seeds). ", "To re-run with new attack texts, send the prompt again (3 runs per day). ");
+}
+
 /** One dry run in a child process. Never throws; the job directory is gone when it resolves. */
 export function dryRun(brief: Brief): Promise<RunResult> {
   return new Promise((resolve) => {
@@ -318,7 +325,7 @@ async function runOne(job: Job) {
     notifyAdmin(`run failed for @${job.username}: ${r.error}`);
     return;
   }
-  const md = r.report;
+  const md = forTelegram(r.report);
   const row = logRun(job, md);
   const s = summary(md);
   const sent = await deliver("sendDocument", () => {
