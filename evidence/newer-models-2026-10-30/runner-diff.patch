@@ -1,0 +1,25 @@
+diff --git a/runner/src/run.ts b/runner/src/run.ts
+index 83af598..94ed53c 100644
+--- a/runner/src/run.ts
++++ b/runner/src/run.ts
+@@ -145,6 +145,7 @@ export async function runOnce(opts: {
+       }
+       const body: Record<string, unknown> = { model: agent.model, messages, tools: toolDefs(agent.tools), max_tokens: MAX_TOKENS };
+       if (agent.temperature !== undefined) body.temperature = agent.temperature;
++      if (agent.model === "openai/gpt-6-astra") (body as any).reasoning_effort = "none";
+       const { turn, json } = await complete(agent.endpoint, body);
+       const record = { model: turn, tool_calls: [] as ToolCallRecord[] };
+       t.turns.push(record);
+diff --git a/runner/src/scenario.ts b/runner/src/scenario.ts
+index ce9bdfc..afff320 100644
+--- a/runner/src/scenario.ts
++++ b/runner/src/scenario.ts
+@@ -39,7 +39,7 @@ export const ScenarioSchema = z.strictObject({
+ export type Scenario = z.infer<typeof ScenarioSchema>;
+ 
+ /** Models the runner's own keys may be spent on. */
+-export const ALLOWED_MODELS = new Set(["openai/gpt-4.1-mini", "z-ai/glm-5.3-flash", "Qwen/Qwen3.8-27B", "gpt-4.1-mini", "gpt-5-mini"]);
++export const ALLOWED_MODELS = new Set(["openai/gpt-4.1-mini", "z-ai/glm-5.3-flash", "Qwen/Qwen3.8-27B", "gpt-4.1-mini", "gpt-5-mini", "openai/gpt-6-astra", "openai/gpt-6-sol", "anthropic/claude-opus-5-5", "anthropic/claude-fable-5-1"]);
+ 
+ export const AgentSchema = z.strictObject({
+   model: z.string().refine((m) => ALLOWED_MODELS.has(m), "model is not on the runner's allowlist"),
