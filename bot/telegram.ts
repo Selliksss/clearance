@@ -17,6 +17,7 @@ import { homedir, tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { BUYER_MODELS, BUYER_TOOLS, type Brief, parseBrief } from "../runner/src/market-worker.ts";
+import { type ChallengeInput, type ChallengeResult, CHALLENGE_AGENT, runChallenge, toGenerator } from "./challenge.ts";
 
 const RUNNER = join(dirname(fileURLToPath(import.meta.url)), "..", "runner");
 const TSX = join(RUNNER, "node_modules", ".bin", "tsx");
@@ -52,17 +53,20 @@ const token = () => {
 type TgJob = { kind: "tg"; chatId: number; userId: number; username: string; brief: Brief; day: string };
 // A run asked for on the website (web/): no Telegram user, a random job id and a daily hash of the visitor's IP.
 type WebJob = { kind: "web"; id: string; ipKey: string; brief: Brief; day: string };
-type Job = TgJob | WebJob;
+// A visitor's attack on the certified agent (/challenge): one run, its own limits.
+type ChallengeJob = { kind: "challenge"; id: string; ipKey: string; generator: { id: string }; day: string };
+type Job = TgJob | WebJob | ChallengeJob;
 type State = {
   offset: number; adminId?: number; adminChat?: number; day: string; total: number;
   users: Record<string, number>; failures: Record<string, number>; pending: number[];
   webTotal: number; webIps: Record<string, number>; webFailures: Record<string, number>;
+  chTotal: number; chIps: Record<string, number>; chFailures: Record<string, number>;
 };
 
 const today = () => new Date().toISOString().slice(0, 10);
 
 function loadState(): State {
-  const fresh: State = { offset: 0, day: today(), total: 0, users: {}, failures: {}, pending: [], webTotal: 0, webIps: {}, webFailures: {} };
+  const fresh: State = { offset: 0, day: today(), total: 0, users: {}, failures: {}, pending: [], webTotal: 0, webIps: {}, webFailures: {}, chTotal: 0, chIps: {}, chFailures: {} };
   if (!existsSync(STATE)) return fresh;
   try {
     const s = JSON.parse(readFileSync(STATE, "utf8"));
@@ -76,6 +80,7 @@ function loadState(): State {
       users: obj(s.users), failures: obj(s.failures),
       pending: Array.isArray(s.pending) ? s.pending.filter(Number.isInteger) : [],
       webTotal: Number.isInteger(s.webTotal) ? s.webTotal : 0, webIps: obj(s.webIps), webFailures: obj(s.webFailures),
+      chTotal: Number.isInteger(s.chTotal) ? s.chTotal : 0, chIps: obj(s.chIps), chFailures: obj(s.chFailures),
     };
   } catch (e) {
     console.error(`state file unreadable (${(e as Error).message}); starting fresh, old file kept`);
@@ -107,6 +112,9 @@ function rollDay() {
   state.webTotal = 0;
   state.webIps = {};
   state.webFailures = {};
+  state.chTotal = 0;
+  state.chIps = {};
+  state.chFailures = {};
   saveState();
 }
 
@@ -363,14 +371,16 @@ async function work() {
   try {
     syncPending();
     if (job.kind === "tg") await runOne(job);
-    else await runWeb(job);
+    else if (job.kind === "web") await runWeb(job);
+    else await runChallengeJob(job);
   } catch (e) {
     // runOne's own steps do not throw; this is a last guard so the queue keeps moving.
     console.error(`job: ${(e as Error).message}`);
     if (job.kind === "tg") {
       refund(job.userId, job.day);
       await say(job.chatId, "Something went wrong on my side and the run did not finish. It did not count against your limit; please try again later.");
-    } else webFail(job, "internal error");
+    } else if (job.kind === "web") webFail(job, "internal error");
+    else challengeFail(job, "Something went wrong on our side. This attempt did not count.");
   } finally {
     running = null;
     syncPending();
@@ -725,7 +735,166 @@ async function onHttp(req: IncomingMessage, res: ServerResponse) {
     void work();
     return json(res, 201, publicRecord(rec));
   }
+  if (await onChallengeHttp(req, res, path)) return;
   json(res, 404, { error: "not found" });
+}
+
+/* ---------------- the public challenge (/challenge) ---------------- */
+
+const CH_DIR = join(STATE_DIR, "challenge-jobs");
+const CH_STATS = join(STATE_DIR, "challenge-stats.json");
+const CH_PER_IP_PER_DAY = 10;
+const CH_PER_DAY = 200;
+const CH_FAILURES_PER_IP_PER_DAY = 3;
+const CH_MAX_QUEUED = 6;
+
+type ChallengeRecord = {
+  id: string; state: "queued" | "running" | "done" | "failed"; created: number; started?: number; finished?: number;
+  channel: string; fields: Record<string, string>; result?: ChallengeResult; error?: string;
+  owner?: { ipKey: string; day: string };
+};
+const chJobs = new Map<string, ChallengeRecord>();
+type ChStats = { attempts: number; held: number; wins: number; since: string };
+let chStats: ChStats = (() => {
+  try { return JSON.parse(readFileSync(CH_STATS, "utf8")) as ChStats; } catch { return { attempts: 0, held: 0, wins: 0, since: new Date().toISOString() }; }
+})();
+
+function saveJson(dir: string, id: string, body: unknown) {
+  try {
+    mkdirSync(dir, { recursive: true, mode: 0o700 });
+    writeFileSync(join(dir, `${id}.json.tmp`), JSON.stringify(body), { mode: 0o600 });
+    renameSync(join(dir, `${id}.json.tmp`), join(dir, `${id}.json`));
+  } catch (e) {
+    console.error(`save ${id}: ${(e as Error).message}`);
+  }
+}
+
+function loadCh(id: string): ChallengeRecord | null {
+  if (!/^[0-9a-f]{16}$/.test(id)) return null;
+  let r = chJobs.get(id) ?? null;
+  if (!r) {
+    try { r = JSON.parse(readFileSync(join(CH_DIR, `${id}.json`), "utf8")) as ChallengeRecord; } catch { return null; }
+  }
+  if (Date.now() - r.created > WEB_KEEP_MS) {
+    chJobs.delete(id);
+    rmSync(join(CH_DIR, `${id}.json`), { force: true });
+    return null;
+  }
+  return r;
+}
+
+function chRefund(owner: ChallengeRecord["owner"]) {
+  if (!owner || owner.day !== state.day) return;
+  state.chIps[owner.ipKey] = Math.max(0, (state.chIps[owner.ipKey] ?? 1) - 1);
+  state.chTotal = Math.max(0, state.chTotal - 1);
+  saveState();
+}
+
+function challengeFail(job: ChallengeJob, error: string) {
+  const r = chJobs.get(job.id);
+  if (r) {
+    r.state = "failed";
+    r.error = error;
+    r.finished = Date.now();
+    saveJson(CH_DIR, r.id, r);
+    chJobs.delete(job.id);
+  }
+  chRefund({ ipKey: job.ipKey, day: job.day });
+  if (job.day === state.day) {
+    state.chFailures[job.ipKey] = (state.chFailures[job.ipKey] ?? 0) + 1;
+    saveState();
+  }
+}
+
+async function runChallengeJob(job: ChallengeJob) {
+  const r = chJobs.get(job.id);
+  if (!r) return;
+  r.state = "running";
+  r.started = Date.now();
+  saveJson(CH_DIR, r.id, r);
+  const res = await runChallenge(job.generator);
+  if ("error" in res || !res.valid) {
+    console.error(`challenge ${job.id} failed: ${"error" in res ? res.error : "invalid run"}`);
+    return challengeFail(job, "The run did not complete (model API or sandbox error). It did not count; try again in a minute.");
+  }
+  r.state = "done";
+  r.finished = Date.now();
+  r.result = res;
+  saveJson(CH_DIR, r.id, r);
+  chJobs.delete(job.id);
+  chStats.attempts += 1;
+  if (res.deceived) chStats.wins += 1; else chStats.held += 1;
+  saveJson(STATE_DIR, "challenge-stats", chStats);
+  if (res.deceived) notifyAdmin(`CHALLENGE WIN ${job.id}: ${r.channel}, loss ${res.loss}, ${res.actions.map((a) => `${a.tool} ${a.near} -> ${a.to}${a.landed ? "" : " (refused)"}`).join("; ")}`);
+}
+
+function publicCh(r: ChallengeRecord) {
+  const { owner: _owner, ...pub } = r;
+  const at = queue.findIndex((j) => j.kind === "challenge" && j.id === r.id);
+  return { ...pub, agent: CHALLENGE_AGENT, ahead: r.state === "queued" ? at + (running ? 1 : 0) : 0 };
+}
+
+async function onChallengeHttp(req: IncomingMessage, res: ServerResponse, path: string): Promise<boolean> {
+  if (req.method === "GET" && path === "/api/challenge/stats") {
+    rollDay();
+    json(res, 200, { ...chStats, agent: CHALLENGE_AGENT, left_today: Math.max(0, CH_PER_DAY - state.chTotal), per_ip: CH_PER_IP_PER_DAY, queue: queue.length + (running ? 1 : 0) });
+    return true;
+  }
+  const m = /^\/api\/challenge\/([0-9a-f]{16})$/.exec(path);
+  if (req.method === "GET" && m) {
+    const r = loadCh(m[1]);
+    r ? json(res, 200, publicCh(r)) : json(res, 404, { error: "No attempt with this id, or it is older than a week." });
+    return true;
+  }
+  if (req.method !== "POST" || path !== "/api/challenge") return false;
+  if (!String(req.headers["content-type"] ?? "").startsWith("application/json")) { json(res, 415, { error: "Send JSON." }); return true; }
+  const body = await readBody(req, 16 * 1024);
+  if (body === null) { json(res, 413, { error: "That is too long." }); return true; }
+  let input: ChallengeInput;
+  try { input = JSON.parse(body); } catch { json(res, 400, { error: "Send JSON." }); return true; }
+  const id = randomBytes(8).toString("hex");
+  const g = toGenerator(input, id);
+  if ("error" in g) { json(res, 400, { error: g.error }); return true; }
+  rollDay();
+  const ipKey = createHash("sha256").update(`ch|${state.day}|${clientIp(req)}`).digest("hex").slice(0, 16);
+  const busy = queue.some((j) => j.kind === "challenge" && j.ipKey === ipKey) || (running?.kind === "challenge" && running.ipKey === ipKey);
+  const reject = (state.chFailures[ipKey] ?? 0) >= CH_FAILURES_PER_IP_PER_DAY ? [429, "Your last attempts failed on our side several times today. Try again tomorrow (UTC)."]
+    : busy ? [409, "Your previous attempt is still in the queue or running. Wait for its result."]
+    : (state.chIps[ipKey] ?? 0) >= CH_PER_IP_PER_DAY ? [429, `That's ${CH_PER_IP_PER_DAY} attempts from your network today. Come back tomorrow (UTC).`]
+    : state.chTotal >= CH_PER_DAY ? [429, "Today's attempts are used up. Try tomorrow (UTC)."]
+    : queue.length >= MAX_QUEUE || queue.filter((j) => j.kind === "challenge").length >= CH_MAX_QUEUED ? [503, "The queue is full right now; try again in a few minutes."]
+    : null;
+  if (reject) { json(res, reject[0] as number, { error: reject[1] }); return true; }
+  state.chIps[ipKey] = (state.chIps[ipKey] ?? 0) + 1;
+  state.chTotal += 1;
+  saveState();
+  const tpl = (g.generator as { template: Record<string, string> }).template;
+  const rec: ChallengeRecord = { id, state: "queued", created: Date.now(), channel: input.channel, fields: tpl, owner: { ipKey, day: state.day } };
+  chJobs.set(id, rec);
+  saveJson(CH_DIR, id, rec);
+  queue.push({ kind: "challenge", id, ipKey, generator: g.generator as { id: string }, day: state.day });
+  void work();
+  json(res, 201, publicCh(rec));
+  return true;
+}
+
+/** Attempts lost in a restart are given back; old ones are removed. */
+function recoverCh(startup: boolean) {
+  let files: string[] = [];
+  try { files = readdirSync(CH_DIR).filter((f) => f.endsWith(".json")); } catch { return; }
+  for (const f of files) {
+    try {
+      const r = JSON.parse(readFileSync(join(CH_DIR, f), "utf8")) as ChallengeRecord;
+      if (Date.now() - r.created > WEB_KEEP_MS) { rmSync(join(CH_DIR, f), { force: true }); continue; }
+      if (startup && (r.state === "queued" || r.state === "running")) {
+        chRefund(r.owner);
+        r.state = "failed";
+        r.error = "The server restarted and this attempt was lost. It did not count; please send it again.";
+        r.finished = Date.now();
+        saveJson(CH_DIR, r.id, r);
+      }
+    } catch { /* unreadable record: leave it */ }
+  }
 }
 
 /** Web runs that were queued or running when the bot stopped are lost with their prompts: mark them so. */
@@ -751,8 +920,9 @@ function recoverWeb(startup: boolean) {
 function startWeb() {
   if (!WEB_PORT) return;
   recoverWeb(true);
+  recoverCh(true);
   // Expired result pages go once an hour.
-  setInterval(() => recoverWeb(false), 3600_000).unref();
+  setInterval(() => { recoverWeb(false); recoverCh(false); }, 3600_000).unref();
   createServer((req, res) => {
     onHttp(req, res).catch((e) => {
       console.error(`http: ${(e as Error).message}`);

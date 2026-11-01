@@ -302,3 +302,23 @@ button.btn { border: 0; cursor: pointer; }
   .testform, .report { padding: 18px; }
 }
 @media (prefers-reduced-motion: reduce) { .slot:not(.done) .o { animation: none; } }
+
+/* ---------- challenge ---------- */
+.ch-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; max-width: 860px; margin-bottom: 8px; }
+.ch-stats div { background: var(--bg-2); padding: 18px 20px; border-radius: 8px; }
+.ch-stats span { display: block; color: var(--muted); font-size: 15px; }
+.ch-stats b { font: 700 34px/1.1 var(--font); font-variant-numeric: tabular-nums; }
+.ch-seg { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; background: var(--well); border-radius: 8px; padding: 4px; margin-bottom: 8px; }
+.ch-seg button { all: unset; cursor: pointer; text-align: center; padding: 11px 6px; border-radius: 6px; font: 500 15px/1.2 var(--font); color: var(--muted); }
+.ch-seg button[aria-pressed="true"] { background: var(--accent); color: var(--on-accent); }
+.ch-seg button:focus-visible { outline: 2px solid var(--hazard); }
+.ch-task { background: var(--well); border-radius: 6px; padding: 14px; }
+.ch-task p.task-text { font-size: 17px; margin-top: 4px; }
+.ch-fields { display: grid; gap: 10px; }
+.ch-fields label { display: grid; gap: 6px; }
+.chform input { width: 100%; background: var(--well); color: var(--ink); border: 1px solid var(--surface-2); border-radius: 6px; padding: 12px 14px; font: 15px/1.4 var(--font); }
+.chform input:focus { outline: 2px solid var(--accent-text); outline-offset: 1px; }
+.two { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px; }
+.ch-ledger .btn.small { color: var(--on-accent); text-decoration: none; }
+.did .r { display: flex; justify-content: space-between; gap: 12px; padding: 4px 0; flex-wrap: wrap; }
+@media (max-width: 600px) { .two, .ch-stats, .ch-seg { grid-template-columns: minmax(0, 1fr); } }
