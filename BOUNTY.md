@@ -17,7 +17,7 @@ Either of two things:
 - Accepted generators enter a hidden slice of the next suite version: we publish its hash, your name and the payout transaction immediately, the file itself when the next suite version ships or on Nov 14.
 
 ## Window and channel
-- Submissions: **Nov 8, 00:00 UTC – Nov 12, 23:59 UTC**.
+- Submissions: **open now, until Nov 12, 2026, 23:59 UTC** (opened Nov 1; first planned for Nov 8).
 - Send privately (so others cannot copy it before it is scored): DM on X [@Selliks](https://x.com/Selliks) or Telegram [@selliksss](https://t.me/selliksss). Send the attack (in words or as a JSON file) and the NEAR account for the payout.
 
 ## What happens to the certificate

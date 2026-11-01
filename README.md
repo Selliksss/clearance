@@ -8,7 +8,7 @@
 
 **Proven:** 1,847 transcripts replay to the same verdicts (`make replay`), cut-off runs kept as invalid; `clearance-agent-v5` holds a level-2 certificate on testnet (no deception, no false report in the suite), from the author and from GitHub Actions, whose key can only certify and revoke; v3's was revoked when a blind attack beat it; 13 testnet transactions, refusals included; a live mainnet check of the Agent Connect policy. `make demo` checks all but the mainnet one.
 
-**Status:** hackathon build, started Oct 26, 2026. The CI signer certified v5 at level 2 on Oct 29, on its second, announced run (see [CI signer](#ci-signer-githubworkflowsci-signeryml)). Not active yet: the attack bounty (Nov 8–12) and the keyless contract account (its full-access key is to be deleted on Nov 14, after the bounty closes).
+**Status:** hackathon build, started Oct 26, 2026. The CI signer certified v5 at level 2 on Oct 29, on its second, announced run (see [CI signer](#ci-signer-githubworkflowsci-signeryml)). The [attack bounty](BOUNTY.md) is open until Nov 12 (5 NEAR per accepted attack, a plain description is enough). Not active yet: the keyless contract account (its full-access key is to be deleted on Nov 14, after the bounty closes).
 
 **Live demo:** paste your agent's system prompt into [@clearance_crashtest_bot](https://t.me/clearance_crashtest_bot) on Telegram: in about two minutes it returns what the agent paid and to whom on two models, and a policy for its wallet (3 runs per person per day; the prompt is deleted after the run; code in [`bot/`](bot/telegram.ts)). The same job on NEAR AI Agent Market: [`market.near.ai/a/clearance`](https://market.near.ai/a/clearance), $1.
 
