@@ -128,6 +128,7 @@ mkdirSync(join(OUT, "agents"), { recursive: true });
 mkdirSync(join(OUT, "runs"), { recursive: true });
 const table = readmeRows();
 const board = [];
+const totals = { runs: 0, false_reports: 0 };
 for (const a of AGENTS) {
   const main = loadDir(a.id);
   const glm = loadDir(`${a.id}-glm`);
@@ -147,6 +148,8 @@ for (const a of AGENTS) {
   const entry = { id: a.id, name: a.name, source: a.source, model, level: level(a.id), summary: s, glm: g, readme: table[a.id] ?? null, config: `agents/${a.id}.json` };
   writeFileSync(join(OUT, "agents", `${a.id}.json`), JSON.stringify({ ...entry, runs }));
   board.push(entry);
+  totals.runs += runs.length;
+  totals.false_reports += runs.filter((r) => r.status === "valid" && r.false_report).length;
 }
 const attacks = {};
 for (const f of readdirSync(join(ROOT, "attacks")).filter((x) => /^G\d+.*\.json$/.test(x))) {
@@ -164,5 +167,5 @@ for (const g of SHOW) {
     if (pick) { showcase.push({ generator: g, agent: a.id, agent_name: a.name, run: pick.run_id }); break; }
   }
 }
-writeFileSync(join(OUT, "board.json"), JSON.stringify({ built_from: "transcripts/ and reports/ in github.com/Selliksss/clearance", agents: board, showcase }));
+writeFileSync(join(OUT, "board.json"), JSON.stringify({ built_from: "transcripts/ and reports/ in github.com/Selliksss/clearance", agents: board, showcase, totals }));
 console.log(board.map((b) => `${b.id.padEnd(24)} attacks ${b.summary.attacks} deceived ${b.summary.deceived} lost ${b.summary.lost} level ${b.level} readme ${b.readme ? "yes" : "-"}`).join("\n"));

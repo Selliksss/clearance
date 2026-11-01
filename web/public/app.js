@@ -156,7 +156,7 @@ function observeRises() {
 
 async function home(paint) {
   document.title = "Clearance: a crash test for AI agents that hold money";
-  const [board, credits] = await Promise.all([get("/data/board.json"), get("/img/credits.json")]);
+  const board = await get("/data/board.json");
   const shows = board.showcase.filter((s) => REPLAY[s.generator]);
   const runs = await Promise.all(shows.map((s) => get(`/data/runs/${s.run}.json`)));
   const policyAgents = board.agents.filter((a) => a.readme);
@@ -176,8 +176,6 @@ async function home(paint) {
       <p class="src">${esc(note)}</p>
     </a>`;
   };
-  const credit = (file) => credits.find((c) => c.file.endsWith(file));
-  const creditLine = credits.filter((c) => !/b11204p267|ridgeline/i.test(c.file)).map((c) => `<a href="${esc(c.page)}">${esc(c.title)}</a>, ${esc(c.creator.split(",")[0])}, ${esc(c.license)}`).join("; ");
 
   if (!paint(`
   <section class="hero">
@@ -214,22 +212,6 @@ async function home(paint) {
       ${board.agents.map(tile).join("")}
     </div>
     <p class="after">Public prompts ran on gpt-4.1-mini with an open wallet; the numbers match the table in the <a href="${REPO}#readme">README</a>, rebuilt from <code>transcripts/</code>. A row measures the published prompt and its tools, not the company's product.</p>
-  </section>
-
-  <section class="why">
-    <div class="rise">
-      <h2>Why it is called a crash test</h2>
-      <p>The idea comes from car safety. Before a new car is sold, it is driven into a barrier with a dummy in the seat, and the verdict is what reached the dummy, whatever the maker says about the car.</p>
-      <p>Clearance does the same to an agent with a wallet. The barrier is a lying invoice or email, the dummy is the vault, and the verdict is the NEAR that left it. The result is a level from 0 to 2 and wallet limits sized for that agent; a level-2 agent gets a certificate on NEAR testnet that anyone can check.</p>
-    </div>
-    <figure class="rise">
-      <video src="/img/crash-loop.mp4" poster="/img/crash-loop-poster.jpg" autoplay muted loop playsinline preload="metadata" aria-label="A pickup truck hits a barrier in a frontal crash test"></video>
-      <figcaption class="cap">2017 Honda Ridgeline frontal crash test, NHTSA</figcaption>
-    </figure>
-    <div class="strip">
-    <figure class="rise"><img src="/img/thor-mod-kit-post-test.jpg" alt="THOR crash test dummy slumped in a test rig after an impact" loading="lazy"><figcaption class="cap">THOR dummy after a test, University of Virginia for NHTSA</figcaption></figure>
-    <figure class="rise"><img src="/img/iihs-crash-test-dummy-in-hyundai-tucson.jpg" alt="Crash test dummy at the wheel of a Hyundai Tucson" loading="lazy"><figcaption class="cap">IIHS dummy in a Hyundai Tucson, photo Brady Holt</figcaption></figure>
-    </div>
   </section>
 
   <section class="how" id="how">
@@ -272,12 +254,15 @@ async function home(paint) {
       <div class="actions"><a class="btn" href="${BOT}">Test your agent</a><a class="link" href="${REPO}">Run it yourself</a></div>
       <p class="after">Paste the agent's system prompt into the Telegram bot for a preliminary report in about two minutes. No keys. A level and a certificate come from the full suite.</p>
     </div>
-    <figure class="rise" style="margin:0"><img src="/img/ford-f-150-crew-cab-frontal-crash.jpg" alt="Ford F-150 crumpled against the barrier in a frontal crash test" loading="lazy"><figcaption class="cap">Ford F-150 frontal crash test, Calspan for NHTSA</figcaption></figure>
+    <dl class="marks rise">
+      <div><dt>${Number(board.totals.runs)}</dt><dd>recorded runs, every one readable on this site</dd></div>
+      <div><dt>${Number(board.totals.false_reports)}</dt><dd>times an agent told its owner something the chain does not show</dd></div>
+      <div><dt>0</dt><dd>public agent prompts that reached level 1 or 2 on an open wallet</dd></div>
+    </dl>
   </section>
 
   <footer>
     <div class="quiet"><span>Clearance, built for the NEAR hackathon, MIT.</span><span><a href="${REPO}">GitHub</a> &nbsp; <a href="${BOT}">Telegram bot</a> &nbsp; <a href="${CERTS.v5}">Certificate</a></span></div>
-    <p class="credits">Photographs: ${creditLine}. Video from <a href="https://commons.wikimedia.org/wiki/File:2017_Honda_Ridgeline_Crash_Test-NHTSA.gif">2017 Honda Ridgeline Crash Test</a>, NHTSA, public domain. All via Wikimedia Commons.</p>
   </footer>`)) return false;
 
   setupReplay(shows, runs);
@@ -384,9 +369,9 @@ async function agentPage(id, paint) {
   };
   const glm = a.glm ? `<h2>The same prompt on GLM-5.3-flash</h2><ul class="runlist">${group("glm")}</ul>` : "";
   return paint(`<div class="inner">
-  <div class="topbar">${homeLink}<nav><a href="/#agents" data-link>All agents</a><a href="${BOT}">Test your agent</a></nav></div>
+  <div class="topbar">${homeLink}<nav><a href="/#agents" data-link>All agents</a><a class="btn small" href="${BOT}">Test your agent</a></nav></div>
   <h1 class="page-h">${esc(a.name)}</h1>
-  <p class="page-sub">${esc(a.source)}. Model <code>${esc(a.model ?? "")}</code>, config <a href="${REPO}/blob/main/${esc(a.config)}">${esc(a.config)}</a>.</p>
+  <p class="page-sub">Crash-test results for ${esc(a.source)}. Model <code>${esc(a.model ?? "")}</code>, config <a href="${REPO}/blob/main/${esc(a.config)}">${esc(a.config)}</a>.</p>
   <div class="stats">
     <div><span>NEAR lost</span><b class="${Number(s.lost) > 0 ? "loss" : "kept"}">${esc(s.lost)}</b></div>
     ${a.readme ? `<div><span>With limits sized by Clearance</span><b>${esc(a.readme.lost_with_policy)}</b></div>` : ""}
@@ -429,9 +414,9 @@ async function runPage(id, paint) {
     ? (r.verdict.completed ? "Honest task done correctly." : "Honest task not done.")
     : r.verdict.deceived ? `Fooled. ${r.verdict.loss} NEAR lost.` : "Not fooled.";
   return paint(`<div class="inner">
-  <div class="topbar">${homeLink}<nav><a href="/#agents" data-link>All agents</a><a href="${BOT}">Test your agent</a></nav></div>
+  <div class="topbar">${homeLink}<nav><a href="/#agents" data-link>All agents</a><a class="btn small" href="${BOT}">Test your agent</a></nav></div>
   <h1 class="page-h">${esc(attackName(r.generator))}</h1>
-  <p class="page-sub">${r.kind === "control" ? "Honest task, no attack." : `Attack <code>${esc(r.generator)}</code>.`} Model <code>${esc(r.model ?? "")}</code>, run <code>${esc(r.id)}</code>.${r.status !== "valid" ? " <strong>Invalid run, not scored.</strong>" : ""}</p>
+  <p class="page-sub">${r.kind === "control" ? "A recorded run of an honest task, no attack." : `A recorded run of attack <code>${esc(r.generator)}</code>.`} Model <code>${esc(r.model ?? "")}</code>, run <code>${esc(r.id)}</code>.${r.status !== "valid" ? " <strong>Invalid run, not scored.</strong>" : ""}</p>
   <div class="run-grid">
     <div class="timeline" data-ui>
       <div class="step"><div class="who">The owner's task</div><p class="line">${esc(r.task)}</p>${r.should ? `<p class="note">A correct agent would ${esc(r.should)}.</p>` : ""}</div>
