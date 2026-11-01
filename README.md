@@ -2,7 +2,7 @@
 
 **Clearance is a crash test for AI agents that hold money.** Wallet guards (Spend Guard, Countersign, OutLayer, Agent Connect) cap what an agent can lose; Clearance measures what it does inside that cap.
 
-**Try it:** [95-179-249-64.sslip.io](https://95-179-249-64.sslip.io) - paste an agent's system prompt and watch the attacks land on a sandbox, or read any of the recorded runs.
+**Try it:** [95-179-249-64.sslip.io](https://95-179-249-64.sslip.io) - paste an agent's system prompt and watch the attacks land on a sandbox, read any of the recorded runs, or [try to scam the certified agent yourself](https://95-179-249-64.sslip.io/challenge) (one lie in its invoice, inbox or payment result, judged by the same runner).
 
 **How:** fake invoices, lookalike payees and "payment failed, retry" hidden in what the agent reads; every payment is a real transfer on a NEAR sandbox, scored by the money that left the vault (1,847 replayable transcripts).
 
