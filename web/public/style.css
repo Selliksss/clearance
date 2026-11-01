@@ -86,7 +86,7 @@ img, video { display: block; max-width: 100%; }
 mark.planted { color: var(--hazard-ink); background: var(--hazard); padding: 0 3px; border-radius: 2px; box-decoration-break: clone; -webkit-box-decoration-break: clone; }
 
 /* ---------- showcase: the policy switch, blown up ---------- */
-.switch-field { position: relative; min-height: 96svh; overflow: hidden; background: var(--loss); color: var(--on-loss); transition: background .5s var(--ease), color .5s; padding: 140px var(--m) 260px; }
+.switch-field { position: relative; overflow: hidden; background: var(--loss); color: var(--on-loss); transition: background .5s var(--ease), color .5s; padding: 140px var(--m) 120px; }
 .switch-field.saved { background: var(--accent); color: var(--on-accent); }
 .switch-field h2 { font-size: clamp(56px, 9vw, 150px); line-height: .9; letter-spacing: -0.04em; font-variant-numeric: tabular-nums; }
 .switch-field .sub { max-width: 44ch; margin-top: 28px; }
@@ -95,13 +95,14 @@ mark.planted { color: var(--hazard-ink); background: var(--hazard); padding: 0 3
 .switch-field .agents button:hover { background: rgba(0,0,0,.28); }
 .switch-field .agents button[aria-pressed="true"] { background: var(--bg); color: var(--ink); }
 .switch-field .agents button:focus-visible, .big-toggle button:focus-visible { outline: 3px solid var(--bg); }
-.big-toggle { position: absolute; right: 0; bottom: calc(var(--m) * -1); font-size: clamp(34px, 6vw, 96px); }
-.big-toggle button { all: unset; cursor: pointer; display: flex; align-items: center; gap: .45em; background: rgba(0,0,0,.2); border-radius: 999px 0 0 999px; padding: .32em calc(var(--m) + .2em) .32em .42em; color: inherit; }
+.big-toggle { margin-top: 36px; font-size: clamp(22px, 1.9vw, 28px); }
+.big-toggle button { all: unset; cursor: pointer; display: flex; align-items: center; gap: .45em; background: rgba(0,0,0,.2); border-radius: 999px; padding: .32em 1em .32em .36em; color: inherit; transition: background .2s; }
+.big-toggle button:hover { background: rgba(0,0,0,.3); }
 .big-toggle .track { width: 2.6em; height: 1.4em; border-radius: 999px; background: rgba(0,0,0,.38); position: relative; flex: none; }
 .big-toggle .thumb { position: absolute; top: .12em; left: .12em; width: 1.16em; height: 1.16em; border-radius: 50%; background: var(--bg); transition: transform .45s var(--ease), background .45s; }
 .switch-field.saved .big-toggle .thumb { transform: translateX(1.2em); background: var(--light); }
-.big-toggle .lab { font: 700 .5em/1 var(--font); white-space: nowrap; letter-spacing: -0.01em; }
-.switch-field .fine { margin-top: 48px; max-width: 52ch; font-size: 15px; }
+.big-toggle .lab { font: 600 .8em/1 var(--font); white-space: nowrap; letter-spacing: -0.01em; }
+.switch-field .fine { margin-top: 40px; max-width: 52ch; font-size: 15px; }
 
 /* ---------- proof: the board as tiles ---------- */
 .board { padding: 200px var(--m) 0; }
@@ -133,7 +134,7 @@ mark.planted { color: var(--hazard-ink); background: var(--hazard); padding: 0 3
 .why p + p { margin-top: 16px; }
 .why figure { margin: 0; }
 .why video { width: 100%; height: auto; aspect-ratio: 3 / 2; object-fit: cover; background: var(--bg-2); }
-.strip { grid-column: 1 / -1; display: grid; grid-template-columns: 4fr 3fr 3fr; gap: 8px; margin-top: -40px; }
+.strip { grid-column: 1 / -1; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: -40px; }
 .strip figure { margin: 0; }
 .strip img { width: 100%; height: clamp(220px, 28vw, 420px); object-fit: cover; }
 .cap { color: var(--muted); font-size: 14px; margin-top: 8px; }
@@ -245,13 +246,10 @@ mark.planted { color: var(--hazard-ink); background: var(--hazard); padding: 0 3
   .top-link { display: none; }
   .replay .panel { min-height: 560px; }
   .replay .seg button { font-size: 12px; padding: 10px 2px; }
-  .switch-field { padding: 96px var(--m) 220px; min-height: 0; }
-  .big-toggle { font-size: clamp(30px, 9vw, 52px); }
+  .switch-field { padding: 96px var(--m) 96px; }
   .tile { min-height: 200px; padding: 18px; }
   .board, .why, .how { padding-top: 140px; }
   .why, .close, .run-grid { grid-template-columns: 1fr; gap: 32px; }
-  .strip { grid-template-columns: 1fr 1fr; }
-  .strip figure:first-child { grid-column: span 2; }
   .how { display: block; }
   .response { margin-left: 0; }
   .pair { grid-template-columns: 1fr; }

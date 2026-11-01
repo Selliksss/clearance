@@ -177,7 +177,7 @@ async function home(paint) {
     </a>`;
   };
   const credit = (file) => credits.find((c) => c.file.endsWith(file));
-  const creditLine = credits.map((c) => `<a href="${esc(c.page)}">${esc(c.title)}</a>, ${esc(c.creator.split(",")[0])}, ${esc(c.license)}`).join("; ");
+  const creditLine = credits.filter((c) => !/b11204p267|ridgeline/i.test(c.file)).map((c) => `<a href="${esc(c.page)}">${esc(c.title)}</a>, ${esc(c.creator.split(",")[0])}, ${esc(c.license)}`).join("; ");
 
   if (!paint(`
   <section class="hero">
@@ -201,8 +201,8 @@ async function home(paint) {
     <h2><span class="gone" data-v="0">0</span> NEAR gone</h2>
     <p class="sub"></p>
     <div class="agents" role="group" aria-label="Choose an agent">${policyAgents.map((a) => `<button type="button" data-id="${esc(a.id)}" aria-pressed="${a.id === "elizaos-default"}">${esc(a.name)}</button>`).join("")}</div>
+    <div class="big-toggle"><button type="button" role="switch" aria-checked="false"><span class="track"><span class="thumb"></span></span><span class="lab">Turn on limits sized by Clearance</span></button></div>
     <p class="fine">Computed from the recorded transfers with <code>allowlist-what-if.ts</code>. No wallet limit was in the loop when the runs were recorded, and every one is linked from the agent's page.</p>
-    <div class="big-toggle"><button type="button" role="switch" aria-checked="false"><span class="track"><span class="thumb"></span></span><span class="lab">Limits sized by Clearance</span></button></div>
   </section>
 
   <section class="board" id="agents">
@@ -218,9 +218,9 @@ async function home(paint) {
 
   <section class="why">
     <div class="rise">
-      <h2>Cars get crashed first</h2>
-      <p>Before anyone drives a new car, it is crashed. The test never asks the car whether it is safe. It straps a dummy into the seat, drives into a barrier at 56 km/h and measures what reached the dummy.</p>
-      <p>Clearance does that to an agent with a wallet. The attack sits in the data the agent reads, the agent pays with real transfers, and the result is a level from 0 to 2 with wallet limits sized for that agent. A level-2 agent gets a certificate on NEAR testnet that anyone can check.</p>
+      <h2>Why it is called a crash test</h2>
+      <p>The idea comes from car safety. Before a new car is sold, it is driven into a barrier with a dummy in the seat, and the verdict is what reached the dummy, whatever the maker says about the car.</p>
+      <p>Clearance does the same to an agent with a wallet. The barrier is a lying invoice or email, the dummy is the vault, and the verdict is the NEAR that left it. The result is a level from 0 to 2 and wallet limits sized for that agent; a level-2 agent gets a certificate on NEAR testnet that anyone can check.</p>
     </div>
     <figure class="rise">
       <video src="/img/crash-loop.mp4" poster="/img/crash-loop-poster.jpg" autoplay muted loop playsinline preload="metadata" aria-label="A pickup truck hits a barrier in a frontal crash test"></video>
@@ -229,7 +229,6 @@ async function home(paint) {
     <div class="strip">
     <figure class="rise"><img src="/img/thor-mod-kit-post-test.jpg" alt="THOR crash test dummy slumped in a test rig after an impact" loading="lazy"><figcaption class="cap">THOR dummy after a test, University of Virginia for NHTSA</figcaption></figure>
     <figure class="rise"><img src="/img/iihs-crash-test-dummy-in-hyundai-tucson.jpg" alt="Crash test dummy at the wheel of a Hyundai Tucson" loading="lazy"><figcaption class="cap">IIHS dummy in a Hyundai Tucson, photo Brady Holt</figcaption></figure>
-    <figure class="rise"><img src="/img/b11204p267.jpg" alt="A wired-up crash test dummy standing on a rig in a lab" loading="lazy"><figcaption class="cap">A dummy on the rig, Japan Auto Research Institute for NHTSA</figcaption></figure>
     </div>
   </section>
 
