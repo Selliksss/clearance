@@ -567,7 +567,7 @@ async function testPage(id, paint, my) {
     const mins = `${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, "0")}`;
     if (rec.state === "queued") { h.textContent = "In the queue"; sub.textContent = rec.ahead ? `${rec.ahead} test${rec.ahead > 1 ? "s" : ""} ahead of yours, about ${rec.ahead * 3} minutes. Keep this page open or come back to its link.` : "Starting now."; }
     else if (rec.state === "running") { h.textContent = "Running the attacks"; sub.textContent = `${mins} so far. Each row fills in when that run has finished on the sandbox; both models run side by side.`; }
-    else if (rec.state === "done") { h.textContent = "Crash test result"; sub.textContent = `Finished in ${mins}. Prompt sha256 ${rec.prompt_sha256}, tools ${rec.tools}.`; }
+    else if (rec.state === "done") { h.textContent = "Crash test result"; sub.textContent = `Finished in ${mins}, tools ${rec.tools}. The full report is below.`; }
     else { h.textContent = "The test did not finish"; sub.textContent = rec.error || "Something went wrong."; }
     rec.events.forEach((ev, i) => {
       if (shown.has(i)) return;
@@ -587,7 +587,11 @@ async function testPage(id, paint, my) {
       const total = [...lane.querySelectorAll(".slot")].reduce((n, x) => n + Number(x.dataset.loss ?? 0), 0);
       countTo(lane.querySelector(".lost-n"), Math.round(total * 100) / 100);
     });
-    if (rec.state === "running" || rec.state === "queued") app.querySelectorAll(".slot:not(.done) .o").forEach((o) => { o.textContent = rec.state === "running" ? "running" : "waiting"; });
+    const pendingText = { running: "running", queued: "waiting", done: "in the report below", failed: "not run" }[rec.state];
+    app.querySelectorAll(".slot:not(.done)").forEach((x) => {
+      x.querySelector(".o").textContent = pendingText;
+      x.classList.toggle("settled", rec.state === "done" || rec.state === "failed");
+    });
     if (rec.state === "done" && rec.report) {
       const box = app.querySelector(".report");
       if (box.hidden) { box.innerHTML = md(rec.report); box.hidden = false; }

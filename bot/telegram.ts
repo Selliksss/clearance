@@ -56,13 +56,13 @@ type Job = TgJob | WebJob;
 type State = {
   offset: number; adminId?: number; adminChat?: number; day: string; total: number;
   users: Record<string, number>; failures: Record<string, number>; pending: number[];
-  webTotal: number; webIps: Record<string, number>;
+  webTotal: number; webIps: Record<string, number>; webFailures: Record<string, number>;
 };
 
 const today = () => new Date().toISOString().slice(0, 10);
 
 function loadState(): State {
-  const fresh: State = { offset: 0, day: today(), total: 0, users: {}, failures: {}, pending: [], webTotal: 0, webIps: {} };
+  const fresh: State = { offset: 0, day: today(), total: 0, users: {}, failures: {}, pending: [], webTotal: 0, webIps: {}, webFailures: {} };
   if (!existsSync(STATE)) return fresh;
   try {
     const s = JSON.parse(readFileSync(STATE, "utf8"));
@@ -75,7 +75,7 @@ function loadState(): State {
       total: Number.isInteger(s.total) ? s.total : 0,
       users: obj(s.users), failures: obj(s.failures),
       pending: Array.isArray(s.pending) ? s.pending.filter(Number.isInteger) : [],
-      webTotal: Number.isInteger(s.webTotal) ? s.webTotal : 0, webIps: obj(s.webIps),
+      webTotal: Number.isInteger(s.webTotal) ? s.webTotal : 0, webIps: obj(s.webIps), webFailures: obj(s.webFailures),
     };
   } catch (e) {
     console.error(`state file unreadable (${(e as Error).message}); starting fresh, old file kept`);
@@ -106,6 +106,7 @@ function rollDay() {
   state.failures = {};
   state.webTotal = 0;
   state.webIps = {};
+  state.webFailures = {};
   saveState();
 }
 
@@ -488,6 +489,10 @@ const WEB_DIR = join(STATE_DIR, "web-jobs");
 const WEB_PER_IP_PER_DAY = 3;
 const WEB_PER_DAY = 30;
 const WEB_MAX_PROMPT = 8_000;
+// A prompt can make its own runs invalid, and a failed run is given back; so failures are capped per network, and
+// the web may hold only part of the queue it shares with Telegram.
+const WEB_FAILURES_PER_IP_PER_DAY = 2;
+const WEB_MAX_QUEUED = 3;
 // A result page stays readable for a week; the prompt itself is never stored.
 const WEB_KEEP_MS = 7 * 24 * 3600_000;
 
@@ -497,7 +502,9 @@ type WebEvent = {
 };
 type WebRecord = {
   id: string; state: "queued" | "running" | "done" | "failed"; created: number; started?: number; finished?: number;
-  tools: string; prompt_sha256: string; events: WebEvent[]; summary?: string; report?: string; error?: string;
+  tools: string; events: WebEvent[]; summary?: string; report?: string; error?: string;
+  // Server-only (never sent): whose counters a lost run is given back to.
+  owner?: { ipKey: string; day: string };
 };
 const webJobs = new Map<string, WebRecord>();
 
@@ -511,16 +518,28 @@ function saveWeb(r: WebRecord) {
   }
 }
 
+const expired = (r: WebRecord) => Date.now() - r.created > WEB_KEEP_MS;
+
 function loadWeb(id: string): WebRecord | null {
-  if (webJobs.has(id)) return webJobs.get(id)!;
   if (!/^[0-9a-f]{16}$/.test(id)) return null;
-  try {
-    const r = JSON.parse(readFileSync(join(WEB_DIR, `${id}.json`), "utf8")) as WebRecord;
-    if (Date.now() - r.created > WEB_KEEP_MS) return null;
-    return r;
-  } catch {
+  let r = webJobs.get(id) ?? null;
+  if (!r) {
+    try { r = JSON.parse(readFileSync(join(WEB_DIR, `${id}.json`), "utf8")) as WebRecord; } catch { return null; }
+  }
+  if (expired(r)) {
+    webJobs.delete(id);
+    rmSync(join(WEB_DIR, `${id}.json`), { force: true });
     return null;
   }
+  return r;
+}
+
+/** Gives a lost or failed web run back to its network, if it was counted today. */
+function webRefund(owner: WebRecord["owner"]) {
+  if (!owner || owner.day !== state.day) return;
+  state.webIps[owner.ipKey] = Math.max(0, (state.webIps[owner.ipKey] ?? 1) - 1);
+  state.webTotal = Math.max(0, state.webTotal - 1);
+  saveState();
 }
 
 const near = (yocto: unknown): string => {
@@ -571,6 +590,8 @@ function scanTranscripts(dir: string, seen: Set<string>, out: (t: any) => void) 
 /** The market report in the website's terms. */
 export function forWeb(md: string): string {
   return md
+    // The page is public to anyone with its link: no hash of the prompt to check guesses against.
+    .replace(/ \(sha256 `[0-9a-f]+…`; /, " (")
     .replace("`make policy` in the repo, or ask in a revision.", "`make policy` in the repo, or run the test again with the OutLayer tool layer.")
     .replace("One revision is included (a re-run with new seeds). ", "To re-run with new attack texts, submit the prompt again (3 runs per day). ");
 }
@@ -582,10 +603,11 @@ function webFail(job: WebJob, error: string) {
     r.error = error;
     r.finished = Date.now();
     saveWeb(r);
+    webJobs.delete(job.id);
   }
+  webRefund({ ipKey: job.ipKey, day: job.day });
   if (job.day === state.day) {
-    state.webIps[job.ipKey] = Math.max(0, (state.webIps[job.ipKey] ?? 1) - 1);
-    state.webTotal = Math.max(0, state.webTotal - 1);
+    state.webFailures[job.ipKey] = (state.webFailures[job.ipKey] ?? 0) + 1;
     saveState();
   }
 }
@@ -601,7 +623,7 @@ async function runWeb(job: WebJob) {
   const tmp = jobDir ? join(jobDir, "tmp") : null;
   const seen = new Set<string>();
   const scan = () => { if (tmp && existsSync(tmp)) scanTranscripts(tmp, seen, (t) => { r.events.push(webEvent(t)); saveWeb(r); }); };
-  const timer = setInterval(scan, 2_000);
+  const timer = setInterval(scan, 700);
   let res: RunResult;
   try {
     res = await pending;
@@ -619,7 +641,8 @@ async function runWeb(job: WebJob) {
   r.report = md;
   r.summary = summary(md);
   saveWeb(r);
-  notifyAdmin(`web run ${job.id} (${r.prompt_sha256}): ${r.summary.split("\n").slice(0, BUYER_MODELS.length).join("; ")}`);
+  webJobs.delete(job.id);
+  notifyAdmin(`web run ${job.id}: ${r.summary.split("\n").slice(0, BUYER_MODELS.length).join("; ")}`);
 }
 
 function json(res: ServerResponse, code: number, body: unknown) {
@@ -634,7 +657,7 @@ function readBody(req: IncomingMessage, max: number): Promise<string | null> {
     const parts: Buffer[] = [];
     req.on("data", (d: Buffer) => {
       n += d.length;
-      if (n > max) { resolve(null); req.destroy(); return; }
+      if (n > max) { resolve(null); req.pause(); return; }
       parts.push(d);
     });
     req.on("end", () => resolve(Buffer.concat(parts).toString("utf8")));
@@ -642,12 +665,22 @@ function readBody(req: IncomingMessage, max: number): Promise<string | null> {
   });
 }
 
-// Caddy is the only client of this port (127.0.0.1) and sets X-Forwarded-For to the address it saw.
-const clientIp = (req: IncomingMessage) => String(req.headers["x-forwarded-for"] ?? req.socket.remoteAddress ?? "").split(",").pop()!.trim();
+// Caddy is the only client of this port (127.0.0.1) and sets X-Real-IP to the address it saw (header_up in the
+// Caddyfile). An IPv6 client is counted by its /64, which is what one subscriber usually gets.
+function clientIp(req: IncomingMessage): string {
+  const ip = String(req.headers["x-real-ip"] ?? req.socket.remoteAddress ?? "").trim();
+  if (!ip.includes(":") || ip.startsWith("::ffff:")) return ip.replace(/^::ffff:/, "");
+  const [head, tail = ""] = ip.split("::");
+  const h = head ? head.split(":") : [];
+  const t = tail ? tail.split(":") : [];
+  const full = [...h, ...Array(Math.max(0, 8 - h.length - t.length)).fill("0"), ...t];
+  return `${full.slice(0, 4).map((x) => x.toLowerCase().replace(/^0+(?=.)/, "")).join(":")}::/64`;
+}
 
 function publicRecord(r: WebRecord) {
+  const { owner: _owner, ...pub } = r;
   const at = queue.findIndex((j) => j.kind === "web" && j.id === r.id);
-  return { ...r, ahead: r.state === "queued" ? at + (running ? 1 : 0) : 0 };
+  return { ...pub, ahead: r.state === "queued" ? at + (running ? 1 : 0) : 0 };
 }
 
 async function onHttp(req: IncomingMessage, res: ServerResponse) {
@@ -664,6 +697,7 @@ async function onHttp(req: IncomingMessage, res: ServerResponse) {
   if (req.method === "POST" && path === "/api/test") {
     if (!String(req.headers["content-type"] ?? "").startsWith("application/json")) return json(res, 415, { error: "Send JSON." });
     const body = await readBody(req, 64 * 1024);
+    if (body === null) return json(res, 413, { error: "That is too long; the prompt limit is 8000 characters." });
     let input: any;
     try { input = JSON.parse(body ?? ""); } catch { return json(res, 400, { error: "Send JSON with a prompt field." }); }
     const prompt = typeof input?.prompt === "string" ? input.prompt.trim() : "";
@@ -673,16 +707,17 @@ async function onHttp(req: IncomingMessage, res: ServerResponse) {
     if ("error" in parsed) return json(res, 400, { error: parsed.error === "short" ? `Paste the whole system prompt (at least ${MIN_PROMPT} characters).` : `This can't be used as a prompt: ${parsed.error}.` });
     rollDay();
     const ipKey = createHash("sha256").update(`${state.day}|${clientIp(req)}`).digest("hex").slice(0, 16);
+    if ((state.webFailures[ipKey] ?? 0) >= WEB_FAILURES_PER_IP_PER_DAY) return json(res, 429, { error: "Your last tests failed on our side twice today. Please try again tomorrow (UTC), or use the Telegram bot." });
+    if (queue.some((j) => j.kind === "web" && j.ipKey === ipKey) || (running?.kind === "web" && running.ipKey === ipKey)) return json(res, 409, { error: "A test from your network is still in the queue or running. Wait for its result first." });
     if ((state.webIps[ipKey] ?? 0) >= WEB_PER_IP_PER_DAY) return json(res, 429, { error: `That's ${WEB_PER_IP_PER_DAY} tests from your network today. Come back tomorrow (UTC), or use the Telegram bot.` });
     if (state.webTotal >= WEB_PER_DAY) return json(res, 429, { error: "Today's tests on the website are used up. Try tomorrow (UTC), or use the Telegram bot." });
-    if (queue.length >= MAX_QUEUE) return json(res, 503, { error: "Too many tests in the queue right now; try again in half an hour." });
+    if (queue.length >= MAX_QUEUE || queue.filter((j) => j.kind === "web").length >= WEB_MAX_QUEUED) return json(res, 503, { error: "Too many tests in the queue right now; try again in half an hour." });
     state.webIps[ipKey] = (state.webIps[ipKey] ?? 0) + 1;
     state.webTotal += 1;
     saveState();
     const id = randomBytes(8).toString("hex");
     const rec: WebRecord = {
-      id, state: "queued", created: Date.now(), tools: parsed.brief.tools ?? "clearance-v1",
-      prompt_sha256: createHash("sha256").update(parsed.brief.system_prompt).digest("hex").slice(0, 12), events: [],
+      id, state: "queued", created: Date.now(), tools: parsed.brief.tools ?? "clearance-v1", events: [], owner: { ipKey, day: state.day },
     };
     webJobs.set(id, rec);
     saveWeb(rec);
@@ -694,14 +729,16 @@ async function onHttp(req: IncomingMessage, res: ServerResponse) {
 }
 
 /** Web runs that were queued or running when the bot stopped are lost with their prompts: mark them so. */
-function recoverWeb() {
+function recoverWeb(startup: boolean) {
   let files: string[] = [];
   try { files = readdirSync(WEB_DIR).filter((f) => f.endsWith(".json")); } catch { return; }
   for (const f of files) {
     try {
       const r = JSON.parse(readFileSync(join(WEB_DIR, f), "utf8")) as WebRecord;
-      if (Date.now() - r.created > WEB_KEEP_MS) { rmSync(join(WEB_DIR, f), { force: true }); continue; }
+      if (expired(r)) { rmSync(join(WEB_DIR, f), { force: true }); continue; }
+      if (!startup) continue;
       if (r.state === "queued" || r.state === "running") {
+        webRefund(r.owner);
         r.state = "failed";
         r.error = "The server restarted and this test was lost. Please submit the prompt again.";
         r.finished = Date.now();
@@ -713,7 +750,9 @@ function recoverWeb() {
 
 function startWeb() {
   if (!WEB_PORT) return;
-  recoverWeb();
+  recoverWeb(true);
+  // Expired result pages go once an hour.
+  setInterval(() => recoverWeb(false), 3600_000).unref();
   createServer((req, res) => {
     onHttp(req, res).catch((e) => {
       console.error(`http: ${(e as Error).message}`);

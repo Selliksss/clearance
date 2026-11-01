@@ -281,7 +281,7 @@ button.btn { border: 0; cursor: pointer; }
 .slot.bad .o { color: var(--loss); }
 .slot.ok { border-left-color: var(--accent-text); }
 .slot.ok .o { color: var(--accent-text); }
-.slot:not(.done) .o { animation: pulse 1.6s ease-in-out infinite; }
+.slot:not(.done):not(.settled) .o { animation: pulse 1.6s ease-in-out infinite; }
 @keyframes pulse { 50% { opacity: .45; } }
 .report { margin-top: 40px; background: var(--bg-2); border-radius: 10px; padding: 28px; max-width: 1100px; overflow-wrap: anywhere; }
 .report p { max-width: 80ch; margin: 0 0 14px; }
