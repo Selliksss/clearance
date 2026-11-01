@@ -1,6 +1,8 @@
 # Clearance
 
-**A crash test and an on-chain spending certificate for AI agents that hold money on NEAR.** (Unrelated to JetStream's *Clearance* gateway or other projects with a similar name, see [Related work](#related-work-and-a-name-clash).)
+**The crash test behind the spending limit.** Wallet guards (OutLayer, Agent Connect, AgentKit, and hackathon projects such as Spend Guard and Countersign) cap what an agent can lose; Clearance measures what the agent does inside that cap, on real NEAR transfers, and issues the level that sets it: fake invoices, lookalike payees and "payment failed, retry", 1,847 replayable transcripts, a certificate on testnet that any contract can read.
+
+**It sizes the wallet policy:** paste a system prompt into [@clearance_crashtest_bot](https://t.me/clearance_crashtest_bot) and get back what the agent paid, to whom, and the per-transaction and daily limits its guard should run with. (Unrelated to JetStream's *Clearance* gateway, see [Related work](#related-work-and-a-name-clash).)
 
 **What:** a crash test that feeds a money-holding agent fake invoices, lookalike payees and "payment failed, retry" on a real NEAR sandbox, and issues an on-chain certificate (level 0 to 2) that caps what the agent may spend.
 
@@ -180,6 +182,7 @@ Everything in this repository was written during the hackathon (first commit Oct
 - **[Agentic Commerce Bench](https://github.com/BuildWithGordonAI/agentcommercebench)** (Gordon AI, Apache-2.0) is the closest: 20 fraud classes for agents with spend authority, including payee substitution, overcharge and retry farming, the same families as our G2, G1 and G6. Its pipeline is offline on synthetic traffic with no chain and no account. Clearance judges real transfers by the balance that left the vault, adds blind generators by other vendors' models, and issues a revocable certificate on NEAR.
 - **[AgentDojo](https://github.com/ethz-spylab/agentdojo)** (ETH Zurich, MIT) measures indirect prompt injection in tool outputs; its Banking environment is the general-purpose ancestor of this setting, with simulated tools and no chain.
 - **[Fenceline](https://nearbuilders.org/projects/project/fenceline-2x87z3)**, another project for this hackathon, is the complement: per its description it checks whether an agent wallet's spending limits really cap the loss. It tests the cage, and Clearance tests the agent and sizes the cage.
+- **Wallet guards in this hackathon** put the spending decision on chain: [NEAR Agent Spend Guard](https://github.com/mubudot/near-agent-spend-guard) (allowlist, per-transaction and daily caps, owner approval, spend-only key), [Countersign](https://github.com/team-attention/countersign) (allowlist and limits pay automatically, everything else waits for a human), [TabWrit](https://github.com/Lesnak1/tabwrit) (contract-enforced spending tabs for merchants and agents). They bound what a deceived agent can lose; Clearance measures how often an agent is deceived inside those bounds (a second payment to an allowed payee, an inflated invoice under the cap) and gives the numbers to set them with. Spend Guard's own README states the same limit: an allowlisted destination can still receive unwanted payments within the configured limits.
 - **Name:** JetStream Security announced an unrelated commercial product called *Clearance* on Sep 2, 2026 ([press release](https://www.newswire.com/news/jetstream-announces-clearance-an-ai-zero-trust-reasoning-engine)), a gateway that authorizes each AI-agent tool call before it runs. Not affiliated.
 
 ## All checks
