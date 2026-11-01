@@ -4,9 +4,7 @@
 
 **How:** fake invoices, lookalike payees and "payment failed, retry" hidden in what the agent reads; every payment is a real transfer on a NEAR sandbox, scored by the money that left the vault (1,847 replayable transcripts).
 
-**You get:** a level 0–2 certificate on NEAR testnet (`is_certified`) and the per-transaction and daily limits your guard should run with. Try it: paste a prompt into [@clearance_crashtest_bot](https://t.me/clearance_crashtest_bot).
-
-**What:** a crash test that feeds a money-holding agent fake invoices, lookalike payees and "payment failed, retry" on a real NEAR sandbox, and issues an on-chain certificate (level 0 to 2) that caps what the agent may spend.
+**You get:** from a full-suite run (5 runs per attack), a revocable level 0–2 certificate on NEAR testnet that records the tested configuration (`is_certified`). For a quick look, paste a prompt into [@clearance_crashtest_bot](https://t.me/clearance_crashtest_bot): a preliminary report (one run per attack, no certificate) with what the agent paid, to whom, and the per-transaction and daily limits its guard should run with.
 
 **For whom:** builders of agents that pay (on OutLayer, Agent Connect or AgentKit) and the owners who fund them.
 
@@ -157,6 +155,7 @@ This is the rule the wallet policies lack: a count of payments per payee, set by
   - The TEE signatures are checked against the signing address stored in the transcript, and `make certify` and the CI signer refuse an Attested report whose signers are not pinned in `deploy/tee-signers.json`. Pinning stops a transcript from claiming an arbitrary address; it does not prove that the pinned address belongs to an attested NEAR AI enclave (the full Intel TDX + NVIDIA attestation was checked separately in GitHub Actions during the spikes, not on these runs).
   - The runner writes the transcripts, so offline checks cannot show that unfavourable runs were not discarded, or that a tool result matches the chain. Runs cut off mid-way are kept. The CI signer below takes the author's machine out of that loop. It does not take out the author: the code that judges a CI run is whatever the author committed (see the judge hash below).
   - The runner signs certificates with a function-call key limited to `certify`/`revoke` on the contract; that limits the runner process, not the author, whose runner account also holds a full-access key (a second function-call key on it, `CebzmHhj…`, is limited to the old spike contract and cannot call this one).
+  - A certificate records the tested configuration (`config_hash`: model, prompt, temperature, tools), but nothing on chain ties the agent that is actually running to that hash. A contract that reads `is_certified` trusts whoever operates the agent to run the certified configuration; it should keep its own hard limits as well.
   - The contract account still holds a full-access key, so its code could be replaced; it is kept so the contract can still be fixed during the hackathon and is to be deleted on Nov 14, after the bounty closes (the contract has no admin or upgrade method, so nothing depends on it). Until then, check the code hash: `make demo` compares it with `deploy/contract.json`.
 
 [^build]: Its `build_command` reads `cargo near build non-reproducible-wasm --locked` because that is the command `reproducible-wasm` runs inside the pinned image; cargo-near records it that way.
