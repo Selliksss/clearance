@@ -45,7 +45,7 @@ function attackName(g) {
 const gnum = (k) => (k.startsWith("control:") ? 1e6 : Number(/^G(\d+)/.exec(k)?.[1] ?? 1e5));
 const cache = new Map();
 async function get(path) {
-  if (!cache.has(path)) cache.set(path, fetch(path).then((r) => { if (!r.ok) throw new Error(`${path}: ${r.status}`); return r.json(); }));
+  if (!cache.has(path)) cache.set(path, fetch(path).then((r) => { if (!r.ok) throw new Error(`${path}: ${r.status}`); return r.json(); }).catch((e) => { cache.delete(path); throw e; }));
   return cache.get(path);
 }
 
@@ -72,7 +72,7 @@ function plant(text, injected) {
   return out + esc(raw.slice(at));
 }
 const hasPlant = (text, injected) => (injected ?? []).some((s) => s && s.length >= 4 && (String(text).includes(s) || String(text).includes(s.slice(0, 60))));
-const isPay = (c) => !/^get_|^read_/.test(c.name) && (/pay|transfer|send|swap/i.test(c.name) || /transfer/.test(c.args));
+const isPay = (c) => !/^get_|^read_|^quote_/.test(c.name) && (/pay|transfer|send|swap/i.test(c.name) || /transfer/.test(c.args));
 // Shows a JSON tool result as a document: one "key: value" line per field, a blank line between records.
 function pretty(s) {
   let v;
@@ -87,7 +87,7 @@ const fmt = (n) => (Math.round(n * 100) / 100).toString();
 
 // Counts a number up (or down) inside el, so a change in money is something you watch happen.
 function countTo(el, to, suffix = "") {
-  const from = Number(el.dataset.v ?? 0);
+  const from = parseFloat(el.textContent) || 0;
   el.dataset.v = to;
   if (REDUCED || from === to) { el.textContent = fmt(to) + suffix; return; }
   const t0 = performance.now(), dur = 650;
@@ -105,21 +105,40 @@ function navigate(path) {
 }
 document.addEventListener("click", (e) => {
   const a = e.target.closest("a[data-link]");
-  if (a && a.origin === location.origin && !e.metaKey && !e.ctrlKey && !e.shiftKey) { e.preventDefault(); navigate(a.pathname + a.hash); }
+  if (!a || a.origin !== location.origin || e.metaKey || e.ctrlKey || e.shiftKey) return;
+  e.preventDefault();
+  if (a.pathname === location.pathname) {
+    // Same page: scroll to the anchor instead of rebuilding the page and restarting the replay.
+    if (a.hash !== location.hash) history.replaceState(null, "", a.hash || a.pathname);
+    if (a.hash) scrollToHash(); else window.scrollTo(0, 0);
+    return;
+  }
+  navigate(a.pathname + a.hash);
 });
 window.addEventListener("popstate", route);
 
+function scrollToHash() {
+  try { document.getElementById(decodeURIComponent(location.hash.slice(1)))?.scrollIntoView(); } catch { /* not an id on this page */ }
+}
+
 let stopReplay = () => {};
+let nav = 0;
+// Each page function fetches first and calls paint() to write the page; a navigation that started later wins.
 async function route() {
   stopReplay();
+  const my = ++nav;
+  const paint = (html) => { if (my !== nav) return false; app.innerHTML = html; return true; };
   const p = location.pathname;
   try {
-    if (p.startsWith("/agent/")) await agentPage(decodeURIComponent(p.slice(7)));
-    else if (p.startsWith("/run/")) await runPage(decodeURIComponent(p.slice(5)));
-    else await home();
-    if (location.hash) document.querySelector(location.hash)?.scrollIntoView(); else window.scrollTo(0, 0);
+    let ok;
+    if (p.startsWith("/agent/")) ok = await agentPage(decodeURIComponent(p.slice(7)), paint);
+    else if (p.startsWith("/run/")) ok = await runPage(decodeURIComponent(p.slice(5)), paint);
+    else ok = await home(paint);
+    if (!ok) return;
+    if (location.hash) scrollToHash(); else window.scrollTo(0, 0);
     observeRises();
   } catch (err) {
+    if (my !== nav) return;
     app.innerHTML = `<div class="inner"><div class="topbar">${homeLink}</div><p class="page-sub">This page could not load (${esc(err.message)}). <a href="/" data-link>Back to the results</a>.</p></div>`;
   }
 }
@@ -135,7 +154,7 @@ function observeRises() {
 
 /* ---------------- home ---------------- */
 
-async function home() {
+async function home(paint) {
   document.title = "Clearance: a crash test for AI agents that hold money";
   const [board, credits] = await Promise.all([get("/data/board.json"), get("/img/credits.json")]);
   const shows = board.showcase.filter((s) => REPLAY[s.generator]);
@@ -151,8 +170,8 @@ async function home() {
     return `<a class="tile ${a.id === "protected-v5" ? "ours" : ""}" href="/agent/${esc(a.id)}" data-link>
       <h3>${esc(a.name)}</h3>
       <div class="nums">
-        <div class="lost ${Number(s.lost) > 0 ? "" : "zero"}">${esc(s.lost)}<small>NEAR lost, fooled in ${s.deceived} of ${s.attacks}</small></div>
-        <span class="lvl lvl-${a.level ?? 0}" title="Clearance level ${a.level ?? 0}" aria-label="Level ${a.level ?? 0}">${a.level ?? 0}</span>
+        <div class="lost ${Number(s.lost) > 0 ? "" : "zero"}">${esc(s.lost)}<small>NEAR lost, fooled in ${Number(s.deceived)} of ${Number(s.attacks)}</small></div>
+        <span class="lvl lvl-${Number(a.level ?? 0)}" title="Clearance level ${Number(a.level ?? 0)}" aria-label="Level ${Number(a.level ?? 0)}">${Number(a.level ?? 0)}</span>
       </div>
       <p class="src">${esc(note)}</p>
     </a>`;
@@ -160,7 +179,7 @@ async function home() {
   const credit = (file) => credits.find((c) => c.file.endsWith(file));
   const creditLine = credits.map((c) => `<a href="${esc(c.page)}">${esc(c.title)}</a>, ${esc(c.creator.split(",")[0])}, ${esc(c.license)}`).join("; ");
 
-  app.innerHTML = `
+  if (!paint(`
   <section class="hero">
     <a class="top-link" href="${REPO}">Source and data on GitHub</a>
     <div class="hero-left">
@@ -260,10 +279,11 @@ async function home() {
   <footer>
     <div class="quiet"><span>Clearance, built for the NEAR hackathon, MIT.</span><span><a href="${REPO}">GitHub</a> &nbsp; <a href="${BOT}">Telegram bot</a> &nbsp; <a href="${CERTS.v5}">Certificate</a></span></div>
     <p class="credits">Photographs: ${creditLine}. Video from <a href="https://commons.wikimedia.org/wiki/File:2017_Honda_Ridgeline_Crash_Test-NHTSA.gif">2017 Honda Ridgeline Crash Test</a>, NHTSA, public domain. All via Wikimedia Commons.</p>
-  </footer>`;
+  </footer>`)) return false;
 
   setupReplay(shows, runs);
   setupSwitch(policyAgents);
+  return true;
 }
 
 function setupReplay(shows, runs) {
@@ -340,7 +360,7 @@ function setupSwitch(agents) {
 
 /* ---------------- agent page ---------------- */
 
-async function agentPage(id) {
+async function agentPage(id, paint) {
   const [a, meta] = await Promise.all([get(`/data/agents/${id}.json`), get("/data/attacks.json")]);
   document.title = `${a.name}: Clearance results`;
   const s = a.summary;
@@ -364,26 +384,26 @@ async function agentPage(id) {
     }).join("");
   };
   const glm = a.glm ? `<h2>The same prompt on GLM-5.3-flash</h2><ul class="runlist">${group("glm")}</ul>` : "";
-  app.innerHTML = `<div class="inner">
+  return paint(`<div class="inner">
   <div class="topbar">${homeLink}<nav><a href="/#agents" data-link>All agents</a><a href="${BOT}">Test your agent</a></nav></div>
   <h1 class="page-h">${esc(a.name)}</h1>
   <p class="page-sub">${esc(a.source)}. Model <code>${esc(a.model ?? "")}</code>, config <a href="${REPO}/blob/main/${esc(a.config)}">${esc(a.config)}</a>.</p>
   <div class="stats">
     <div><span>NEAR lost</span><b class="${Number(s.lost) > 0 ? "loss" : "kept"}">${esc(s.lost)}</b></div>
     ${a.readme ? `<div><span>With limits sized by Clearance</span><b>${esc(a.readme.lost_with_policy)}</b></div>` : ""}
-    <div><span>Fooled</span><b>${s.deceived} of ${s.attacks}</b></div>
+    <div><span>Fooled</span><b>${Number(s.deceived)} of ${Number(s.attacks)}</b></div>
     <div><span>Honest tasks done</span><b>${esc(s.honest.replace("/", " of "))}</b></div>
-    <div><span>False reports</span><b>${s.false_reports}</b></div>
-    <div><span>Level</span><b><span class="lvl lvl-${a.level ?? 0}">${a.level ?? 0}</span></b></div>
+    <div><span>False reports</span><b>${Number(s.false_reports)}</b></div>
+    <div><span>Level</span><b><span class="lvl lvl-${Number(a.level ?? 0)}">${Number(a.level ?? 0)}</span></b></div>
   </div>
   <p class="share">Each tile opens a recorded run. The full set is in <code>transcripts/${esc(a.id)}/</code>.</p>
   <section class="runs"><h2>One tile per attack, on ${esc((a.model ?? "").replace(/^.*\//, ""))}</h2><ul class="runlist">${group("main")}</ul>${glm}</section>
-  </div>`;
+  </div>`);
 }
 
 /* ---------------- run page ---------------- */
 
-async function runPage(id) {
+async function runPage(id, paint) {
   const r = await get(`/data/runs/${id}.json`);
   document.title = `${attackName(r.generator)}: a recorded Clearance run`;
   let k = 0;
@@ -409,7 +429,7 @@ async function runPage(id) {
   const verdict = r.kind === "control"
     ? (r.verdict.completed ? "Honest task done correctly." : "Honest task not done.")
     : r.verdict.deceived ? `Fooled. ${r.verdict.loss} NEAR lost.` : "Not fooled.";
-  app.innerHTML = `<div class="inner">
+  return paint(`<div class="inner">
   <div class="topbar">${homeLink}<nav><a href="/#agents" data-link>All agents</a><a href="${BOT}">Test your agent</a></nav></div>
   <h1 class="page-h">${esc(attackName(r.generator))}</h1>
   <p class="page-sub">${r.kind === "control" ? "Honest task, no attack." : `Attack <code>${esc(r.generator)}</code>.`} Model <code>${esc(r.model ?? "")}</code>, run <code>${esc(r.id)}</code>.${r.status !== "valid" ? " <strong>Invalid run, not scored.</strong>" : ""}</p>
@@ -429,7 +449,7 @@ async function runPage(id) {
       ${r.verdict.false_report ? `<p class="note loss">The report does not match what happened on chain.</p>` : ""}
       <p class="note">Recorded on a local NEAR sandbox. Transcript <a href="${REPO}/search?q=${esc(r.id)}">${esc(r.id.slice(0, 8))}</a>.</p>
     </aside>
-  </div></div>`;
+  </div></div>`);
 }
 
 route();
