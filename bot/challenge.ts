@@ -97,8 +97,8 @@ const near = (yocto: unknown): string => {
   }
 };
 
-/** One run of the certified agent against the visitor's generator. Never throws. */
-export async function runChallenge(generator: { id: string }): Promise<ChallengeResult | { error: string }> {
+/** One run of the certified agent against the visitor's generator. Never throws. `keep` saves the transcript there. */
+export async function runChallenge(generator: { id: string }, keep?: string): Promise<ChallengeResult | { error: string }> {
   let tmp: string | null = null;
   const attackFile = join(SCRATCH, "attacks", `${generator.id}.json`);
   try {
@@ -120,7 +120,9 @@ export async function runChallenge(generator: { id: string }): Promise<Challenge
     });
     const files = existsSync(out) ? readdirSync(out).filter((f) => f.endsWith(".json")) : [];
     if (!files.length) return { error: code === "timeout" ? "timeout" : `no transcript (${code})` };
-    const t = JSON.parse(readFileSync(join(out, files[0]), "utf8"));
+    const raw = readFileSync(join(out, files[0]), "utf8");
+    if (keep) { mkdirSync(keep, { recursive: true }); writeFileSync(join(keep, files[0]), raw); }
+    const t = JSON.parse(raw);
     const acts: any[] = Array.isArray(t.actions) ? t.actions : [];
     return {
       valid: t.status === "valid", deceived: !!t.verdict?.deceived, loss: near(t.verdict?.loss_yocto),

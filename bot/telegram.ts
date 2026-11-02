@@ -221,6 +221,30 @@ let running: Job | null = null;
 let child: ChildProcess | null = null;
 let jobDir: string | null = null;
 const buffers = new Map<number, { parts: string[]; timer: NodeJS.Timeout }>();
+// Text that doesn't read like an agent's instructions waits here for /run instead of spending a run (people write to
+// the bot as to a person, and a chat message run as a prompt is a wasted run and a confusing report).
+const pending = new Map<number, { text: string; userId: number; username: string; at: number }>();
+const PENDING_MS = 15 * 60_000;
+
+/** Whether pasted text reads like a system prompt: at least two signs of instructions to an agent, in English or Russian. */
+export function looksLikePrompt(text: string): boolean {
+  const t = text.trim();
+  if (t.startsWith("{") || t.startsWith("```") || /^tools:/i.test(t)) return true;
+  const signs = [
+    /\byou(?: are|'re)\b/i, /\byour (?:task|role|job|goal)\b/i, /\b(?:assistant|agent)\b/i, /\btools?\b/i,
+    /\b(?:wallet|vault|balance)\b/i, /\b(?:pay|payment|transfer|invoice|swap|NEAR|USDC)\b/i, /\b(?:never|always|must|do not|don't)\b/i,
+    /(?:^|\s)ты(?:\s|,|$)/i, /агент|ассистент/i, /кош[её]л|баланс/i, /плат|перевод|сч[её]т/i, /никогда|всегда|должен|нельзя/i,
+  ];
+  return signs.filter((r) => r.test(t)).length >= 2;
+}
+
+const NOT_A_PROMPT = [
+  "This doesn't look like an agent's system prompt, so I haven't run it.",
+  "",
+  "I'm a bot that crash-tests AI agents that pay: send me the instructions your agent runs on, and I attack it with fake invoices and payment results on a NEAR sandbox.",
+  "",
+  "If that text really is your agent's prompt, send /run and I'll test it.",
+].join("\n");
 
 /** Chats whose run would be lost on a restart: the running one and the queue. */
 function syncPending() {
@@ -423,7 +447,7 @@ function enqueue(chatId: number, userId: number, username: string, text: string)
   void work();
 }
 
-function buffer(chatId: number, userId: number, username: string, part: string) {
+function buffer(chatId: number, userId: number, username: string, part: string, isFile = false) {
   const b = buffers.get(chatId);
   if (b) clearTimeout(b.timer);
   const parts = [...(b?.parts ?? []), part];
@@ -434,8 +458,15 @@ function buffer(chatId: number, userId: number, username: string, part: string) 
   }
   const timer = setTimeout(() => {
     buffers.delete(chatId);
+    const text = parts.join("\n");
+    if (!isFile && !looksLikePrompt(text)) {
+      pending.set(chatId, { text, userId, username, at: Date.now() });
+      void say(chatId, NOT_A_PROMPT);
+      return;
+    }
+    pending.delete(chatId);
     try {
-      enqueue(chatId, userId, username, parts.join("\n"));
+      enqueue(chatId, userId, username, text);
     } catch (e) {
       console.error(`enqueue: ${(e as Error).message}`);
       void say(chatId, "Something went wrong on my side; please send the prompt again.");
@@ -474,6 +505,18 @@ async function onMessage(m: any) {
       rollDay();
       return void say(chatId, `today ${state.total} runs, ${Object.keys(state.users).length} people, queue ${queue.length}${running ? ", one running" : ""}`);
     }
+    if (cmd === "/run") {
+      const p = pending.get(chatId);
+      pending.delete(chatId);
+      if (!p || Date.now() - p.at > PENDING_MS) return void say(chatId, "Nothing is waiting to run. Paste your agent's system prompt first.");
+      try {
+        enqueue(chatId, p.userId, p.username, p.text);
+      } catch (e) {
+        console.error(`enqueue: ${(e as Error).message}`);
+        void say(chatId, "Something went wrong on my side; please send the prompt again.");
+      }
+      return;
+    }
     return void say(chatId, HELP);
   }
   if (m.document) {
@@ -482,7 +525,7 @@ async function onMessage(m: any) {
       return void say(chatId, `Send the prompt as a .txt, .md or .json file up to ${MAX_FILE / 1024} KB, or paste it as text.`);
     }
     try {
-      return void buffer(chatId, userId, username, await fileText(m.document.file_id));
+      return void buffer(chatId, userId, username, await fileText(m.document.file_id), true);
     } catch (e) {
       console.error(`file: ${(e as Error).message}`);
       return void say(chatId, "I couldn't read that file; please paste the prompt as text.");
