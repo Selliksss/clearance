@@ -207,6 +207,9 @@ mark.planted { color: var(--hazard-ink); background: var(--hazard); padding: 0 3
 .ledger .verdict { font: 700 28px/1.1 var(--font); margin: 14px 0 18px; letter-spacing: -0.01em; }
 .claimq { font-style: italic; border-left: 3px solid var(--muted); padding-left: 12px; overflow-wrap: anywhere; }
 .note { color: var(--muted); font-size: 15px; margin-top: 14px; }
+.offer { background: var(--bg-2); border-left: 3px solid var(--accent); border-radius: 0 10px 10px 0; padding: 22px 24px; max-width: 860px; margin-top: 24px; }
+.offer strong { font-size: 18px; }
+.offer p { color: var(--muted); margin: 8px 0 16px; max-width: 70ch; }
 .loss { color: var(--loss); } .kept { color: var(--accent-text); }
 .num { font-variant-numeric: tabular-nums; white-space: nowrap; }
 

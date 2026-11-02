@@ -2,6 +2,11 @@
 const app = document.getElementById("app");
 const BOT = "https://t.me/clearance_crashtest_bot";
 const REPO = "https://github.com/Selliksss/clearance";
+const CONTACT = "https://t.me/selliksss";
+// The paid offer, shown under the quick test and its result: what the full report adds over one seed per attack.
+const OFFER = `<div class="offer" data-ui><strong>Full report on your agent: $250 in USDC</strong>
+  <p>The quick test runs each attack once. The full report runs five seeds per attack plus the blind set written by other vendors' models, on two models and the wallet tools your agent really has. You get every transcript, wallet limits sized for this agent and a rerun after your fix, within 48 hours.</p>
+  <a class="btn small" href="${CONTACT}">Write @selliksss</a></div>`;
 const ATTACKS = {
   "G1-invoice-inflate": "Padded invoice",
   "G2-lookalike-merchant": "Lookalike payee",
@@ -256,7 +261,7 @@ async function home(paint) {
     <div class="rise">
       <p class="statement">Before your agent pays anyone, find out what it pays <span class="blank">a liar</span>.</p>
       <div class="actions"><a class="btn" href="/test" data-link>Test your agent</a><a class="link" href="/challenge" data-link>Or try to scam ours</a></div>
-      <p class="after">Paste the agent's system prompt and watch the attacks land, usually within a few minutes. No keys, no sign-up; the same test runs in the <a href="${BOT}">Telegram bot</a>. A level and a certificate come from the full suite.</p>
+      <p class="after">Paste the agent's system prompt and watch the attacks land, usually within a few minutes. No keys, no sign-up; the same test runs in the <a href="${BOT}">Telegram bot</a>. A level and a certificate come from the full suite, and the full report on your agent (<a href="${CONTACT}">write @selliksss</a>) costs $250 in USDC, back within 48 hours with a rerun after your fix.</p>
     </div>
     <dl class="marks rise">
       <div><dt>${Number(board.totals.runs)}</dt><dd>recorded runs, every one readable on this site</dd></div>
@@ -472,6 +477,7 @@ function testForm(paint) {
     <div class="formrow submit"><button class="btn" type="submit">Run the crash test</button><span class="msg" role="status"></span></div>
     <p class="note">The prompt goes to the models through NEAR AI and is deleted when the run ends; we keep its hash and the numbers. The result page is open to anyone with its link for seven days. Three tests per network per day.</p>
   </form>
+  ${OFFER}
   </div>`);
   if (!ok) return false;
   const form = app.querySelector(".testform");
@@ -560,6 +566,7 @@ async function testPage(id, paint, my) {
     </section>`).join("")}</div>
     <div class="report" data-ui hidden></div>
     <p class="share"></p>
+    <div class="offer-slot" hidden>${OFFER}</div>
   </div>`)) return false;
 
   const h = app.querySelector(".live-h"), sub = app.querySelector(".live-sub");
@@ -598,6 +605,7 @@ async function testPage(id, paint, my) {
       const box = app.querySelector(".report");
       if (box.hidden) { box.innerHTML = md(rec.report); box.hidden = false; }
       app.querySelector(".share").innerHTML = `Link to this result, open for seven days: <a href="${esc(location.href)}">${esc(location.href)}</a>`;
+      app.querySelector(".offer-slot").hidden = false;
     }
   }
   render();

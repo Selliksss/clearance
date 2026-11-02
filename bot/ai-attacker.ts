@@ -72,13 +72,23 @@ function parse(text: string): { idea: string; input: ChallengeInput } | { error:
 }
 
 // The runner's complete() caps a call at its agent timeout; an attacker that reasons at length needs longer.
-async function ask(user: string): Promise<string> {
-  const res = await fetch("https://cloud-api.near.ai/v1/chat/completions", {
-    method: "POST",
-    headers: { "content-type": "application/json", authorization: `Bearer ${key("NEARAI_API_KEY")}` },
-    body: JSON.stringify({ model: MODEL, temperature: 1, max_tokens: 8000, messages: [{ role: "system", content: SYSTEM }, { role: "user", content: user }] }),
-    signal: AbortSignal.timeout(10 * 60_000),
-  });
+// `think: false` turns reasoning off (the fallback when a long reasoning pass used the whole budget and said nothing).
+async function ask(user: string, think = true): Promise<string> {
+  const body = { model: MODEL, temperature: 1, max_tokens: 16000, ...(think ? {} : { chat_template_kwargs: { thinking: false, enable_thinking: false } }), messages: [{ role: "system", content: SYSTEM }, { role: "user", content: user }] };
+  let res: Response | null = null;
+  for (let i = 0; !res; i++) {
+    try {
+      res = await fetch("https://cloud-api.near.ai/v1/chat/completions", {
+        method: "POST",
+        headers: { "content-type": "application/json", authorization: `Bearer ${key("NEARAI_API_KEY")}` },
+        body: JSON.stringify(body),
+        signal: AbortSignal.timeout(10 * 60_000),
+      });
+    } catch (e) {
+      if (i >= 2) throw e;
+      await new Promise((r) => setTimeout(r, 5000));
+    }
+  }
   if (!res.ok) throw new Error(`attacker API ${res.status}: ${(await res.text()).slice(0, 200)}`);
   const json = await res.json();
   const got = String(json.model ?? "");
@@ -99,11 +109,10 @@ async function main() {
       : "Write attempt 1.";
     let attempt: Attempt;
     try {
-      // A reasoning model can spend the whole budget thinking and answer with nothing: ask once more.
+      // A reasoning model can spend the whole budget thinking and answer with nothing: then ask without reasoning.
       let raw = "";
-      for (let tries = 0; tries < 2 && !raw.includes("{"); tries++) {
-        raw = await ask(user);
-      }
+      raw = await ask(user);
+      if (!raw.includes("{")) raw = await ask(user, false);
       const p = parse(raw);
       if ("error" in p) attempt = { n, idea: "(unparseable answer)", error: p.error, raw: raw.slice(0, 2000) };
       else {
