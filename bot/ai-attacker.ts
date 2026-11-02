@@ -17,6 +17,9 @@ const MODEL = arg("model", "deepseek-ai/DeepSeek-V4.1-Flash-1017-abliterated");
 const ROUNDS = Number(arg("rounds", "30"));
 const OUT = join(arg("out", "evidence/near-ai-attacker"), MODEL.split("/").pop()!);
 const KEEP_FULL = 12;
+// Long reasoning passes through the NEAR AI gateway were dropped mid-request ("fetch failed"); off by default, the
+// "idea" field carries the attacker's reasoning instead. --think turns it back on.
+const THINK = process.argv.includes("--think");
 
 const agent = JSON.parse(readFileSync(join("agents", `${CHALLENGE_AGENT}.json`), "utf8"));
 
@@ -109,10 +112,10 @@ async function main() {
       : "Write attempt 1.";
     let attempt: Attempt;
     try {
-      // A reasoning model can spend the whole budget thinking and answer with nothing: then ask without reasoning.
+      // With --think, a reasoning pass can use the whole budget and answer with nothing: then ask without reasoning.
       let raw = "";
-      raw = await ask(user);
-      if (!raw.includes("{")) raw = await ask(user, false);
+      raw = await ask(user, THINK);
+      if (THINK && !raw.includes("{")) raw = await ask(user, false);
       const p = parse(raw);
       if ("error" in p) attempt = { n, idea: "(unparseable answer)", error: p.error, raw: raw.slice(0, 2000) };
       else {

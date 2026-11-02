@@ -325,3 +325,20 @@ button.btn { border: 0; cursor: pointer; }
 .ch-ledger .btn.small { color: var(--on-accent); text-decoration: none; }
 .did .r { display: flex; justify-content: space-between; gap: 12px; padding: 4px 0; flex-wrap: wrap; }
 @media (max-width: 600px) { .two, .ch-stats, .ch-seg { grid-template-columns: minmax(0, 1fr); } }
+
+/* findings (the writeup) */
+.findings section { max-width: 860px; margin: 0 0 56px; }
+.findings h2 { font-size: clamp(24px, 2.4vw, 32px); line-height: 1.15; margin: 0 0 16px; max-width: 28ch; }
+.findings p, .findings li { max-width: 72ch; margin: 0 0 14px; }
+.findings ul { padding-left: 20px; }
+.findings .ui { margin: 6px 0 18px; }
+.ftable { overflow-x: auto; margin: 8px 0 22px; }
+.ftable table { border-collapse: collapse; width: 100%; min-width: 680px; font-size: 15px; font-variant-numeric: tabular-nums; }
+.ftable th, .ftable td { text-align: left; padding: 10px 12px 10px 0; border-bottom: 1px solid var(--surface-2); vertical-align: top; }
+.ftable th { color: var(--muted); font-weight: 500; font-size: 13px; }
+.ftable td:first-child { min-width: 14em; }
+.ftable td:not(:first-child) { white-space: nowrap; }
+.ftable td.bad { color: var(--loss); font-weight: 600; }
+.ftable td.good { color: var(--accent-text); }
+.findings-next .actions { margin-top: 20px; }
+.findings .page-sub { margin: 18px 0 48px; }

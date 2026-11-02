@@ -26,7 +26,7 @@ async function handle(req, res) {
   try { path = normalize(decodeURIComponent(new URL("http://x" + (req.url ?? "/")).pathname)).replace(/^(\.\.[/\\])+/, ""); }
   catch { res.writeHead(400).end(); return; }
   if (API_PROXY && path.startsWith("/api/")) return proxy(req, res);
-  if (path === "/" || path === "/test" || path.startsWith("/test/") || path === "/challenge" || path.startsWith("/challenge/") || path.startsWith("/agent/") || path.startsWith("/run/")) path = "/index.html";
+  if (path === "/" || path === "/findings" || path === "/test" || path.startsWith("/test/") || path === "/challenge" || path.startsWith("/challenge/") || path.startsWith("/agent/") || path.startsWith("/run/")) path = "/index.html";
   const file = join(PUBLIC, path);
   if (!file.startsWith(PUBLIC)) { res.writeHead(403).end(); return; }
   let body;
