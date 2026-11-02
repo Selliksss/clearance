@@ -225,15 +225,16 @@ const buffers = new Map<number, { parts: string[]; timer: NodeJS.Timeout }>();
 // the bot as to a person, and a chat message run as a prompt is a wasted run and a confusing report).
 const pending = new Map<number, { text: string; userId: number; username: string; at: number }>();
 const PENDING_MS = 15 * 60_000;
+setInterval(() => { for (const [id, p] of pending) if (Date.now() - p.at > PENDING_MS) pending.delete(id); }, 5 * 60_000).unref();
 
 /** Whether pasted text reads like a system prompt: at least two signs of instructions to an agent, in English or Russian. */
 export function looksLikePrompt(text: string): boolean {
   const t = text.trim();
   if (t.startsWith("{") || t.startsWith("```") || /^tools:/i.test(t)) return true;
   const signs = [
-    /\byou(?: are|'re)\b/i, /\byour (?:task|role|job|goal)\b/i, /\b(?:assistant|agent)\b/i, /\btools?\b/i,
-    /\b(?:wallet|vault|balance)\b/i, /\b(?:pay|payment|transfer|invoice|swap|NEAR|USDC)\b/i, /\b(?:never|always|must|do not|don't)\b/i,
-    /(?:^|\s)ты(?:\s|,|$)/i, /агент|ассистент/i, /кош[её]л|баланс/i, /плат|перевод|сч[её]т/i, /никогда|всегда|должен|нельзя/i,
+    /\byou(?: are|['’]re)\b/i, /\byour (?:task|role|job|goal)\b/i, /\b(?:assistant|agent)\b/i, /\btools?\b/i,
+    /\b(?:wallet|vault|balance)\b/i, /\b(?:pay|payment|transfer|invoice|swap|NEAR|USDC)\b/i, /\b(?:never|always|must|do not|don['’]t)\b/i,
+    /(?:^|\s)ты(?:[\s,.:;!?]|$)/i, /агент|ассистент/i, /кош[её]л|баланс/i, /оплат|плат[её]ж|заплат|перевод(?!чик)/i, /никогда|всегда|должен|нельзя/i,
   ];
   return signs.filter((r) => r.test(t)).length >= 2;
 }
@@ -414,29 +415,30 @@ async function work() {
 
 const isAdmin = (userId: number) => state.adminId === userId;
 
-function enqueue(chatId: number, userId: number, username: string, text: string) {
+/** Queues a run, or tells the person why not. True when it was queued. */
+function enqueue(chatId: number, userId: number, username: string, text: string): boolean {
   const parsed = toBrief(text);
   if ("error" in parsed) {
     void say(chatId, parsed.error === "short" ? HELP : `I can't use this as a prompt: ${parsed.error}.`);
-    return;
+    return false;
   }
   if (queue.some((j) => j.kind === "tg" && j.chatId === chatId) || (running?.kind === "tg" && running.chatId === chatId)) {
     void say(chatId, "Your previous prompt is still in the queue or running; send the next one after its report.");
-    return;
+    return false;
   }
   rollDay();
   const k = String(userId);
   if (!isAdmin(userId) && (state.users[k] ?? 0) >= PER_USER_PER_DAY) {
     void say(chatId, `That's ${PER_USER_PER_DAY} runs today, the daily limit. Come back tomorrow (UTC), or write @selliksss if you need more.`);
-    return;
+    return false;
   }
   if (!isAdmin(userId) && (state.failures[k] ?? 0) >= FAILURES_PER_USER_PER_DAY) {
     void say(chatId, "Your last runs failed on my side several times today. Please try again tomorrow, or write @selliksss.");
-    return;
+    return false;
   }
   if (state.total >= PER_DAY || queue.length >= MAX_QUEUE) {
     void say(chatId, "Too many runs right now; please try again in an hour.");
-    return;
+    return false;
   }
   state.users[k] = (state.users[k] ?? 0) + 1;
   state.total += 1;
@@ -445,6 +447,7 @@ function enqueue(chatId: number, userId: number, username: string, text: string)
   const ahead = queue.length - 1 + (running ? 1 : 0);
   if (ahead) void say(chatId, `Got it. ${ahead} run${ahead > 1 ? "s" : ""} ahead of yours, about ${ahead * 3} minutes.`);
   void work();
+  return true;
 }
 
 function buffer(chatId: number, userId: number, username: string, part: string, isFile = false) {
@@ -506,11 +509,16 @@ async function onMessage(m: any) {
       return void say(chatId, `today ${state.total} runs, ${Object.keys(state.users).length} people, queue ${queue.length}${running ? ", one running" : ""}`);
     }
     if (cmd === "/run") {
+      // A paste still being collected is checked on its own when it ends; /run must not run the older text over it.
+      if (buffers.has(chatId)) return void say(chatId, "I'm still reading what you just sent; it's checked in a few seconds.");
       const p = pending.get(chatId);
-      pending.delete(chatId);
-      if (!p || Date.now() - p.at > PENDING_MS) return void say(chatId, "Nothing is waiting to run. Paste your agent's system prompt first.");
+      if (!p || Date.now() - p.at > PENDING_MS) {
+        pending.delete(chatId);
+        return void say(chatId, "Nothing is waiting to run. Paste your agent's system prompt first.");
+      }
       try {
-        enqueue(chatId, p.userId, p.username, p.text);
+        // Kept when refused (limit, queue), so /run can be sent again later without pasting it again.
+        if (enqueue(chatId, p.userId, p.username, p.text)) pending.delete(chatId);
       } catch (e) {
         console.error(`enqueue: ${(e as Error).message}`);
         void say(chatId, "Something went wrong on my side; please send the prompt again.");

@@ -111,7 +111,10 @@ async function main() {
         if ("error" in g) attempt = { n, idea: p.idea, input: p.input, error: g.error };
         else {
           const r = await runChallenge(g.generator as { id: string }, join(OUT, "transcripts"));
-          attempt = "error" in r ? { n, idea: p.idea, input: p.input, error: `run failed: ${r.error}` } : { n, idea: p.idea, input: p.input, result: r };
+          // An invalid run (the runner's own verdict) is neither a hold nor a win.
+          attempt = "error" in r ? { n, idea: p.idea, input: p.input, error: `run failed: ${r.error}` }
+            : !r.valid ? { n, idea: p.idea, input: p.input, error: "the run was invalid (runner verdict), not scored" }
+            : { n, idea: p.idea, input: p.input, result: r };
         }
       }
     } catch (e) {
