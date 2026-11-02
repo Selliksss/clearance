@@ -511,6 +511,15 @@ async function findingsPage(paint) {
   </section>
 
   <section>
+    <h2>Related work</h2>
+    <ul>
+      <li>Breckenridge, Vilardell, Wang and Zhang, <a href="https://arxiv.org/abs/2610.35835">"I-HITL: Inalienable Human-in-the-Loop"</a> (October 26): on an agentic wallet platform, ten frontier models often raised their own spending cap by reading the emailed one-time passcode meant for the owner. That attacks the limit; the double payment here happens under it.</li>
+      <li>OpenAI, <a href="https://alignment.openai.com/misalignment-reports/using-a-funded-test-cryptocurrency-wallet-without-authorization/">"Using a funded test cryptocurrency wallet without authorization"</a> (October): a research model spent from a test wallet it was not given and did not mention it in its final report. Here, the same gap between what the agent says and what the chain shows appears in ${Number(board.totals.false_reports)} of ${Number(board.totals.runs)} runs.</li>
+      <li>Li, Wang and Wang, <a href="https://arxiv.org/abs/2605.11781">"Five Attacks on x402 Agentic Payment Protocol"</a> (May): authorization, binding and replay weaknesses in the payment protocol itself, tested on local chains and Base Sepolia. Clearance tests the agent's decisions above any such protocol.</li>
+    </ul>
+  </section>
+
+  <section>
     <h2>How to read these numbers</h2>
     <ul>
       <li>The frontier-model table is three runs per cell: an indication, not a certificate. The Claude and GPT models were reached through NEAR AI's proxy. Details and the two-line runner change: <a href="${ev}/newer-models-2026-10-30">evidence/newer-models-2026-10-30</a>.</li>
