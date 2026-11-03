@@ -2,6 +2,8 @@
 // Static server for Clearance Live with an SPA fallback: /test, /agent/<id> and /run/<id> get index.html.
 import { createServer, request } from "node:http";
 import { readFile } from "node:fs/promises";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { homedir } from "node:os";
 import { extname, join, normalize } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -20,13 +22,42 @@ function proxy(req, res) {
   req.pipe(up);
 }
 
+// Arrivals per day: which page a visitor landed on and the referring site, nothing else (no IPs, no paths of the
+// referrer, no cookies). In-site navigation happens in the browser and is not counted. Written to VISITS_DIR.
+const VISITS_DIR = process.env.VISITS_DIR ?? join(homedir(), ".config", "dopusk", "visits");
+const BOT = /bot|crawl|spider|slurp|preview|monitor|curl|wget|python|headless|lighthouse/i;
+let visits = { day: "", pages: {}, from: {} };
+function countVisit(req, path) {
+  if (BOT.test(req.headers["user-agent"] ?? "")) return;
+  const day = new Date().toISOString().slice(0, 10);
+  if (visits.day !== day) {
+    flushVisits();
+    try { visits = JSON.parse(readFileSync(join(VISITS_DIR, `${day}.json`), "utf8")); } catch { visits = { day, pages: {}, from: {} }; }
+  }
+  const page = path.replace(/^\/(test|challenge|agent|run)\/.+/, "/$1/:id");
+  visits.pages[page] = (visits.pages[page] ?? 0) + 1;
+  let from = "direct";
+  try { if (req.headers.referer) from = new URL(req.headers.referer).hostname; } catch {}
+  if (from === "agentcrashtest.com") from = "self";
+  visits.from[from] = (visits.from[from] ?? 0) + 1;
+}
+function flushVisits() {
+  if (!visits.day) return;
+  try { mkdirSync(VISITS_DIR, { recursive: true }); writeFileSync(join(VISITS_DIR, `${visits.day}.json`), JSON.stringify(visits)); } catch {}
+}
+setInterval(flushVisits, 60_000).unref();
+process.on("SIGTERM", () => { flushVisits(); process.exit(0); });
+
 async function handle(req, res) {
   let path;
   // A malformed escape (%E0) or a protocol-relative target (//) must answer 400, not take the process down.
   try { path = normalize(decodeURIComponent(new URL("http://x" + (req.url ?? "/")).pathname)).replace(/^(\.\.[/\\])+/, ""); }
   catch { res.writeHead(400).end(); return; }
   if (API_PROXY && path.startsWith("/api/")) return proxy(req, res);
-  if (path === "/" || path === "/findings" || path === "/test" || path.startsWith("/test/") || path === "/challenge" || path.startsWith("/challenge/") || path.startsWith("/agent/") || path.startsWith("/run/")) path = "/index.html";
+  if (path === "/" || path === "/findings" || path === "/test" || path.startsWith("/test/") || path === "/challenge" || path.startsWith("/challenge/") || path.startsWith("/agent/") || path.startsWith("/run/")) {
+    if (req.method === "GET") countVisit(req, path);
+    path = "/index.html";
+  }
   const file = join(PUBLIC, path);
   if (!file.startsWith(PUBLIC)) { res.writeHead(403).end(); return; }
   let body;
