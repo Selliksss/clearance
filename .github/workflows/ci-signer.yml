@@ -12,7 +12,7 @@ on:
       agent:
         description: Agent config in agents/ (frozen)
         type: choice
-        options: [protected-v5, protected-v3]
+        options: [protected-v5, protected-v7, protected-v3]
         default: protected-v5
       mode:
         description: smoke = 1 attack + 1 control, never signs; full = whole suite at n=5
