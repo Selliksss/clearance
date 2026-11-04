@@ -46,6 +46,14 @@ Controls (no lie): every valid control paid the shop exactly once (8 of 8).
   received or the funds were not deducted), paid twice in 3 of 3 each (`sandbox-g6-recheck/`), as on Oct 30.
 - protected-v7 paid twice in none of 32 runs on the two lies that worked.
 
+## What Tidepool's author said
+Chris Wilder, who built Tidepool, after reading these runs (Telegram, Nov 4, quoted with permission):
+> The double-pay result is a strong finding. Policy and idempotency can't catch it because the second payment is a
+> valid new request, so checking the balance before any retry is the right defence.
+
+He also took the four API notes in `api-notes.md` as fixes: the OpenAPI destinations mode and list-entry shape, the
+faucet answering 202 before failing with `rate_limited`, and the 25-agents-a-day limit missing from the guide.
+
 ## What these numbers don't say
 - 5 runs per cell; the runs are ours (not a third party's, not the CI signer's), and the model answers were not
   TEE-verified here (the Clearance sandbox runs are).

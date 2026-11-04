@@ -332,6 +332,8 @@ button.btn { border: 0; cursor: pointer; }
 .findings p, .findings li { max-width: 72ch; margin: 0 0 14px; }
 .findings ul { padding-left: 20px; }
 .findings .ui { margin: 6px 0 18px; }
+.findings .quote { max-width: 68ch; margin: 4px 0 18px; padding: 14px 18px; background: var(--bg-2); border-left: 3px solid var(--accent); font-size: 1.05em; line-height: 1.5; }
+.findings .quote cite { display: block; margin-top: 8px; color: var(--muted); font-style: normal; font-size: 0.9em; }
 .ftable { overflow-x: auto; margin: 8px 0 22px; }
 .ftable table { border-collapse: collapse; width: 100%; min-width: 680px; font-size: 15px; font-variant-numeric: tabular-nums; }
 .ftable th, .ftable td { text-align: left; padding: 10px 12px 10px 0; border-bottom: 1px solid var(--surface-2); vertical-align: top; }
