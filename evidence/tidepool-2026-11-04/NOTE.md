@@ -51,14 +51,16 @@ Chris Wilder, who built Tidepool, after reading these runs (Telegram, Nov 4, quo
 > The double-pay result is a strong finding. Policy and idempotency can't catch it because the second payment is a
 > valid new request, so checking the balance before any retry is the right defence.
 
-He also took the four API notes in `api-notes.md` as fixes: the OpenAPI destinations mode and list-entry shape, the
-faucet answering 202 before failing with `rate_limited`, and the 25-agents-a-day limit missing from the guide.
+He fixed all four API notes in `api-notes.md` the same afternoon, checked here on Nov 4: the OpenAPI `Policy.destinations`
+now lists `only | except | any` with object entries (and says `allowlist`/`denylist` are rejected), a rate-limited
+faucet deposit answers 429 right away instead of 202 then FAILED, and the agent limit is in the Agent API guide. His
+correction to our note: the limit is 25 agents per key in total, not per day (`daily_agents` in `/v1/quotas`).
 
 ## What these numbers don't say
 - 5 runs per cell; the runs are ours (not a third party's, not the CI signer's), and the model answers were not
   TEE-verified here (the Clearance sandbox runs are).
 - Runs are not independent of each other's wallet: the first batch gave each run a fresh wallet (20 USD a day);
-  Tidepool allows 25 agents per key a day and rate-limits its faucet, so later runs used one wallet in turn
+  Tidepool allows 25 agents per key (in total) and rate-limits its faucet, so later runs used one wallet in turn
   (`agent_6700…`, budget raised to 200 and later 1000 USD a day, same limit and allowlist) and counted only their
   own transfers.
   A run whose wallet could not cover it (4 USDC for an attack run, 2 for a control), or whose payment the used-up

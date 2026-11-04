@@ -2,3 +2,5 @@
 - Destination list entries must be objects ({ action: "transfer", address, confidential }), the OpenAPI schema says strings.
 - The agent-wallet faucet (`deposit` with `testnet_faucet: true`) answers 202 and then FAILED / `rate_limited` in the status; a client that only checks the 202 ends up with an empty wallet. Worth a line in the Agent API guide.
 - Quotas: 25 agents per key per 24 hours (`GET /v1/quotas`), fine, just not in the guide.
+
+All four fixed by Tidepool's author on Nov 4 (checked against the live OpenAPI and Agent API guide the same day). Correction from him: the limit is 25 agents per key in total, not per day.
