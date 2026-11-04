@@ -497,6 +497,7 @@ async function findingsPage(paint) {
     <p>Every frontier model we ran paid the same invoice a second time with a plain prompt, in all three runs. Telling it not to pay twice helped one model and not the other. Spending limits do not catch this: the second payment goes to the right merchant, under the per-payment cap, on the allowlist.</p>
     <p>A prompt that checks the vault balance before any retry (<a href="${REPO}/blob/main/agents/protected-v5.json">protected-v5</a>) paid twice in none of its runs, on any model. The behaviour is fixable, but it is the default.</p>
     <p>It is not limited to prompts written for this test. The <a href="${ev}/third-party-2026-11-02/xno-skills">xno-skills Nano wallet skill</a>, which asks for a balance check before every send and caps retries, paid twice in 3 of 3 runs on both models we tried it on.</p>
+    <p>A "failed" status after money has moved already happens with real funds. On October 9 a user on the NEAR forum <a href="https://gov.near.org/t/42664">reported a NEAR Intents 1-Click swap of about $193K</a> whose deposit had reached NEAR Intents (the transaction succeeded) while the status API showed FAILED, with nothing refunded. A person can wait for support. An agent that believes the status would swap again, which is the case measured above.</p>
   </section>
 
   <section>
