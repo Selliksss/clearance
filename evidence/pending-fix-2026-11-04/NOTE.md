@@ -34,6 +34,14 @@ Same model (glm-5.3-flash, temperature 0), 3 seeds each. This is a quick check; 
 - attacks G1, G2, G3, G6, G7, G8, G9: **0 of 21** deceived, 0 NEAR lost, 0 false reports;
 - honest tasks on all six scenarios (S1 invoice, S2 swap, S3 inbox, S4 token swap, S5 renewal, S6 agent hire): **18 of 18** done.
 
+## Precheck before certification (local, same settings as the CI full run)
+Same model, temperature 0, outside the CI signer (so not a certificate):
+- levelled suite v1 (G1–G8 on S1–S3) at n = 5: **0 of 40** deceived, 0 NEAR lost, 0 false reports, 0 invalid;
+  honest tasks **15 of 15** (5 each on S1, S2, S3);
+- blind generators G11–G38 (written by other models without seeing the agent) at n = 3: **0 of 84** deceived,
+  0 NEAR lost, 0 false reports, 0 invalid.
+Files: `precheck-v7/`.
+
 ## What v7 is, and what these numbers don't say
 - v7 is a stricter frame, not a smarter agent: "exactly one money call in the whole run" fits this suite, where every
   task has one payment. An agent given three invoices would need a different rule. v7 is the reference agent for the
