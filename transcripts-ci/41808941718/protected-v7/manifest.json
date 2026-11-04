@@ -1,0 +1,395 @@
+{
+  "format": 1,
+  "ci_run_id": "41808941718",
+  "sha": "c529229252e566103b5dfa5dbef7e6d68fe54289",
+  "agent": "protected-v7",
+  "mode": "full",
+  "seeds": 5,
+  "slots": [
+    {
+      "kind": "attack",
+      "id": "G1-invoice-inflate",
+      "i": 0,
+      "status": "written",
+      "run_id": "295722c2-8ed7-4d85-8304-d448fc7364a0"
+    },
+    {
+      "kind": "attack",
+      "id": "G1-invoice-inflate",
+      "i": 1,
+      "status": "written",
+      "run_id": "27e8414c-f481-4a82-8b39-8d5ee33d090e"
+    },
+    {
+      "kind": "attack",
+      "id": "G1-invoice-inflate",
+      "i": 2,
+      "status": "written",
+      "run_id": "c27047c7-b495-49bc-bbd6-9b03934f9d76"
+    },
+    {
+      "kind": "attack",
+      "id": "G1-invoice-inflate",
+      "i": 3,
+      "status": "written",
+      "run_id": "066e7ae4-6870-4c53-a481-82a75c1e08dd"
+    },
+    {
+      "kind": "attack",
+      "id": "G1-invoice-inflate",
+      "i": 4,
+      "status": "written",
+      "run_id": "6d21a1b2-8dbe-4372-81a0-de1e462c2208"
+    },
+    {
+      "kind": "attack",
+      "id": "G2-lookalike-merchant",
+      "i": 0,
+      "status": "written",
+      "run_id": "7b704301-fa42-4bce-a4b6-b3adeaec27ad"
+    },
+    {
+      "kind": "attack",
+      "id": "G2-lookalike-merchant",
+      "i": 1,
+      "status": "written",
+      "run_id": "49dd68b5-9c55-487a-b757-45b91f3db196"
+    },
+    {
+      "kind": "attack",
+      "id": "G2-lookalike-merchant",
+      "i": 2,
+      "status": "written",
+      "run_id": "149a7b5c-a6c4-40b3-93d2-1ab93243b081"
+    },
+    {
+      "kind": "attack",
+      "id": "G2-lookalike-merchant",
+      "i": 3,
+      "status": "written",
+      "run_id": "d3ad024a-f5fa-497b-a198-83935fc15cee"
+    },
+    {
+      "kind": "attack",
+      "id": "G2-lookalike-merchant",
+      "i": 4,
+      "status": "written",
+      "run_id": "bc34bfa6-181b-4e04-9979-bbcdd1fa9c41"
+    },
+    {
+      "kind": "attack",
+      "id": "G3-inbox-invoice",
+      "i": 0,
+      "status": "written",
+      "run_id": "86a9afb6-f40e-4be4-91da-abd6c757268c"
+    },
+    {
+      "kind": "attack",
+      "id": "G3-inbox-invoice",
+      "i": 1,
+      "status": "written",
+      "run_id": "842b6add-bed6-4124-a42e-2feccc0ca0a0"
+    },
+    {
+      "kind": "attack",
+      "id": "G3-inbox-invoice",
+      "i": 2,
+      "status": "written",
+      "run_id": "0fef9def-0b8a-46de-9dce-3badd88bd217"
+    },
+    {
+      "kind": "attack",
+      "id": "G3-inbox-invoice",
+      "i": 3,
+      "status": "written",
+      "run_id": "1091a6df-303c-4fe5-beec-8b3f0df25a7d"
+    },
+    {
+      "kind": "attack",
+      "id": "G3-inbox-invoice",
+      "i": 4,
+      "status": "written",
+      "run_id": "0a36bb7b-2d39-44c3-90cd-eab0ca8a163a"
+    },
+    {
+      "kind": "attack",
+      "id": "G4-swap-no-slippage",
+      "i": 0,
+      "status": "written",
+      "run_id": "6945b82e-4275-4ffb-9b9e-d235b5d8ad1c"
+    },
+    {
+      "kind": "attack",
+      "id": "G4-swap-no-slippage",
+      "i": 1,
+      "status": "written",
+      "run_id": "99df48a1-9b93-45e5-b345-062f152381a0"
+    },
+    {
+      "kind": "attack",
+      "id": "G4-swap-no-slippage",
+      "i": 2,
+      "status": "written",
+      "run_id": "446f7cfe-a9a2-4f9c-848d-01cda974a3db"
+    },
+    {
+      "kind": "attack",
+      "id": "G4-swap-no-slippage",
+      "i": 3,
+      "status": "written",
+      "run_id": "449015a9-f57e-452c-bed6-46dd6ecf2280"
+    },
+    {
+      "kind": "attack",
+      "id": "G4-swap-no-slippage",
+      "i": 4,
+      "status": "written",
+      "run_id": "f06cbaa1-d1ee-43c8-b46d-3d3a572a13b6"
+    },
+    {
+      "kind": "attack",
+      "id": "G5-fake-oracle-price",
+      "i": 0,
+      "status": "written",
+      "run_id": "9337125d-a8ea-451f-9069-e07f1e36f1d5"
+    },
+    {
+      "kind": "attack",
+      "id": "G5-fake-oracle-price",
+      "i": 1,
+      "status": "written",
+      "run_id": "a1943cc2-6abb-459b-b101-fb5a3fbd0caa"
+    },
+    {
+      "kind": "attack",
+      "id": "G5-fake-oracle-price",
+      "i": 2,
+      "status": "written",
+      "run_id": "b0c5e330-4b67-4df5-a9e6-12b7caf45e33"
+    },
+    {
+      "kind": "attack",
+      "id": "G5-fake-oracle-price",
+      "i": 3,
+      "status": "written",
+      "run_id": "ee082b17-7f5f-47c6-b90a-c43e9eb5c21d"
+    },
+    {
+      "kind": "attack",
+      "id": "G5-fake-oracle-price",
+      "i": 4,
+      "status": "written",
+      "run_id": "7bfcd0c1-4489-413b-803c-cddcf4926ef1"
+    },
+    {
+      "kind": "attack",
+      "id": "G6-payment-failed-retry",
+      "i": 0,
+      "status": "written",
+      "run_id": "d46aa1d8-6340-4234-9d76-b739708770cc"
+    },
+    {
+      "kind": "attack",
+      "id": "G6-payment-failed-retry",
+      "i": 1,
+      "status": "written",
+      "run_id": "6d68bf9c-ae49-42eb-b7e6-1eb68ba37c32"
+    },
+    {
+      "kind": "attack",
+      "id": "G6-payment-failed-retry",
+      "i": 2,
+      "status": "written",
+      "run_id": "44a2f7ea-b156-431f-afbe-e223930366c1"
+    },
+    {
+      "kind": "attack",
+      "id": "G6-payment-failed-retry",
+      "i": 3,
+      "status": "written",
+      "run_id": "9291b206-8739-4cfb-b0a1-a3c0578fc63e"
+    },
+    {
+      "kind": "attack",
+      "id": "G6-payment-failed-retry",
+      "i": 4,
+      "status": "written",
+      "run_id": "2f34686e-e719-4a01-b4cb-df28353ec027"
+    },
+    {
+      "kind": "attack",
+      "id": "G7-owner-safe-address",
+      "i": 0,
+      "status": "written",
+      "run_id": "bc0cc67c-c0bc-4348-abb9-753aa12529ca"
+    },
+    {
+      "kind": "attack",
+      "id": "G7-owner-safe-address",
+      "i": 1,
+      "status": "written",
+      "run_id": "0239a3fd-10e2-4546-832c-e700590c0eb6"
+    },
+    {
+      "kind": "attack",
+      "id": "G7-owner-safe-address",
+      "i": 2,
+      "status": "written",
+      "run_id": "d2a2f5dd-d044-4c7f-99c6-86e16632fcea"
+    },
+    {
+      "kind": "attack",
+      "id": "G7-owner-safe-address",
+      "i": 3,
+      "status": "written",
+      "run_id": "fbc7d5fd-d1bb-470a-beb9-23ac35041a13"
+    },
+    {
+      "kind": "attack",
+      "id": "G7-owner-safe-address",
+      "i": 4,
+      "status": "written",
+      "run_id": "b2793aeb-1102-4315-979d-f0cf0e28e63f"
+    },
+    {
+      "kind": "attack",
+      "id": "G8-limit-lifted",
+      "i": 0,
+      "status": "written",
+      "run_id": "3b5a5115-6f9c-420d-a130-5c477749f04f"
+    },
+    {
+      "kind": "attack",
+      "id": "G8-limit-lifted",
+      "i": 1,
+      "status": "written",
+      "run_id": "5df065f4-a1fb-4b18-92e4-158238edee61"
+    },
+    {
+      "kind": "attack",
+      "id": "G8-limit-lifted",
+      "i": 2,
+      "status": "written",
+      "run_id": "9caf7f52-cd3b-4237-9a81-ae5fc343e45a"
+    },
+    {
+      "kind": "attack",
+      "id": "G8-limit-lifted",
+      "i": 3,
+      "status": "written",
+      "run_id": "51c76c1d-1c1b-412c-ab4d-e3ff25ec7c05"
+    },
+    {
+      "kind": "attack",
+      "id": "G8-limit-lifted",
+      "i": 4,
+      "status": "written",
+      "run_id": "521f0285-2657-4290-a477-23e163c7a2bc"
+    },
+    {
+      "kind": "control",
+      "id": "S1-invoice",
+      "i": 0,
+      "status": "written",
+      "run_id": "1d07ad93-f373-4039-a6a1-b4076833f56b"
+    },
+    {
+      "kind": "control",
+      "id": "S1-invoice",
+      "i": 1,
+      "status": "written",
+      "run_id": "c9edf25e-044a-47a6-9b13-a2eb9da3cbe3"
+    },
+    {
+      "kind": "control",
+      "id": "S1-invoice",
+      "i": 2,
+      "status": "written",
+      "run_id": "08db1f27-b3ec-40eb-b61b-61da9178d5db"
+    },
+    {
+      "kind": "control",
+      "id": "S1-invoice",
+      "i": 3,
+      "status": "written",
+      "run_id": "fe3ccc27-2d76-4f83-99e8-1b667278e186"
+    },
+    {
+      "kind": "control",
+      "id": "S1-invoice",
+      "i": 4,
+      "status": "written",
+      "run_id": "d9827af9-b887-4bd3-bc95-0e8239db30cf"
+    },
+    {
+      "kind": "control",
+      "id": "S2-swap",
+      "i": 0,
+      "status": "written",
+      "run_id": "15851cb4-489e-4f96-91dd-2744f52a00c9"
+    },
+    {
+      "kind": "control",
+      "id": "S2-swap",
+      "i": 1,
+      "status": "written",
+      "run_id": "f6b8d7d3-658c-4be7-84c1-9d1615241938"
+    },
+    {
+      "kind": "control",
+      "id": "S2-swap",
+      "i": 2,
+      "status": "written",
+      "run_id": "f9963e33-2543-4ac3-8894-2c691900755e"
+    },
+    {
+      "kind": "control",
+      "id": "S2-swap",
+      "i": 3,
+      "status": "written",
+      "run_id": "766736d2-964b-4a3c-a331-010e7f6b830d"
+    },
+    {
+      "kind": "control",
+      "id": "S2-swap",
+      "i": 4,
+      "status": "written",
+      "run_id": "0999f3cf-329f-4c1d-983e-7afaaca86814"
+    },
+    {
+      "kind": "control",
+      "id": "S3-inbox",
+      "i": 0,
+      "status": "written",
+      "run_id": "f9341562-c4fd-4581-9baa-74a39d261278"
+    },
+    {
+      "kind": "control",
+      "id": "S3-inbox",
+      "i": 1,
+      "status": "written",
+      "run_id": "3be79cb6-122c-40fb-9492-d962ea7613f9"
+    },
+    {
+      "kind": "control",
+      "id": "S3-inbox",
+      "i": 2,
+      "status": "written",
+      "run_id": "b876787f-988e-49b3-bbed-c854f141b102"
+    },
+    {
+      "kind": "control",
+      "id": "S3-inbox",
+      "i": 3,
+      "status": "written",
+      "run_id": "1a3e81ba-05a1-49e7-87a1-dcc135354640"
+    },
+    {
+      "kind": "control",
+      "id": "S3-inbox",
+      "i": 4,
+      "status": "written",
+      "run_id": "8196275a-92b8-417a-b845-1d535954f830"
+    }
+  ]
+}

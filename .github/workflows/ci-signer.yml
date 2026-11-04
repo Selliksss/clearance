@@ -3,6 +3,8 @@
 # agent on the exact wasm deployed on testnet and uploads every transcript plus a manifest of every
 # planned run. Job 2 executes nothing from that artifact: it rebuilds the report with this commit's
 # code, checks it, and signs (or revokes) with its own function-call key, run_ref "run:<id>@<sha>".
+# Mode revoke-by-evidence runs nothing: job 3 replays committed, TEE-signed transcripts of one generator
+# with this commit's judge and revokes the CI certificate when the large-n clause holds (BOUNTY.md). It never certifies.
 name: ci-signer
 run-name: ci-signer ${{ inputs.agent }} ${{ inputs.mode }}
 
@@ -15,10 +17,18 @@ on:
         options: [protected-v5, protected-v7, protected-v3]
         default: protected-v5
       mode:
-        description: smoke = 1 attack + 1 control, never signs; full = whole suite at n=5
+        description: smoke = 1 attack + 1 control, never signs; full = whole suite at n=5; revoke-by-evidence = replay committed transcripts, may only revoke
         type: choice
-        options: [smoke, full]
+        options: [smoke, full, revoke-by-evidence]
         default: smoke
+      evidence:
+        description: revoke-by-evidence only, a directory under evidence/ (e.g. evidence/pending-fix-2026-11-04/transcripts/v5)
+        type: string
+        default: ""
+      generator:
+        description: revoke-by-evidence only, the generator in attacks/ the runs were made with (e.g. G39-pending-escrow-release)
+        type: string
+        default: ""
 
 permissions: {}
 
@@ -28,6 +38,7 @@ concurrency:
 
 jobs:
   crash:
+    if: inputs.mode != 'revoke-by-evidence'
     runs-on: ubuntu-latest
     # NEARAI_API_KEY lives in this environment, restricted to main once the repo is public.
     environment: ci-crash
@@ -129,3 +140,34 @@ jobs:
         run: |
           echo "::stop-commands::$(openssl rand -hex 16)"
           npx tsx src/certify-ci.ts "$AGENT" "$RUNNER_TEMP/art" | tee -a "$GITHUB_STEP_SUMMARY"
+
+  revoke:
+    # Only on main, first attempt, in the public repo (protected environment with the key).
+    if: inputs.mode == 'revoke-by-evidence' && github.ref == 'refs/heads/main' && github.run_attempt == 1 && !github.event.repository.private
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: ci-signer
+    permissions:
+      contents: read
+    env:
+      AGENT: ${{ inputs.agent }}
+      EVIDENCE: ${{ inputs.evidence }}
+      GENERATOR: ${{ inputs.generator }}
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+      - name: Install (no install scripts)
+        working-directory: runner
+        run: npm ci --ignore-scripts
+      - name: Replay the evidence and revoke if the large-n clause holds
+        working-directory: runner
+        shell: bash
+        env:
+          CI_SIGNER_KEY: ${{ secrets.CI_SIGNER_KEY }}
+        run: |
+          echo "::stop-commands::$(openssl rand -hex 16)"
+          npx tsx src/revoke-evidence.ts "$AGENT" "$EVIDENCE" "$GENERATOR" | tee -a "$GITHUB_STEP_SUMMARY"

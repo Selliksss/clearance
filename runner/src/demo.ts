@@ -237,16 +237,27 @@ const build = JSON.parse(readFileSync(join(ROOT, "deploy", "contract.json"), "ut
     }
   }
 
-  // 3b. The CI signer's certificate: it must carry the report rebuilt from a CI run archived in transcripts-ci/.
+  // 3b. The CI signer's certificate: it must carry the report rebuilt from a CI run archived in transcripts-ci/,
+  // or, when reports/ci-revocations.json records a revoke-by-evidence run for the agent, be absent after that revoke.
   if (deploy.ci_signer) {
-    for (const a of agents) {
+    let ciRevoked: { agent: string; run_id: string; tx: string; why: string }[] = [];
+    try {
+      const raw = existsSync(join(ROOT, "reports", "ci-revocations.json")) ? JSON.parse(readFileSync(join(ROOT, "reports", "ci-revocations.json"), "utf8")) : [];
+      if (!Array.isArray(raw) || !raw.every((x) => typeof x?.agent === "string" && /^\d{1,20}$/.test(String(x?.run_id)) && /^[1-9A-HJ-NP-Za-km-z]{43,44}$/.test(String(x?.tx)))) {
+        throw new Error("entries need agent, run_id and a base58 tx");
+      }
+      ciRevoked = raw;
+    } catch (e) {
+      step(false, "LOCAL", "reports/ci-revocations.json is well formed", (e as Error).message);
+    }
+    for (const a of Object.keys(deploy.agents).sort()) {
       const account = deploy.agents[a];
-      if (!account) continue;
       const runs = existsSync(join(ROOT, "transcripts-ci"))
         ? readdirSync(join(ROOT, "transcripts-ci")).filter((id) => /^\d+$/.test(id) && existsSync(join(ROOT, "transcripts-ci", id, a, "manifest.json"))
           && JSON.parse(readFileSync(join(ROOT, "transcripts-ci", id, a, "manifest.json"), "utf8")).mode === "full")
         : [];
-      if (!runs.length) continue;
+      const rev = ciRevoked.find((x) => x.agent === a);
+      if (!runs.length && !rev) continue;
       let got: Answer & { value: Cert };
       try {
         got = await view<Cert>(deploy.contract, "get_cert", { agent: account, signer: deploy.ci_signer });
@@ -255,6 +266,23 @@ const build = JSON.parse(readFileSync(join(ROOT, "deploy", "contract.json"), "ut
         continue;
       }
       const cert = got.value;
+      if (rev) {
+        // The revoke must be the CI signer's own `revoke` of this agent on this contract, and it must have succeeded.
+        let ok = false;
+        let detail = "";
+        try {
+          const tx = await rpc("tx", { tx_hash: rev.tx, sender_account_id: deploy.ci_signer, wait_until: "FINAL" });
+          const fc = tx.result.transaction.actions.find((x: any) => x.FunctionCall)?.FunctionCall;
+          const args = fc ? JSON.parse(Buffer.from(fc.args, "base64").toString()) : null;
+          ok = tx.result.transaction.signer_id === deploy.ci_signer && tx.result.transaction.receiver_id === deploy.contract
+            && fc?.method_name === "revoke" && args?.agent === account && "SuccessValue" in (tx.result.status ?? {});
+        } catch (e) {
+          detail = (e as Error).message;
+        }
+        step(ok && !cert, got, `${a}: the CI signer revoked its certificate by evidence (run ${rev.run_id}, ${rev.tx.slice(0, 8)}…); ${account} holds none from ${deploy.ci_signer}`, detail || rev.why);
+        step(readme.includes(rev.tx), "LOCAL", `README links the CI revoke transaction`, `${EXPLORER}/txns/${rev.tx}`);
+        continue;
+      }
       const runId = cert?.run_ref?.match(/^run:(\d+)@/)?.[1];
       const r = runId && runs.includes(runId) ? ciReport(ROOT, a, join(ROOT, "transcripts-ci", runId, a)) : null;
       const ok = !!cert && !!r && cert.report_hash === reportHash(r) && cert.level === r.level && cert.config_hash === r.agent_config_hash && cert.suite_hash === r.suite_hash;

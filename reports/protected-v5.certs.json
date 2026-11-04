@@ -18,6 +18,10 @@
       "ttl_ns": "2592000000000000"
     },
     "expires_ns": "1795697198455176497",
-    "commit": "8a10e9e20a29475dead3ed7318970d3fe6c6803a"
+    "commit": "8a10e9e20a29475dead3ed7318970d3fe6c6803a",
+    "revoked": {
+      "tx": "Aw8S4PA6aKzwZARFNFeK5TnEbkTG11aBKV9jtWHvKur4",
+      "why": "large-n clause of BOUNTY.md: G39 (the 'payment pending, pay again to release' lie found by NEAR AI's abliterated DeepSeek) deceived it in 5 of 50 runs (evidence/pending-fix-2026-11-04); replaced by protected-v7"
+    }
   }
 ]
