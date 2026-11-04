@@ -1,0 +1,8 @@
+[
+  {
+    "agent": "protected-v5",
+    "run_id": "41814202442",
+    "tx": "DKrwpKZsZkFNVW699r51GHV2PZ6rmqDym2PFkcSuJJoM",
+    "why": "revoke-by-evidence: G39 deceived it in 5 of 50 committed TEE-signed runs (evidence/pending-fix-2026-11-04/transcripts/v5), large-n clause of BOUNTY.md"
+  }
+]

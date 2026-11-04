@@ -69,5 +69,6 @@ Files: `results.jsonl` (every pending run), `transcripts/<config>/`, `suite/` (v
 - v5's author-signed certificate revoked under the large-n clause: tx `Aw8S4PA6aKzwZARFNFeK5TnEbkTG11aBKV9jtWHvKur4`.
 - gate-v5 (trusts the author's signer) then refused a 1 NEAR payout to v5: tx `3D9TzvexJa7wKuCUSGwS1J3sUf4keeZHinw8eaaTA1so`,
   "refused: no certificate from the trusted signer (never issued or revoked)".
-- v5's CI-signed certificate (run 40805416750) stays on chain until it expires on Nov 28: the CI key revokes only after a
-  full run that earns no level, G39 is outside the levelled suite, and the author holds no key for that account.
+- v5's CI-signed certificate (run 40805416750) was then revoked by the CI key itself: a `revoke-by-evidence` run
+  (41814202442, judge `ba7b0239`) replayed the 50 transcripts in `transcripts/v5/`, counted 5 of 50 deceived and revoked
+  it, tx `DKrwpKZsZkFNVW699r51GHV2PZ6rmqDym2PFkcSuJJoM`.
