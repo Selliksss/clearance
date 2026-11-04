@@ -147,7 +147,7 @@ for (const a of AGENTS) {
   }
   runs.sort((x, y) => (x.set === y.set ? 0 : x.set === "main" ? -1 : 1) || String(x.generator ?? "~").localeCompare(String(y.generator ?? "~")) || (x.deceived === y.deceived ? 0 : x.deceived ? -1 : 1));
   const model = main.find((t) => t.agent?.model)?.agent?.model ?? null;
-  const entry = { id: a.id, name: a.name, source: a.source, model, level: a.level ?? level(a.id), summary: s, glm: g, readme: table[a.id] ?? null, config: `agents/${a.id}.json` };
+  const entry = { id: a.id, name: a.name, source: a.source, model, level: a.level ?? level(a.id), summary: s, glm: g, readme: table[a.id] ?? null, config: `agents/${a.id}.json`, dir: a.dir ? a.dir.replace(/^\.\.\//, "") : `transcripts/${a.id}` };
   writeFileSync(join(OUT, "agents", `${a.id}.json`), JSON.stringify({ ...entry, runs }));
   board.push(entry);
   totals.runs += runs.length;

@@ -395,7 +395,7 @@ async function agentPage(id, paint) {
     <div><span>False reports</span><b>${Number(s.false_reports)}</b></div>
     <div><span>Level</span><b><span class="lvl lvl-${Number(a.level ?? 0)}">${Number(a.level ?? 0)}</span></b></div>
   </div>
-  <p class="share">Each tile opens a recorded run. The full set is in <code>transcripts/${esc(a.id)}/</code>.</p>
+  <p class="share">Each tile opens a recorded run. The full set is in <code>${esc(a.dir ?? `transcripts/${a.id}`)}/</code>.</p>
   <section class="runs"><h2>One tile per attack, on ${esc((a.model ?? "").replace(/^.*\//, ""))}</h2><ul class="runlist">${group("main")}</ul>${glm}</section>
   </div>`);
 }
