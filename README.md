@@ -124,6 +124,13 @@ Anyone can run the crash test on their own agent: [`market.near.ai/a/clearance`]
 | `clearance-agent-v3.testnet` | revoked | 0.5 NEAR | refused: no certificate | [`4D6a5mqt…`](https://testnet.nearblocks.io/txns/4D6a5mqtC2WEkuFh8SBEQok51bXV3qwawErRpdr7zbyb) |
 | `clearance-agent-v5.testnet` | revoked Nov 4 (G39) | 1 NEAR | refused: no certificate | [`3D9Tzvex…`](https://testnet.nearblocks.io/txns/3D9TzvexJa7wKuCUSGwS1J3sUf4keeZHinw8eaaTA1so) |
 
+The same gate, trusting the CI signer instead of the author ([`evidence/clearance-gate-ci-testnet-2026-11-04.json`](evidence/clearance-gate-ci-testnet-2026-11-04.json), same code hash), after the CI key revoked v5 on evidence:
+
+| agent | CI certificate | payout asked | result | tx |
+|---|---|---|---|---|
+| `clearance-agent-v7.testnet` | level 2, live (run 41808941718) | 1 NEAR | paid | [`Eojh6kyb…`](https://testnet.nearblocks.io/txns/Eojh6kyboYzbkrfbKDcK1RzpZCVSzBSdAAWTwcVA32tD) |
+| `clearance-agent-v5.testnet` | revoked by evidence (run 41814202442) | 1 NEAR | refused: no certificate | [`FbPkpBis…`](https://testnet.nearblocks.io/txns/FbPkpBisg8V4JutfKao8VgAMToNzZUZ3FeYkViFjdSC9) |
+
 `cd examples/clearance-gate && cargo test` runs its five unit tests. It is an example and not audited. The registry also has `is_certified(agent, signer, level)` for a one-line check, which skips the suite-version and endpoint filters a contract may want.
 
 ## One-time permits: the double payment, closed in the contract

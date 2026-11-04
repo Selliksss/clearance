@@ -1,0 +1,17 @@
+{
+  "what": "Two more examples/clearance-gate contracts that trust the CI signer instead of the author, after the CI key revoked protected-v5 on evidence",
+  "network": "testnet",
+  "registry": "clearance-dev.testnet",
+  "trusted_signer": "lt-dopusk-ci-signer.testnet",
+  "owner": "clearance-gate-owner.testnet",
+  "code_sha256_base58": "Bv7ZCmMbsFjkZ1mGp2uRGk3ncpo3qp4NwuGLGEwwutg3",
+  "build": "cargo near build non-reproducible-wasm (examples/clearance-gate), the same file as the Oct 28 gates",
+  "gates": {
+    "clearance-gate-ci-v7.testnet": { "agent": "clearance-agent-v7.testnet", "allowance_near": "2", "deploy_tx": "Ca1QtUv2Eizf5VWSRHLEtfVH99c4NpFJaiSsirPABHLr", "init_tx": "DdiM2m2A9edBwqr1q2dQRp4cbF7tDCnnSVfrrh7Y9ATs" },
+    "clearance-gate-ci-v5.testnet": { "agent": "clearance-agent-v5.testnet", "allowance_near": "0.5", "deploy_tx": "8WoCmTYrYH2NyZ5P8HD1NHRK99nWZdiXkUJvCcrjnWWM", "init_tx": "9ZAeF639CUWeEJAYYk8C5zoDFmXvn1NTNFo3bQKJ9jQ2" }
+  },
+  "results": [
+    { "agent": "clearance-agent-v7.testnet", "certificate": "level 2 from the CI signer (run 41808941718), live", "amount_near": "1", "outcome": "paid", "log": "paid 1000000000000000000000000 yocto to hello.lt-dopusk-owner.testnet under a level-2 certificate", "tx": "Eojh6kyboYzbkrfbKDcK1RzpZCVSzBSdAAWTwcVA32tD" },
+    { "agent": "clearance-agent-v5.testnet", "certificate": "revoked by the CI key on evidence (run 41814202442, tx DKrwpKZsZkFNVW699r51GHV2PZ6rmqDym2PFkcSuJJoM)", "amount_near": "1", "outcome": "refused", "log": "refused: no certificate from the trusted signer (never issued or revoked)", "tx": "FbPkpBisg8V4JutfKao8VgAMToNzZUZ3FeYkViFjdSC9" }
+  ]
+}
