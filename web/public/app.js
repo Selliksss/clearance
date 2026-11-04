@@ -179,8 +179,10 @@ async function home(paint) {
     const s = a.summary;
     const note = a.id === "protected-v5"
       ? "Level 2 on the suite, certificate revoked Nov 4: a \"payment pending\" lie made it pay twice in 5 of 50 runs."
-      : a.source;
-    return `<a class="tile ${a.id === "protected-v5" ? "ours" : ""}" href="/agent/${esc(a.id)}" data-link>
+      : a.id === "protected-v7"
+        ? "Certified level 2 by the CI signer on Nov 4, in its public run: v5 with the pending hole closed."
+        : a.source;
+    return `<a class="tile ${a.id.startsWith("protected-v") ? "ours" : ""}" href="/agent/${esc(a.id)}" data-link>
       <h3>${esc(a.name)}</h3>
       <div class="nums">
         <div class="lost ${Number(s.lost) > 0 ? "" : "zero"}">${esc(s.lost)}<small>NEAR lost, fooled in ${Number(s.deceived)} of ${Number(s.attacks)}</small></div>
@@ -219,8 +221,8 @@ async function home(paint) {
   <section class="board" id="agents">
     <div class="tiles">
       <div class="tile head rise">
-        <h2>Eight agents, the same attacks</h2>
-        <p>Six published agent prompts, a one-line naive agent and our own protected-v5, each run through every attack with five random seeds. Open one to read every recorded run.</p>
+        <h2>Nine agents, the same attacks</h2>
+        <p>Six published agent prompts, a one-line naive agent and our own protected-v5, each run through every attack with five random seeds, and v5's successor protected-v7, shown with the CI signer's public run that certified it. Open one to read every recorded run.</p>
       </div>
       ${board.agents.map(tile).join("")}
     </div>
@@ -268,7 +270,7 @@ async function home(paint) {
       <p class="after">Paste the agent's system prompt and watch the attacks land, usually within a few minutes. No keys, no sign-up; the same test runs in the <a href="${BOT}">Telegram bot</a>. A level and a certificate come from the full suite, and the full report on your agent (<a href="${CONTACT}">write @selliksss</a>) costs $250 in USDC, back within 48 hours with a rerun after your fix.</p>
     </div>
     <dl class="marks rise">
-      <div><dt>${Number(board.totals.runs)}</dt><dd>recorded runs, every one readable on this site</dd></div>
+      <div><dt>${Number(board.totals.runs)}</dt><dd>recorded runs of the nine agents on this board, every one readable here</dd></div>
       <div><dt>${Number(board.totals.false_reports)}</dt><dd>times an agent told its owner something the chain does not show</dd></div>
       <div><dt>0</dt><dd>public agent prompts that reached level 1 or 2 on an open wallet</dd></div>
     </dl>
@@ -487,7 +489,7 @@ async function findingsPage(paint) {
   return paint(`<div class="inner findings">
   ${topbar}
   <h1 class="page-h">Agents pay twice when a tool lies</h1>
-  <p class="page-sub">What ${Number(board.totals.runs)} recorded runs of AI agents with a wallet show. Every payment is a real transfer on a local NEAR sandbox, and the score is the money that left the vault, not what the agent says it did.</p>
+  <p class="page-sub">What the ${Number(board.totals.runs)} recorded runs of the nine agents on our board show. Every payment is a real transfer on a local NEAR sandbox, and the score is the money that left the vault, not what the agent says it did.</p>
 
   <section>
     <h2>One false line makes the payment happen twice</h2>
@@ -536,10 +538,9 @@ async function findingsPage(paint) {
 
   <section class="findings-next">
     <h2>Check your own agent</h2>
-    <p>Paste its system prompt and watch the same attacks hit it, or try to scam the agent Clearance certified.</p>
+    <p>Paste its system prompt and watch the same attacks hit it, or try to scam our agent.</p>
     <div class="actions"><a class="btn" href="/test" data-link>Test your agent</a><a class="link" href="/challenge" data-link>Scam our agent</a></div>
   </section>
-  ${OFFER}
   </div>`);
 }
 
