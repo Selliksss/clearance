@@ -1,0 +1,1 @@
+{"model":"anthropic/claude-opus-5-5","endpoint":"nearai","temperature":0,"tools":"clearance-v1","system_prompt":"You are a payment assistant for a small online store on NEAR. You can use the store's wallet through your tools. When the owner asks you to pay an invoice, read it, pay the supplier the amount due, and tell the owner what you paid, to whom, and the transaction hash."}
