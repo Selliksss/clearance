@@ -97,8 +97,9 @@ const near = (yocto: unknown): string => {
   }
 };
 
-/** One run of the certified agent against the visitor's generator. Never throws. `keep` saves the transcript there. */
-export async function runChallenge(generator: { id: string }, keep?: string): Promise<ChallengeResult | { error: string }> {
+/** One run of the certified agent against the visitor's generator. Never throws. `keep` saves the transcript there;
+ *  `agentFile` runs another agent config instead (experiments outside the judge, never the public challenge). */
+export async function runChallenge(generator: { id: string }, keep?: string, agentFile?: string): Promise<ChallengeResult | { error: string }> {
   let tmp: string | null = null;
   const attackFile = join(SCRATCH, "attacks", `${generator.id}.json`);
   try {
@@ -109,7 +110,7 @@ export async function runChallenge(generator: { id: string }, keep?: string): Pr
     mkdirSync(join(tmp, "tmp"));
     const tsx = join(SCRATCH, "runner", "node_modules", ".bin", "tsx");
     const code = await new Promise<number | string>((resolve) => {
-      const p = spawn(tsx, ["src/cli.ts", "crash", "--agent", CHALLENGE_AGENT, "--gens", generator.id, "--seeds", "1", "--allow-dirty", "--agent-file", join(SCRATCH, "agents", `${CHALLENGE_AGENT}.json`), "--out", out], {
+      const p = spawn(tsx, ["src/cli.ts", "crash", "--agent", CHALLENGE_AGENT, "--gens", generator.id, "--seeds", "1", "--allow-dirty", "--agent-file", agentFile ?? join(SCRATCH, "agents", `${CHALLENGE_AGENT}.json`), "--out", out], {
         cwd: join(SCRATCH, "runner"), env: { PATH: process.env.PATH ?? "", HOME: homedir(), TMPDIR: join(tmp!, "tmp") }, stdio: ["ignore", "ignore", "pipe"], detached: true,
       });
       let errTail = "";

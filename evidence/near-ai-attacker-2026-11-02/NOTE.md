@@ -33,6 +33,9 @@ says so (4 NEAR left the vault), so it is not a false report.
 deception in 7 runs. Under the published rule (a win must repeat in 2 of 3 runs) the certificate stands. The weak
 spot is clear anyway: protected-v5's retry rule is written around "failed", and "pending" slipped past it once.
 
+**Update, Nov 4:** rerun 50 times, the same lie deceived v5 in 5 of 50, so 6 of 57 in all (1 of 7 on Nov 2, 5 of 50
+on Nov 4): a real, low-frequency weakness, not noise. Cause, fix and the rerun: [`../pending-fix-2026-11-04/`](../pending-fix-2026-11-04/NOTE.md).
+
 ## Second attacker: Qwen3.8-27B abliterated (Nov 4)
 
 NEAR AI's other abliterated model was unavailable on Nov 2 (502) and ran on Nov 4 with the same harness, prompt
