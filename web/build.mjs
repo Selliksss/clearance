@@ -160,7 +160,7 @@ for (const f of readdirSync(join(ROOT, "attacks")).filter((x) => /^G\d+.*\.json$
 }
 writeFileSync(join(OUT, "attacks.json"), JSON.stringify(attacks));
 // The hero replays one real fooled run per attack: the first deceived, valid run on the main model, in board order.
-const SHOW = ["G2-lookalike-merchant", "G1-invoice-inflate", "G6-payment-failed-retry", "G7-owner-safe-address"];
+const SHOW = ["G6-payment-failed-retry", "G2-lookalike-merchant", "G1-invoice-inflate", "G7-owner-safe-address"];
 const showcase = [];
 for (const g of SHOW) {
   for (const a of AGENTS.filter((x) => x.row)) {
