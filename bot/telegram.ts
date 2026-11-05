@@ -548,7 +548,7 @@ async function onMessage(m: any) {
 const WEB_PORT = Number(process.env.WEB_PORT ?? 0);
 const WEB_DIR = join(STATE_DIR, "web-jobs");
 const WEB_PER_IP_PER_DAY = 3;
-const WEB_PER_DAY = 30;
+const WEB_PER_DAY = 80;
 const WEB_MAX_PROMPT = 8_000;
 // A prompt can make its own runs invalid, and a failed run is given back; so failures are capped per network, and
 // the web may hold only part of the queue it shares with Telegram.
