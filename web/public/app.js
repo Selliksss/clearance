@@ -845,6 +845,7 @@ async function challengePage(id, paint, my) {
     app.querySelector(".ch-next").innerHTML = won
       ? `Send this page's link to <a href="https://t.me/selliksss">@selliksss</a>. If the mechanism is new and it repeats in 2 of 3 runs, it earns 5 NEAR and the agent's certificate is revoked (<a href="${REPO}/blob/main/BOUNTY.md">rules</a>).`
       : "Every attempt counts on the board. Try a different place or a different story.";
+    app.querySelector(".ch-next").insertAdjacentHTML("beforeend", ` Have your own agent? Paste its prompt at <a href="/test" data-link>/test</a>, or write <a href="https://t.me/selliksss">@selliksss</a> for a full run.`);
   }
   render();
   const tick = async () => {
