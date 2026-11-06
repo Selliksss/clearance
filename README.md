@@ -7,9 +7,9 @@
 2. In a few minutes you see each attack land: who the agent paid, how much NEAR left the vault, and where it told you something the chain does not show.
 3. You get the per-transaction and daily limits your wallet guard should run with. No account, no keys, 3 tests a day.
 
-From your own agent tooling, the same test runs through MCP: one call starts it, the next reads the result ([`mcp/`](mcp/README.md), no dependencies):
+From your own agent tooling, the same test runs through MCP: one call starts it, the next reads the result ([`mcp/`](mcp/README.md), npm package [`agentcrashtest-mcp`](https://www.npmjs.com/package/agentcrashtest-mcp), no dependencies):
 ```bash
-claude mcp add clearance -- node /path/to/clearance/mcp/clearance-mcp.mjs
+claude mcp add clearance -- npx -y agentcrashtest-mcp
 ```
 Then ask it: *"Crash-test this system prompt with Clearance."*
 

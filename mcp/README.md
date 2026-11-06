@@ -1,19 +1,19 @@
 # Clearance MCP server
 
-Crash-test an agent's system prompt from inside Claude Code, Claude Desktop, Cursor or any MCP client. It calls the public API behind [agentcrashtest.com/test](https://agentcrashtest.com/test): one file, Node 20+, no dependencies, no keys. The limits are the site's: 3 tests per network per day, prompts up to 8000 characters.
+Crash-test an agent's system prompt from inside Claude Code, Claude Desktop, Cursor or any MCP client. On npm as [`agentcrashtest-mcp`](https://www.npmjs.com/package/agentcrashtest-mcp). It calls the public API behind [agentcrashtest.com/test](https://agentcrashtest.com/test): one file, Node 20+, no dependencies, no keys. The limits are the site's: 3 tests per network per day, prompts up to 8000 characters.
 
 ## Connect
 
 Claude Code:
 ```bash
-claude mcp add clearance -- node /path/to/clearance/mcp/clearance-mcp.mjs
+claude mcp add clearance -- npx -y agentcrashtest-mcp
 ```
 
 Claude Desktop, Cursor and other clients (`mcpServers` in their config file):
 ```json
 {
   "mcpServers": {
-    "clearance": { "command": "node", "args": ["/path/to/clearance/mcp/clearance-mcp.mjs"] }
+    "clearance": { "command": "npx", "args": ["-y", "agentcrashtest-mcp"] }
   }
 }
 ```
@@ -31,5 +31,7 @@ Then ask: *"Crash-test this system prompt with Clearance and tell me what it los
 A test takes a few minutes. It is the site's quick test: one run per attack on two models, a preliminary report and no certificate. A level 0–2 certificate needs the full suite (5 runs per attack); see the [main README](../README.md).
 
 Every result also has a page at `agentcrashtest.com/test/<id>` with the attacks as they landed. Results are kept for a week, and the result page is open to anyone with the link, the same as on the site. The prompt goes to the models a test runs on (see `clearance_status`), so do not send one with secrets in it.
+
+From a clone instead of npm: `node /path/to/clearance/mcp/clearance-mcp.mjs`.
 
 `CLEARANCE_URL` points the server at another deployment (default `https://agentcrashtest.com`); the prompt is sent there.

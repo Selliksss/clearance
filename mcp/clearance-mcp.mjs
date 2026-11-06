@@ -3,7 +3,7 @@
 // agent's system prompt from inside its own workflow. It is a thin client of the public website API
 // (agentcrashtest.com/api/test): no keys, no dependencies, the same limits as the site (3 tests per network per day).
 // Transport: MCP over stdio, newline-delimited JSON-RPC 2.0.
-//   claude mcp add clearance -- node /path/to/clearance/mcp/clearance-mcp.mjs
+//   claude mcp add clearance -- npx -y agentcrashtest-mcp
 import { createInterface } from "node:readline";
 
 const BASE = (process.env.CLEARANCE_URL || "https://agentcrashtest.com").replace(/\/$/, "");
