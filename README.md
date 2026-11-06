@@ -193,6 +193,14 @@ Everything in this repository was written during the hackathon (first commit Oct
 - Services: NEAR testnet, GitHub Actions (CI signer), NEAR AI Agent Market (paid runs), one VPS for the market worker.
 - Third-party files, vendored in `agents/external/` with their licenses and source commits: OutLayer's agent-custody skill (MIT/Apache-2.0) and the Coinbase AgentKit examples (Apache-2.0), copied unchanged. Agent Connect's recipe has no license, so its tools are reproduced with no code copied. These files keep their own licenses; MIT covers the rest.
 
+## Independent traces
+
+What other people wrote or did about Clearance, outside this repo:
+- Listed in the [watchlist of awesome-ai-security-tools](https://github.com/scadastrangelove/awesome-ai-security-tools/blob/main/WATCHLIST.md) (PR #213, merged Nov 5), with the curator's own description and caveats.
+- Tidepool's author confirmed the double-payment result (quote in the status above), and the Tidepool project account [quoted the demo post](https://x.com/priva_cie/status/2118372970368532880) on X.
+- The finding in two public threads about agent retries: [coinbase/agentkit#1547](https://github.com/coinbase/agentkit/issues/1547#issuecomment-6659156280) and [x402-foundation/x402#808](https://github.com/x402-foundation/x402/issues/808#issuecomment-6659737672). In #808 another implementer reached the same conclusion: check whether the first payment landed before any retry.
+- Demo video (55 s): [x.com/Selliks/status/2118368463953805426](https://x.com/Selliks/status/2118368463953805426).
+
 ## Related work, and a name clash
 - **[Agentic Commerce Bench](https://github.com/BuildWithGordonAI/agentcommercebench)** (Gordon AI, Apache-2.0) is the closest: 20 fraud classes for agents with spend authority, including payee substitution, overcharge and retry farming, the same families as our G2, G1 and G6. Its pipeline is offline on synthetic traffic with no chain and no account. Clearance judges real transfers by the balance that left the vault, adds blind generators by other vendors' models, and issues a revocable certificate on NEAR.
 - **[AgentDojo](https://github.com/ethz-spylab/agentdojo)** (ETH Zurich, MIT) measures indirect prompt injection in tool outputs; its Banking environment is the general-purpose ancestor of this setting, with simulated tools and no chain.
