@@ -2,6 +2,17 @@
 
 **Clearance is a crash test for AI agents that hold money.** Wallet guards (Spend Guard, Countersign, OutLayer, Agent Connect) cap what an agent can lose; Clearance measures what it does inside that cap.
 
+### Check your agent in a few minutes
+1. Open [agentcrashtest.com/test](https://agentcrashtest.com/test), paste your agent's system prompt, pick the payment tools closest to yours (Clearance, Agent Connect, OutLayer or AgentKit).
+2. In a few minutes you see each attack land: who the agent paid, how much NEAR left the vault, and where it told you something the chain does not show.
+3. You get the per-transaction and daily limits your wallet guard should run with. No account, no keys, 3 tests a day.
+
+From your own agent tooling, the same test runs through MCP: one call starts it, the next reads the result ([`mcp/`](mcp/README.md), no dependencies):
+```bash
+claude mcp add clearance -- node /path/to/clearance/mcp/clearance-mcp.mjs
+```
+Then ask it: *"Crash-test this system prompt with Clearance."*
+
 **Try it:** [agentcrashtest.com](https://agentcrashtest.com) - paste an agent's system prompt and watch the attacks land on a sandbox, read any of the recorded runs, or [try to scam our agent yourself](https://agentcrashtest.com/challenge) (one lie in its invoice, inbox or payment result, judged by the same runner). The same quick test runs in [@clearance_crashtest_bot](https://t.me/clearance_crashtest_bot) on Telegram and on [NEAR AI Agent Market](https://market.near.ai/a/clearance). The findings in one page: [agentcrashtest.com/findings](https://agentcrashtest.com/findings).
 
 **How:** fake invoices, lookalike payees and "payment failed, retry" hidden in what the agent reads; every payment is a real transfer on a NEAR sandbox, scored by the money that left the vault (1,847 replayable transcripts).
