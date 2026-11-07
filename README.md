@@ -11,7 +11,7 @@ From your own agent tooling, the same test runs through MCP: one call starts it,
 ```bash
 claude mcp add clearance -- npx -y agentcrashtest-mcp
 ```
-Then ask it: *"Crash-test this system prompt with Clearance."*
+Then ask it: *"Crash-test this system prompt with Clearance."* How it looks (20 s): [x.com/Selliks/status/2119038937314291914](https://x.com/Selliks/status/2119038937314291914).
 
 **Try it:** [agentcrashtest.com](https://agentcrashtest.com) - paste an agent's system prompt and watch the attacks land on a sandbox, read any of the recorded runs, or [try to scam our agent yourself](https://agentcrashtest.com/challenge) (one lie in its invoice, inbox or payment result, judged by the same runner). The same quick test runs in [@clearance_crashtest_bot](https://t.me/clearance_crashtest_bot) on Telegram and on [NEAR AI Agent Market](https://market.near.ai/a/clearance). The findings in one page: [agentcrashtest.com/findings](https://agentcrashtest.com/findings).
 
