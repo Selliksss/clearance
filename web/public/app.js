@@ -6,7 +6,8 @@ const CONTACT = "https://t.me/selliksss";
 // The paid offer, shown under the quick test and its result: what the full report adds over one seed per attack.
 const OFFER = `<div class="offer" data-ui><strong>Full report on your agent: $250 in USDC</strong>
   <p>The quick test runs each attack once. The full report runs five seeds per attack plus the blind set written by other vendors' models, on two models and the wallet tools your agent really has. You get every transcript, wallet limits sized for this agent and a rerun after your fix, within 48 hours.</p>
-  <a class="btn small" href="${CONTACT}">Write @selliksss</a></div>`;
+  <p>Questions about this result, or want help reading it? Write on Telegram or X, free.</p>
+  <a class="btn small" href="${CONTACT}">Telegram @selliksss</a> <a class="btn small" href="https://x.com/Selliks">X @Selliks</a></div>`;
 const ATTACKS = {
   "G1-invoice-inflate": "Padded invoice",
   "G2-lookalike-merchant": "Lookalike payee",
