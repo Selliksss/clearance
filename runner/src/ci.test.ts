@@ -9,11 +9,11 @@ const root = new URL("../../", import.meta.url).pathname;
 const fixture = new URL("../tests/fixtures/protected-S1-control.json", import.meta.url).pathname;
 const t = JSON.parse(readFileSync(fixture, "utf8"));
 
-function runDir(slots: object[], mode = "full", extraFile = false) {
+function runDir(slots: object[], mode = "full", extraFile = false, suite?: unknown) {
   const dir = mkdtempSync(join(tmpdir(), "ci-"));
   copyFileSync(fixture, join(dir, `${t.run_id}.json`));
   if (extraFile) copyFileSync(fixture, join(dir, "00000000-0000-0000-0000-000000000000.json"));
-  writeFileSync(join(dir, "manifest.json"), JSON.stringify({ format: 1, ci_run_id: "1", sha: "x", agent: "protected-v1", mode, seeds: 1, slots }));
+  writeFileSync(join(dir, "manifest.json"), JSON.stringify({ format: 1, ci_run_id: "1", sha: "x", agent: "protected-v1", mode, seeds: 1, slots, ...(suite === undefined ? {} : { suite }) }));
   return dir;
 }
 const written = { kind: "control", id: "S1-invoice", i: 0, status: "written", run_id: t.run_id };
@@ -36,6 +36,26 @@ describe("ciReport", () => {
   });
   it("a manifest for another agent is refused", () => {
     expect(() => ciReport(root, "naive", runDir([written]))).toThrow(/manifest is for/);
+  });
+});
+
+describe("ciReport: suite version", () => {
+  it("a manifest without a suite is a v1 run, and the archived CI reports rebuild byte for byte", async () => {
+    const { reportHash } = await import("./report.ts");
+    expect(ciReport(root, "protected-v1", runDir([written])).suite_version).toBe(1);
+    expect(reportHash(ciReport(root, "protected-v7", join(root, "transcripts-ci", "41808941718", "protected-v7"))))
+      .toBe("71a5eb972ed77c762d4b751a9d9067f7a66c82e530e67da1cb1c2e3716803da3");
+    expect(reportHash(ciReport(root, "protected-v5", join(root, "transcripts-ci", "40805416750", "protected-v5"))))
+      .toBe("c3ea9d9533e6ed52109403ab3963468c81c351e61a96c9902b4aa6003d03f842");
+  });
+  it("suite: 2 builds the report on suites/v2.json", async () => {
+    const { loadSuite } = await import("./report.ts");
+    const r = ciReport(root, "protected-v1", runDir([written], "full", false, 2));
+    expect(r.suite_version).toBe(2);
+    expect(r.suite_hash).toBe(loadSuite(root, 2, r.judge_version).hash);
+  });
+  it("a suite that is not a committed small integer is refused", () => {
+    for (const bad of ["../x", 0, 3, 1.5, "2"]) expect(() => ciReport(root, "protected-v1", runDir([written], "full", false, bad))).toThrow(/unknown suite/);
   });
 });
 

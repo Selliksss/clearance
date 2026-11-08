@@ -7,7 +7,7 @@
 // Writes transcripts/<agent>/<run_id>.json (invalid runs included, marked) and prints a table.
 //
 // --ci (GitHub Actions): runs the whole levelled suite (every generator and every control scenario of
-// suites/v1.json × seeds), on the exact wasm deployed on testnet, into transcripts-ci/<ci run id>/<agent>/.
+// suites/<--suite, default v1>.json × seeds), on the exact wasm deployed on testnet, into transcripts-ci/<ci run id>/<agent>/.
 // A manifest lists every planned slot before it runs and how it ended, so a run that was never written
 // (setup failure, killed job) is visible as missing instead of silently absent. Logs carry only ids,
 // numbers, booleans and an invalid-run category: no model or attack text reaches the CI log.
@@ -41,6 +41,8 @@ const { positionals, values } = parseArgs({
     ci: { type: "boolean", default: false },
     smoke: { type: "boolean", default: false },
     "run-id": { type: "string" },
+    // CI only: the levelled suite to run, suites/<vN>.json (default v1, which every certificate before Nov 8 used).
+    suite: { type: "string" },
     // Market jobs: a buyer's agent config from a file, transcripts outside the repo (see market-worker.ts).
     "agent-file": { type: "string" },
     out: { type: "string" },
@@ -66,6 +68,12 @@ if (CI && !/^\d{1,20}$/.test(ciRunId)) {
   console.error("--ci needs --run-id <digits> (the GitHub run id)");
   process.exit(2);
 }
+const suiteName = values.suite ?? "v1";
+if (values.suite && !CI) {
+  console.error("--suite is for --ci runs; local runs pick generators with --gens");
+  process.exit(2);
+}
+if (!/^v\d{1,2}$/.test(suiteName)) throw new Error("--suite must look like v2");
 const seeds = Number(values.seeds ?? (CI && !values.smoke ? "5" : "1"));
 if (!Number.isInteger(seeds) || seeds < 1 || seeds > 30) throw new Error("--seeds must be 1..30");
 const fixedSeed = values.seed;
@@ -84,7 +92,8 @@ const scenarios = new Map<string, Scenario>(
     .map((s) => [s.id, s]),
 );
 const genFiles = readdirSync(join(ROOT, "attacks")).filter((f) => f.endsWith(".json")).sort();
-const suite = JSON.parse(readFileSync(join(ROOT, "suites", "v1.json"), "utf8")) as { generators: string[]; scenarios: string[] };
+const suite = JSON.parse(readFileSync(join(ROOT, "suites", `${suiteName}.json`), "utf8")) as { version: number; generators: string[]; scenarios: string[]; holdout?: boolean; blind?: boolean };
+if (suite.holdout || suite.blind || suite.version !== Number(suiteName.slice(1))) throw new Error(`suites/${suiteName}.json is not a levelled suite of version ${suiteName.slice(1)}`);
 const wanted = CI ? (values.smoke ? [suite.generators[0]] : suite.generators) : values.gens ? values.gens.split(",").map((g) => g.trim()) : [];
 const generators = wanted.map((w) => {
   const file = genFiles.find((f) => f === `${w}.json` || f.startsWith(`${w}-`));
@@ -146,6 +155,8 @@ const rows: Transcript[] = [];
 type Slot = { kind: "attack" | "control"; id: string; i: number; status: "pending" | "written" | "setup_failed"; run_id?: string; category?: string };
 const manifest = {
   format: 1, ci_run_id: ciRunId || null, sha, agent: agentName, mode: values.smoke ? "smoke" : "full", seeds,
+  // Written only for suites after v1, so manifests of earlier CI runs stay byte for byte what they were.
+  ...(suite.version > 1 ? { suite: suite.version } : {}),
   slots: [
     ...generators.flatMap((g) => Array.from({ length: seeds }, (_, i): Slot => ({ kind: "attack", id: g.generator.id, i, status: "pending" }))),
     ...controlScenarios.flatMap((s) => Array.from({ length: seeds }, (_, i): Slot => ({ kind: "control", id: s.id, i, status: "pending" }))),

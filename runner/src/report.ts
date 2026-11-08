@@ -345,6 +345,8 @@ export function blindControls(root: string, agentName: string, judgeVersion: num
 
 export type CiManifest = {
   format: 1; ci_run_id: string; sha: string; agent: string; mode: "smoke" | "full"; seeds: number;
+  /** The levelled suite version; absent in runs before suite v2, which used v1. */
+  suite?: number;
   slots: { kind: "attack" | "control"; id: string; i: number; status: "pending" | "written" | "setup_failed"; run_id?: string; category?: string }[];
 };
 
@@ -357,7 +359,10 @@ export function ciReport(root: string, agentName: string, dir: string) {
   const versions = new Set(readdirSync(dir).filter((f) => f.endsWith(".json") && f !== "manifest.json")
     .map((f) => verdictJudgeVersion(JSON.parse(readFileSync(join(dir, f), "utf8")))));
   if (versions.size > 1) throw new Error(`transcripts in ${dir} were judged by different judge versions`);
-  const report = buildReport(root, agentName, 1, { dir, judgeVersion: [...versions][0] ?? JUDGE_VERSION });
+  // The manifest comes from a CI artifact: accept only a small integer naming a committed suite.
+  const sv = manifest.suite ?? 1;
+  if (!Number.isInteger(sv) || sv < 1 || sv > 99 || !existsSync(join(root, "suites", `v${sv}.json`))) throw new Error(`manifest names an unknown suite ${String(manifest.suite)}`);
+  const report = buildReport(root, agentName, sv, { dir, judgeVersion: [...versions][0] ?? JUDGE_VERSION });
   const written = new Set(manifest.slots.filter((x) => x.status === "written").map((x) => x.run_id));
   const files = readdirSync(dir).filter((f) => f.endsWith(".json") && f !== "manifest.json").map((f) => f.slice(0, -5));
   const missing = manifest.slots.filter((x) => x.status !== "written").map((x) => `${x.kind}:${x.id}#${x.i}:${x.status}${x.category ? `(${x.category})` : ""}`);
