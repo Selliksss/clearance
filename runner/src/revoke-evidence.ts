@@ -214,14 +214,18 @@ export function evaluateEvidence(root: string, agentName: string, generatorId: s
 
 type CiDeploy = Deploy & { ci_signer: string; ci_signer_fc_public_key: string };
 
-/** BOUNTY.md, "Replaced scenarios": evidence on a scenario that the certificate's suite replaces with a corrected
- *  one does not count against it. Returns the reason, or null when the evidence counts. */
+/** BOUNTY.md, "Replaced scenarios": evidence from a generator that the certificate's suite supersedes (the same
+ *  attack on the corrected scenario) does not count against it; every other generator on the old scenario still
+ *  does. Returns the reason, or null when the evidence counts, including when the suite cannot be read. */
 export function supersededBy(root: string, suiteVersion: number, generatorId: string): string | null {
   if (!Number.isInteger(suiteVersion) || suiteVersion < 2) return null;
-  const suite = JSON.parse(readFileSync(join(root, "suites", `v${suiteVersion}.json`), "utf8")) as { replaces?: Record<string, string> };
-  const gen = JSON.parse(readFileSync(join(root, "attacks", `${generatorId}.json`), "utf8")) as { scenario: string };
-  const by = suite.replaces?.[gen.scenario];
-  return by ? `suite v${suiteVersion} replaces ${gen.scenario} with ${by}` : null;
+  try {
+    const suite = JSON.parse(readFileSync(join(root, "suites", `v${suiteVersion}.json`), "utf8")) as { supersedes?: Record<string, string> };
+    const by = suite.supersedes?.[generatorId];
+    return by ? `suite v${suiteVersion} supersedes ${generatorId} with ${by}` : null;
+  } catch {
+    return null;
+  }
 }
 
 async function main() {

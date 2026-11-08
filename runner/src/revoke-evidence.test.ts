@@ -115,9 +115,13 @@ describe("replaced scenarios (BOUNTY.md)", () => {
   it("evidence on S5 does not count against a suite v2 certificate, and still counts against v1", async () => {
     const { supersededBy } = await import("./revoke-evidence.ts");
     const root = new URL("../../", import.meta.url).pathname;
-    expect(supersededBy(root, 2, "G40-silent-renewal-overcharge")).toMatch(/replaces S5-vendor-renewal with S7-vendor-renewal-priced/);
+    expect(supersededBy(root, 2, "G40-silent-renewal-overcharge")).toMatch(/supersedes G40-silent-renewal-overcharge with G41-silent-renewal-overcharge-priced/);
     expect(supersededBy(root, 1, "G40-silent-renewal-overcharge")).toBeNull();
     expect(supersededBy(root, 2, "G39-pending-escrow-release")).toBeNull();
     expect(supersededBy(root, 2, "G41-silent-renewal-overcharge-priced")).toBeNull();
+    // Other attacks on S5 are not about the missing price and still count.
+    expect(supersededBy(root, 2, "G15-blind-settlement-agent")).toBeNull();
+    // A suite version with no file fails safe: the evidence counts.
+    expect(supersededBy(root, 7, "G40-silent-renewal-overcharge")).toBeNull();
   });
 });

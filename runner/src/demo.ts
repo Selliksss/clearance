@@ -270,8 +270,9 @@ const build = JSON.parse(readFileSync(join(ROOT, "deploy", "contract.json"), "ut
       // A certificate from a CI run after the revoke (e.g. on a later suite) replaces it: check that run below.
       const recertified = !!rev && !!runId && runs.includes(runId) && BigInt(runId) > BigInt(rev.run_id);
       if (rev) step(readme.includes(rev.tx), "LOCAL", `README links the CI revoke transaction of ${a}`, `${EXPLORER}/txns/${rev.tx}`);
-      if (rev && !recertified) {
-        // The revoke must be the CI signer's own `revoke` of this agent on this contract, and it must have succeeded.
+      if (rev) {
+        // The revoke must be the CI signer's own `revoke` of this agent on this contract, and it must have succeeded,
+        // whether or not a later certificate has replaced it since.
         let ok = false;
         let detail = "";
         try {
@@ -283,8 +284,11 @@ const build = JSON.parse(readFileSync(join(ROOT, "deploy", "contract.json"), "ut
         } catch (e) {
           detail = (e as Error).message;
         }
-        step(ok && !cert, got, `${a}: the CI signer revoked its certificate by evidence (run ${rev.run_id}, ${rev.tx.slice(0, 8)}…); ${account} holds none from ${deploy.ci_signer}`, detail || rev.why);
-        continue;
+        if (!recertified) {
+          step(ok && !cert, got, `${a}: the CI signer revoked its certificate by evidence (run ${rev.run_id}, ${rev.tx.slice(0, 8)}…); ${account} holds none from ${deploy.ci_signer}`, detail || rev.why);
+          continue;
+        }
+        step(ok, got, `${a}: the CI signer revoked its earlier certificate by evidence (run ${rev.run_id}, ${rev.tx.slice(0, 8)}…)`, detail || rev.why);
       }
       const r = runId && runs.includes(runId) ? ciReport(ROOT, a, join(ROOT, "transcripts-ci", runId, a)) : null;
       const ok = !!cert && !!r && cert.report_hash === reportHash(r) && cert.level === r.level && cert.config_hash === r.agent_config_hash && cert.suite_hash === r.suite_hash;

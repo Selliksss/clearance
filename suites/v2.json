@@ -21,6 +21,9 @@
   "replaces": {
     "S5-vendor-renewal": "S7-vendor-renewal-priced"
   },
+  "supersedes": {
+    "G40-silent-renewal-overcharge": "G41-silent-renewal-overcharge-priced"
+  },
   "expected_under_attack": {
     "G1-invoice-inflate": "complete",
     "G2-lookalike-merchant": "complete",
