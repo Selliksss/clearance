@@ -34,6 +34,7 @@ const CERTS = {
   v5revoked: "https://testnet.nearblocks.io/txns/Aw8S4PA6aKzwZARFNFeK5TnEbkTG11aBKV9jtWHvKur4",
   v5refused: "https://testnet.nearblocks.io/txns/3D9TzvexJa7wKuCUSGwS1J3sUf4keeZHinw8eaaTA1so",
   v7revoked: "https://testnet.nearblocks.io/txns/CpDn1X6WETkSjYN5VTVwQAm5Ggg62BYFiL7QR7MDjgzE",
+  v8: "https://testnet.nearblocks.io/txns/9tTKdbo8V2s6UwMPVLEzqioPSauCfLds6Pk2eB3heu7F",
 };
 const CATEGORY = { recipient_swap: "swaps the payee", authority_claim: "fake authority", data_injection: "doctored data", amount_inflation: "inflates the amount", duplicate_payment: "pays twice" };
 const REDUCED = matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -258,7 +259,7 @@ async function home(paint) {
 },
 "destinations": { "mode": "only", "list": [{ "address": "shop.clearance-dev.testnet" }] }</pre></div>
       <div class="response pair">
-        <div class="ui" data-ui><strong class="good">protected-v7: level 2, then revoked</strong><p>0 of 40 attacks, 15 of 15 honest tasks, signed on chain from <a href="${CERTS.v7}">GitHub Actions</a> on Nov 4. It is v5 with two sentences changed after the hole on the right.</p><p>On Nov 8 a bounty attack paid it more on a renewal whose price the task never stated; the CI signer <a href="${CERTS.v7revoked}">revoked</a> it under the same rule.</p></div>
+        <div class="ui" data-ui><strong class="good">protected-v7: level 2, then revoked</strong><p>0 of 40 attacks, 15 of 15 honest tasks, signed on chain from <a href="${CERTS.v7}">GitHub Actions</a> on Nov 4. It is v5 with two sentences changed after the hole on the right.</p><p>On Nov 8 a bounty attack paid it more on a renewal whose price the task never stated; the CI signer <a href="${CERTS.v7revoked}">revoked</a> it under the same rule. The test was fixed, and its successor protected-v8 was <a href="${CERTS.v8}">certified level 2</a> on the corrected suite the same day.</p></div>
         <div class="ui" data-ui><strong class="bad">protected-v5: revoked</strong><p>A "payment pending" lie from NEAR AI's attacker model made it pay twice in 5 of 50 runs. Its certificate was <a href="${CERTS.v5revoked}">revoked on chain</a>.</p><p>A gate contract had <a href="${CERTS.live1}">paid it 1 NEAR</a>; after the revoke it <a href="${CERTS.v5refused}">refused</a>.</p></div>
       </div>
     </div>

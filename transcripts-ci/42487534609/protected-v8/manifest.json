@@ -1,0 +1,466 @@
+{
+  "format": 1,
+  "ci_run_id": "42487534609",
+  "sha": "ea3b95230cd6f8dee1d463c4e962fbeea24ac3fa",
+  "agent": "protected-v8",
+  "mode": "full",
+  "seeds": 5,
+  "suite": 2,
+  "slots": [
+    {
+      "kind": "attack",
+      "id": "G1-invoice-inflate",
+      "i": 0,
+      "status": "written",
+      "run_id": "f9619518-eb50-48f7-9eee-6aacb49232e6"
+    },
+    {
+      "kind": "attack",
+      "id": "G1-invoice-inflate",
+      "i": 1,
+      "status": "written",
+      "run_id": "8655f314-744b-4a21-8424-e8ab15f79050"
+    },
+    {
+      "kind": "attack",
+      "id": "G1-invoice-inflate",
+      "i": 2,
+      "status": "written",
+      "run_id": "e676709f-9c84-475a-b55f-b9a0c88f1301"
+    },
+    {
+      "kind": "attack",
+      "id": "G1-invoice-inflate",
+      "i": 3,
+      "status": "written",
+      "run_id": "1197d86f-6d7c-423a-8b6c-ac4741a09491"
+    },
+    {
+      "kind": "attack",
+      "id": "G1-invoice-inflate",
+      "i": 4,
+      "status": "written",
+      "run_id": "9ad5d49a-8148-42c6-b1bd-ac0e0e1bbdd4"
+    },
+    {
+      "kind": "attack",
+      "id": "G2-lookalike-merchant",
+      "i": 0,
+      "status": "written",
+      "run_id": "af614bc3-41ee-4712-bf9b-280168ca097a"
+    },
+    {
+      "kind": "attack",
+      "id": "G2-lookalike-merchant",
+      "i": 1,
+      "status": "written",
+      "run_id": "e96a4b7b-f157-428b-9119-2f9623c7b752"
+    },
+    {
+      "kind": "attack",
+      "id": "G2-lookalike-merchant",
+      "i": 2,
+      "status": "written",
+      "run_id": "b528eda6-df1c-481b-b63b-a43d688645fa"
+    },
+    {
+      "kind": "attack",
+      "id": "G2-lookalike-merchant",
+      "i": 3,
+      "status": "written",
+      "run_id": "a9ff0f7c-d133-4d2e-b2ad-c0f83f6d2d9e"
+    },
+    {
+      "kind": "attack",
+      "id": "G2-lookalike-merchant",
+      "i": 4,
+      "status": "written",
+      "run_id": "13ebefa8-b264-48b4-b4da-32662246cbfb"
+    },
+    {
+      "kind": "attack",
+      "id": "G3-inbox-invoice",
+      "i": 0,
+      "status": "written",
+      "run_id": "2db43403-357d-489f-96e1-f0d37d33fc3a"
+    },
+    {
+      "kind": "attack",
+      "id": "G3-inbox-invoice",
+      "i": 1,
+      "status": "written",
+      "run_id": "d31d6c85-c9e8-42fe-b304-11ba53f9ce06"
+    },
+    {
+      "kind": "attack",
+      "id": "G3-inbox-invoice",
+      "i": 2,
+      "status": "written",
+      "run_id": "bad5dd63-10f6-4b6b-ad05-0c7c659379b7"
+    },
+    {
+      "kind": "attack",
+      "id": "G3-inbox-invoice",
+      "i": 3,
+      "status": "written",
+      "run_id": "7cc3ab60-707e-4293-8b49-e8f7ec6ca6cc"
+    },
+    {
+      "kind": "attack",
+      "id": "G3-inbox-invoice",
+      "i": 4,
+      "status": "written",
+      "run_id": "e309e99e-2386-4168-87c8-31054e8c2479"
+    },
+    {
+      "kind": "attack",
+      "id": "G4-swap-no-slippage",
+      "i": 0,
+      "status": "written",
+      "run_id": "016e93b3-354d-482d-937a-cc2344645872"
+    },
+    {
+      "kind": "attack",
+      "id": "G4-swap-no-slippage",
+      "i": 1,
+      "status": "written",
+      "run_id": "9de31624-7644-48c7-aef5-e75f9afd8014"
+    },
+    {
+      "kind": "attack",
+      "id": "G4-swap-no-slippage",
+      "i": 2,
+      "status": "written",
+      "run_id": "68028374-35e0-49c8-a7bc-f1562204df19"
+    },
+    {
+      "kind": "attack",
+      "id": "G4-swap-no-slippage",
+      "i": 3,
+      "status": "written",
+      "run_id": "1714816c-6b0f-4f54-a64c-9718c5609df1"
+    },
+    {
+      "kind": "attack",
+      "id": "G4-swap-no-slippage",
+      "i": 4,
+      "status": "written",
+      "run_id": "cd51d8b8-acdf-4c9c-8370-b716ff37360c"
+    },
+    {
+      "kind": "attack",
+      "id": "G5-fake-oracle-price",
+      "i": 0,
+      "status": "written",
+      "run_id": "120887b9-a0e3-4507-bed0-d87bd4616370"
+    },
+    {
+      "kind": "attack",
+      "id": "G5-fake-oracle-price",
+      "i": 1,
+      "status": "written",
+      "run_id": "53400ad7-55bb-40db-a8fc-88c548161095"
+    },
+    {
+      "kind": "attack",
+      "id": "G5-fake-oracle-price",
+      "i": 2,
+      "status": "written",
+      "run_id": "d814a261-1155-4c97-bae1-7ea35356e83b"
+    },
+    {
+      "kind": "attack",
+      "id": "G5-fake-oracle-price",
+      "i": 3,
+      "status": "written",
+      "run_id": "724b9b56-873a-4aeb-906f-662e814113ac"
+    },
+    {
+      "kind": "attack",
+      "id": "G5-fake-oracle-price",
+      "i": 4,
+      "status": "written",
+      "run_id": "7dc5d91f-af56-4682-9ba0-e440a9602e09"
+    },
+    {
+      "kind": "attack",
+      "id": "G6-payment-failed-retry",
+      "i": 0,
+      "status": "written",
+      "run_id": "f99863ac-175f-4a6d-9079-3279fbb5df14"
+    },
+    {
+      "kind": "attack",
+      "id": "G6-payment-failed-retry",
+      "i": 1,
+      "status": "written",
+      "run_id": "72bc3bfb-7012-4d36-95c5-3817fe7c2aa1"
+    },
+    {
+      "kind": "attack",
+      "id": "G6-payment-failed-retry",
+      "i": 2,
+      "status": "written",
+      "run_id": "9eacb678-ee2a-4873-b642-0a588de00bd5"
+    },
+    {
+      "kind": "attack",
+      "id": "G6-payment-failed-retry",
+      "i": 3,
+      "status": "written",
+      "run_id": "40764b74-fe21-4bf7-b0dc-c27e34738357"
+    },
+    {
+      "kind": "attack",
+      "id": "G6-payment-failed-retry",
+      "i": 4,
+      "status": "written",
+      "run_id": "dc425d0a-bbd4-411e-977f-20dbb031fae3"
+    },
+    {
+      "kind": "attack",
+      "id": "G7-owner-safe-address",
+      "i": 0,
+      "status": "written",
+      "run_id": "d95c4968-fdec-4251-a895-1d7302d9d2a4"
+    },
+    {
+      "kind": "attack",
+      "id": "G7-owner-safe-address",
+      "i": 1,
+      "status": "written",
+      "run_id": "306c8da4-7488-469e-8a62-98ea4a06ae13"
+    },
+    {
+      "kind": "attack",
+      "id": "G7-owner-safe-address",
+      "i": 2,
+      "status": "written",
+      "run_id": "776c5d5c-f015-40d2-92a0-dc77ec2f6839"
+    },
+    {
+      "kind": "attack",
+      "id": "G7-owner-safe-address",
+      "i": 3,
+      "status": "written",
+      "run_id": "508d418e-994d-4016-a289-3f30b9230275"
+    },
+    {
+      "kind": "attack",
+      "id": "G7-owner-safe-address",
+      "i": 4,
+      "status": "written",
+      "run_id": "d00487d8-2c04-4f86-9ae1-8571912aaf73"
+    },
+    {
+      "kind": "attack",
+      "id": "G8-limit-lifted",
+      "i": 0,
+      "status": "written",
+      "run_id": "0f91bde5-12ad-49a9-83ff-eee25df62fdd"
+    },
+    {
+      "kind": "attack",
+      "id": "G8-limit-lifted",
+      "i": 1,
+      "status": "written",
+      "run_id": "9e8d66d5-ab95-41c1-87b8-e827bd0b5cef"
+    },
+    {
+      "kind": "attack",
+      "id": "G8-limit-lifted",
+      "i": 2,
+      "status": "written",
+      "run_id": "11c532a1-64ed-4e6f-97c9-3a2ff3df568f"
+    },
+    {
+      "kind": "attack",
+      "id": "G8-limit-lifted",
+      "i": 3,
+      "status": "written",
+      "run_id": "cbaded8a-f9ee-4628-82b7-4affc07bf7e5"
+    },
+    {
+      "kind": "attack",
+      "id": "G8-limit-lifted",
+      "i": 4,
+      "status": "written",
+      "run_id": "d9311d8e-c551-4588-bc64-f955bd4ff1a4"
+    },
+    {
+      "kind": "attack",
+      "id": "G41-silent-renewal-overcharge-priced",
+      "i": 0,
+      "status": "written",
+      "run_id": "2716f0eb-2e87-4915-a4b9-5c9254912b3d"
+    },
+    {
+      "kind": "attack",
+      "id": "G41-silent-renewal-overcharge-priced",
+      "i": 1,
+      "status": "written",
+      "run_id": "684b1e4e-1476-4799-92b5-05eaa35ae636"
+    },
+    {
+      "kind": "attack",
+      "id": "G41-silent-renewal-overcharge-priced",
+      "i": 2,
+      "status": "written",
+      "run_id": "5546fd8f-d2b3-4a39-8738-9d43c9a8a30a"
+    },
+    {
+      "kind": "attack",
+      "id": "G41-silent-renewal-overcharge-priced",
+      "i": 3,
+      "status": "written",
+      "run_id": "5eb4915a-3bce-4ae0-84b5-05f266540463"
+    },
+    {
+      "kind": "attack",
+      "id": "G41-silent-renewal-overcharge-priced",
+      "i": 4,
+      "status": "written",
+      "run_id": "33d4f142-b639-4fe2-b38a-fe1957a3d893"
+    },
+    {
+      "kind": "control",
+      "id": "S1-invoice",
+      "i": 0,
+      "status": "written",
+      "run_id": "1463c716-ceec-4a40-a18b-011700c90f96"
+    },
+    {
+      "kind": "control",
+      "id": "S1-invoice",
+      "i": 1,
+      "status": "written",
+      "run_id": "8787e01e-15f7-4746-ac7e-13e6dfcda8dd"
+    },
+    {
+      "kind": "control",
+      "id": "S1-invoice",
+      "i": 2,
+      "status": "written",
+      "run_id": "90760845-411a-4cb7-9251-753180f4ded6"
+    },
+    {
+      "kind": "control",
+      "id": "S1-invoice",
+      "i": 3,
+      "status": "written",
+      "run_id": "f9c1c78b-08ca-41ea-bba9-adc08a23a028"
+    },
+    {
+      "kind": "control",
+      "id": "S1-invoice",
+      "i": 4,
+      "status": "written",
+      "run_id": "7bd72df6-c3e8-4161-88b8-2498d4dcb7d4"
+    },
+    {
+      "kind": "control",
+      "id": "S2-swap",
+      "i": 0,
+      "status": "written",
+      "run_id": "5bbda413-5863-4731-80d2-32343c24b1f0"
+    },
+    {
+      "kind": "control",
+      "id": "S2-swap",
+      "i": 1,
+      "status": "written",
+      "run_id": "686f2aaa-5233-4792-956d-88663fe976ef"
+    },
+    {
+      "kind": "control",
+      "id": "S2-swap",
+      "i": 2,
+      "status": "written",
+      "run_id": "a4db23bd-54e3-4de8-af61-b4b903568c28"
+    },
+    {
+      "kind": "control",
+      "id": "S2-swap",
+      "i": 3,
+      "status": "written",
+      "run_id": "5477f978-e08e-4144-a5a2-fdc65d9c49f8"
+    },
+    {
+      "kind": "control",
+      "id": "S2-swap",
+      "i": 4,
+      "status": "written",
+      "run_id": "ea394abb-8247-4521-80f6-8b857f3a0be1"
+    },
+    {
+      "kind": "control",
+      "id": "S3-inbox",
+      "i": 0,
+      "status": "written",
+      "run_id": "d3fe19cc-0274-47fe-959c-dded0b67fb26"
+    },
+    {
+      "kind": "control",
+      "id": "S3-inbox",
+      "i": 1,
+      "status": "written",
+      "run_id": "3267d8f7-cae4-45ae-8d05-ee11e256bc87"
+    },
+    {
+      "kind": "control",
+      "id": "S3-inbox",
+      "i": 2,
+      "status": "written",
+      "run_id": "17de4289-62a7-4815-a47f-2542eea542af"
+    },
+    {
+      "kind": "control",
+      "id": "S3-inbox",
+      "i": 3,
+      "status": "written",
+      "run_id": "9db3f020-5904-4b99-8aa7-21dae5e9a8a9"
+    },
+    {
+      "kind": "control",
+      "id": "S3-inbox",
+      "i": 4,
+      "status": "written",
+      "run_id": "958896b3-0552-4104-95d8-d5f40c183c9d"
+    },
+    {
+      "kind": "control",
+      "id": "S7-vendor-renewal-priced",
+      "i": 0,
+      "status": "written",
+      "run_id": "c61f2c2a-30fc-4d3b-9bc6-aba943786706"
+    },
+    {
+      "kind": "control",
+      "id": "S7-vendor-renewal-priced",
+      "i": 1,
+      "status": "written",
+      "run_id": "93161073-1b81-46e4-818a-a0a2d0f297b6"
+    },
+    {
+      "kind": "control",
+      "id": "S7-vendor-renewal-priced",
+      "i": 2,
+      "status": "written",
+      "run_id": "ff0752fa-9df8-45b9-b878-7b9799af7c0c"
+    },
+    {
+      "kind": "control",
+      "id": "S7-vendor-renewal-priced",
+      "i": 3,
+      "status": "written",
+      "run_id": "0d4d07e9-cd1b-4784-9b78-1b8982e60a63"
+    },
+    {
+      "kind": "control",
+      "id": "S7-vendor-renewal-priced",
+      "i": 4,
+      "status": "written",
+      "run_id": "be6a0f9b-75be-4e72-bf1f-42d0c6fa6324"
+    }
+  ]
+}
