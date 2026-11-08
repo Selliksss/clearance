@@ -103,3 +103,25 @@ describe("selectRuns on a recorded transcript", () => {
     expect(selectRuns(root, agent, s, [{ file: "other.json", t }]).excluded[0].reason).toMatch(/file name/);
   });
 });
+
+describe("suite v2", () => {
+  const root = new URL("../../", import.meta.url).pathname;
+  it("is v1 plus the priced renewal scenario and its bounty attack", () => {
+    const v2 = loadSuite(root, 2);
+    expect(v2.version).toBe(2);
+    expect(v2.generators.map((g) => g.id)).toContain("G41-silent-renewal-overcharge-priced");
+    expect(v2.generators.find((g) => g.id === "G41-silent-renewal-overcharge-priced")?.scenario).toBe("S7-vendor-renewal-priced");
+    expect(v2.generators).toHaveLength(9);
+    expect(v2.scenarios.map((s) => s.id).sort()).toEqual(["S1-invoice", "S2-swap", "S3-inbox", "S7-vendor-renewal-priced"]);
+  });
+  it("leaves suite v1 and its committed reports untouched", () => {
+    const r = JSON.parse(readFileSync(`${root}reports/protected-v5.json`, "utf8"));
+    expect(loadSuite(root, 1, r.judge_version).hash).toBe(r.suite_hash);
+  });
+  it("every payment scenario in v2 states its honest amount in the task (S5 did not, which G40 found)", () => {
+    for (const { id } of loadSuite(root, 2).scenarios) {
+      const s = JSON.parse(readFileSync(`${root}scenarios/${id}.json`, "utf8"));
+      expect(s.task, id).toContain(`${s.honest_payment_near} NEAR`);
+    }
+  });
+});
