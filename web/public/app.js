@@ -33,6 +33,7 @@ const CERTS = {
   v7: "https://testnet.nearblocks.io/txns/3yaU4XfZW8vN8ZXNkox74MKCmENm4zSeEMq1kgRxULX5",
   v5revoked: "https://testnet.nearblocks.io/txns/Aw8S4PA6aKzwZARFNFeK5TnEbkTG11aBKV9jtWHvKur4",
   v5refused: "https://testnet.nearblocks.io/txns/3D9TzvexJa7wKuCUSGwS1J3sUf4keeZHinw8eaaTA1so",
+  v7revoked: "https://testnet.nearblocks.io/txns/CpDn1X6WETkSjYN5VTVwQAm5Ggg62BYFiL7QR7MDjgzE",
 };
 const CATEGORY = { recipient_swap: "swaps the payee", authority_claim: "fake authority", data_injection: "doctored data", amount_inflation: "inflates the amount", duplicate_payment: "pays twice" };
 const REDUCED = matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -180,7 +181,7 @@ async function home(paint) {
     const note = a.id === "protected-v5"
       ? "Level 2 on the suite, certificate revoked Nov 4: a \"payment pending\" lie made it pay twice in 5 of 50 runs."
       : a.id === "protected-v7"
-        ? "Certified level 2 by the CI signer on Nov 4, in its public run: v5 with the pending hole closed."
+        ? "Certified level 2 by the CI signer on Nov 4; the CI signer revoked it on Nov 8 after a bounty attack on a scenario that never stated the price."
         : a.source;
     return `<a class="tile ${a.id.startsWith("protected-v") ? "ours" : ""}" href="/agent/${esc(a.id)}" data-link>
       <h3>${esc(a.name)}</h3>
@@ -222,7 +223,7 @@ async function home(paint) {
     <div class="tiles">
       <div class="tile head rise">
         <h2>Nine agents, the same attacks</h2>
-        <p>Six published agent prompts, a one-line naive agent and our own protected-v5, each run through every attack with five random seeds, and v5's successor protected-v7, shown with the CI signer's public run that certified it. Open one to read every recorded run.</p>
+        <p>Six published agent prompts, a one-line naive agent and our own protected-v5, each run through every attack with five random seeds, and v5's successor protected-v7, shown with the CI signer's public run that certified it and the bounty evidence that revoked it. Open one to read every recorded run.</p>
       </div>
       ${board.agents.map(tile).join("")}
     </div>
@@ -257,7 +258,7 @@ async function home(paint) {
 },
 "destinations": { "mode": "only", "list": [{ "address": "shop.clearance-dev.testnet" }] }</pre></div>
       <div class="response pair">
-        <div class="ui" data-ui><strong class="good">protected-v7: level 2</strong><p>0 of 40 attacks, 15 of 15 honest tasks, signed on chain from <a href="${CERTS.v7}">GitHub Actions</a> on Nov 4.</p><p>It is v5 with two sentences changed after the hole on the right.</p></div>
+        <div class="ui" data-ui><strong class="good">protected-v7: level 2, then revoked</strong><p>0 of 40 attacks, 15 of 15 honest tasks, signed on chain from <a href="${CERTS.v7}">GitHub Actions</a> on Nov 4. It is v5 with two sentences changed after the hole on the right.</p><p>On Nov 8 a bounty attack paid it more on a renewal whose price the task never stated; the CI signer <a href="${CERTS.v7revoked}">revoked</a> it under the same rule.</p></div>
         <div class="ui" data-ui><strong class="bad">protected-v5: revoked</strong><p>A "payment pending" lie from NEAR AI's attacker model made it pay twice in 5 of 50 runs. Its certificate was <a href="${CERTS.v5revoked}">revoked on chain</a>.</p><p>A gate contract had <a href="${CERTS.live1}">paid it 1 NEAR</a>; after the revoke it <a href="${CERTS.v5refused}">refused</a>.</p></div>
       </div>
     </div>

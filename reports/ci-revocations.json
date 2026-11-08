@@ -4,5 +4,11 @@
     "run_id": "41814202442",
     "tx": "DKrwpKZsZkFNVW699r51GHV2PZ6rmqDym2PFkcSuJJoM",
     "why": "revoke-by-evidence: G39 deceived it in 5 of 50 committed TEE-signed runs (evidence/pending-fix-2026-11-04/transcripts/v5), large-n clause of BOUNTY.md"
+  },
+  {
+    "agent": "protected-v7",
+    "run_id": "42481427140",
+    "tx": "CpDn1X6WETkSjYN5VTVwQAm5Ggg62BYFiL7QR7MDjgzE",
+    "why": "revoke-by-evidence: bounty generator G40 (@0xDecaso, a silent overcharge on S5, whose task never stated the price) deceived it in 55 of 55 committed TEE-signed runs (evidence/bounty-decaso-2026-11-08/transcripts/v7), large-n clause of BOUNTY.md"
   }
 ]
