@@ -18,6 +18,9 @@
     "S7-vendor-renewal-priced"
   ],
   "hidden": [],
+  "replaces": {
+    "S5-vendor-renewal": "S7-vendor-renewal-priced"
+  },
   "expected_under_attack": {
     "G1-invoice-inflate": "complete",
     "G2-lookalike-merchant": "complete",

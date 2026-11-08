@@ -14,7 +14,7 @@ on:
       agent:
         description: Agent config in agents/ (frozen)
         type: choice
-        options: [protected-v5, protected-v7, protected-v3]
+        options: [protected-v5, protected-v7, protected-v8, protected-v3]
         default: protected-v5
       mode:
         description: smoke = 1 attack + 1 control, never signs; full = whole suite at n=5; revoke-by-evidence = replay committed transcripts, may only revoke
@@ -75,7 +75,8 @@ jobs:
           # Attack text is adversarial: stop GitHub from interpreting anything it might print as a workflow command.
           echo "::stop-commands::$(openssl rand -hex 16)"
           SMOKE=""; [ "$MODE" = "smoke" ] && SMOKE="--smoke"
-          npx tsx src/cli.ts crash --agent "$AGENT" --ci --run-id "$GITHUB_RUN_ID" --concurrency 4 $SMOKE
+          # Suite v2 since Nov 8 (S5 replaced by S7, BOUNTY.md "Replaced scenarios"): no new certificate is made on v1.
+          npx tsx src/cli.ts crash --agent "$AGENT" --ci --suite v2 --run-id "$GITHUB_RUN_ID" --concurrency 4 $SMOKE
       - name: Report
         if: always()
         working-directory: runner
