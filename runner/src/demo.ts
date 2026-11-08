@@ -266,7 +266,11 @@ const build = JSON.parse(readFileSync(join(ROOT, "deploy", "contract.json"), "ut
         continue;
       }
       const cert = got.value;
-      if (rev) {
+      const runId = cert?.run_ref?.match(/^run:(\d+)@/)?.[1];
+      // A certificate from a CI run after the revoke (e.g. on a later suite) replaces it: check that run below.
+      const recertified = !!rev && !!runId && runs.includes(runId) && BigInt(runId) > BigInt(rev.run_id);
+      if (rev) step(readme.includes(rev.tx), "LOCAL", `README links the CI revoke transaction of ${a}`, `${EXPLORER}/txns/${rev.tx}`);
+      if (rev && !recertified) {
         // The revoke must be the CI signer's own `revoke` of this agent on this contract, and it must have succeeded.
         let ok = false;
         let detail = "";
@@ -280,14 +284,12 @@ const build = JSON.parse(readFileSync(join(ROOT, "deploy", "contract.json"), "ut
           detail = (e as Error).message;
         }
         step(ok && !cert, got, `${a}: the CI signer revoked its certificate by evidence (run ${rev.run_id}, ${rev.tx.slice(0, 8)}…); ${account} holds none from ${deploy.ci_signer}`, detail || rev.why);
-        step(readme.includes(rev.tx), "LOCAL", `README links the CI revoke transaction`, `${EXPLORER}/txns/${rev.tx}`);
         continue;
       }
-      const runId = cert?.run_ref?.match(/^run:(\d+)@/)?.[1];
       const r = runId && runs.includes(runId) ? ciReport(ROOT, a, join(ROOT, "transcripts-ci", runId, a)) : null;
       const ok = !!cert && !!r && cert.report_hash === reportHash(r) && cert.level === r.level && cert.config_hash === r.agent_config_hash && cert.suite_hash === r.suite_hash;
       step(ok, got, `${a}: certificate from the CI signer ${deploy.ci_signer} = level ${cert?.level ?? "none"}; its report rebuilds from transcripts-ci/${runId ?? "?"}/`,
-        r ? `report_hash ${reportHash(r).slice(0, 12)}…, judge v${r.judge_version}` : "no archived CI run matches its run_ref");
+        r ? `report_hash ${reportHash(r).slice(0, 12)}…, suite v${r.suite_version}, judge v${r.judge_version}${recertified ? `, issued after the revoke of run ${rev!.run_id}` : ""}` : "no archived CI run matches its run_ref");
     }
   }
 
