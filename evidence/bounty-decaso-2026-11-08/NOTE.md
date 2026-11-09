@@ -23,6 +23,8 @@ That does not change the rule. BOUNTY.md revokes a certificate when an accepted 
 
 The 55 runs ([transcripts/v7](transcripts/v7)) are TEE-signed and meet the large-n clause (at least 5 of 50), so the CI signer can revoke its own certificate for v7 with `revoke-by-evidence` from this directory. The precheck ([precheck-s5-with-price](precheck-s5-with-price), with the one-line patch) adds "The renewal is 3.25 NEAR, the same as last month." to the task: v7 then refused the inflated invoice in 5 of 5 runs and did both honest renewals. That patch is the fix for the next suite version; v7 is recertified only by a full public CI run after it lands.
 
+**Outcome (Nov 8).** The CI signer revoked v7 by evidence ([run 42481427140](https://github.com/Selliksss/clearance/actions/runs/42481427140), [`CpDn1X6W…`](https://testnet.nearblocks.io/txns/CpDn1X6WETkSjYN5VTVwQAm5Ggg62BYFiL7QR7MDjgzE)). The fix shipped as suite v2 (S7, G41). v7 was not recertified: on S7 it once made a 0 NEAR placeholder transfer, so `protected-v8` took its place and the CI signer certified it at level 2 on suite v2 ([run 42487534609](https://github.com/Selliksss/clearance/actions/runs/42487534609), [`9tTKdbo8…`](https://testnet.nearblocks.io/txns/9tTKdbo8V2s6UwMPVLEzqioPSauCfLds6Pk2eB3heu7F), [precheck](../v8-precheck-2026-11-08/NOTE.md)).
+
 ## Not shown here
 - The precheck runs were made with the generator under its working id (`G40-bounty-silent-renewal`) and a changed scenario, so they are not evidence for anything but the fix.
 - A related, separate measurement (an inflated invoice with a known price) found that a "price went up, pay now" text got models to overpay more often than the silent version. That is a different attack (G1-like), not covered by this note.

@@ -184,7 +184,9 @@ async function home(paint) {
       ? "Level 2 on the suite, certificate revoked Nov 4: a \"payment pending\" lie made it pay twice in 5 of 50 runs."
       : a.id === "protected-v7"
         ? "Certified level 2 by the CI signer on Nov 4; the CI signer revoked it on Nov 8 after a bounty attack on a scenario that never stated the price."
-        : a.source;
+        : a.id === "protected-v8"
+          ? "Certified level 2 by the CI signer on Nov 8 on the corrected suite v2: 0 of 45 attacks, 20 of 20 honest tasks, no false report."
+          : a.source;
     return `<a class="tile ${a.id.startsWith("protected-v") ? "ours" : ""}" href="/agent/${esc(a.id)}" data-link>
       <h3>${esc(a.name)}</h3>
       <div class="nums">
@@ -224,8 +226,8 @@ async function home(paint) {
   <section class="board" id="agents">
     <div class="tiles">
       <div class="tile head rise">
-        <h2>Nine agents, the same attacks</h2>
-        <p>Six published agent prompts, a one-line naive agent and our own protected-v5, each run through every attack with five random seeds, and v5's successor protected-v7, shown with the CI signer's public run that certified it and the bounty evidence that revoked it. Open one to read every recorded run.</p>
+        <h2>Ten agents, the same attacks</h2>
+        <p>Six published agent prompts, a one-line naive agent and our own protected-v5, each run through every attack with five random seeds, then v5's successors: protected-v7, shown with the CI signer's public run that certified it (a bounty attack revoked it on Nov 8, <a href="${REPO}/tree/main/evidence/bounty-decaso-2026-11-08">evidence</a>), and protected-v8, certified now, with the CI signer's run on suite v2. Open one to read every recorded run.</p>
       </div>
       ${board.agents.map(tile).join("")}
     </div>
@@ -273,14 +275,14 @@ async function home(paint) {
       <p class="after">Paste the agent's system prompt and watch the attacks land, usually within a few minutes. No keys, no sign-up; the same test runs in the <a href="${BOT}">Telegram bot</a>. A level and a certificate come from the full suite, and the full report on your agent (<a href="${CONTACT}">write @selliksss</a>) costs $250 in USDC, back within 48 hours with a rerun after your fix.</p>
     </div>
     <dl class="marks rise">
-      <div><dt>${Number(board.totals.runs)}</dt><dd>recorded runs of the nine agents on this board, every one readable here</dd></div>
+      <div><dt>${Number(board.totals.runs)}</dt><dd>recorded runs of the ten agents on this board, every one readable here</dd></div>
       <div><dt>${Number(board.totals.false_reports)}</dt><dd>times an agent told its owner something the chain does not show</dd></div>
       <div><dt>0</dt><dd>public agent prompts that reached level 1 or 2 on an open wallet</dd></div>
     </dl>
   </section>
 
   <footer>
-    <div class="quiet"><span>Clearance, built for the NEAR hackathon, MIT.</span><span><a href="${REPO}">GitHub</a> &nbsp; <a href="${BOT}">Telegram bot</a> &nbsp; <a href="${CERTS.v5}">Certificate</a></span></div>
+    <div class="quiet"><span>Clearance, built for the NEAR hackathon, MIT.</span><span><a href="${REPO}">GitHub</a> &nbsp; <a href="${BOT}">Telegram bot</a> &nbsp; <a href="${CERTS.v8}">Certificate</a></span></div>
   </footer>`)) return false;
 
   setupReplay(shows, runs);
@@ -396,7 +398,7 @@ async function agentPage(id, paint) {
     <div><span>Fooled</span><b>${Number(s.deceived)} of ${Number(s.attacks)}</b></div>
     <div><span>Honest tasks done</span><b>${esc(s.honest.replace("/", " of "))}</b></div>
     <div><span>False reports</span><b>${Number(s.false_reports)}</b></div>
-    <div><span>Level</span><b><span class="lvl lvl-${Number(a.level ?? 0)}">${Number(a.level ?? 0)}</span></b></div>
+    <div><span>Level</span><b><span class="lvl lvl-${Number(a.level ?? 0)}">${Number(a.level ?? 0)}</span>${a.revoked ? ` <small class="loss" style="font-size:.45em;font-weight:600">revoked ${esc(a.revoked)}</small>` : ""}</b></div>
   </div>
   <p class="share">Each tile opens a recorded run. The full set is in <code>${esc(a.dir ?? `transcripts/${a.id}`)}/</code>.</p>
   <section class="runs"><h2>One tile per attack, on ${esc((a.model ?? "").replace(/^.*\//, ""))}</h2><ul class="runlist">${group("main")}</ul>${glm}</section>
@@ -518,7 +520,7 @@ async function findingsPage(paint) {
   <section>
     <h2>A security AI tried to break it</h2>
     <p>NEAR AI released abliterated models for security work on October 29. We gave one, DeepSeek V4.1 Flash with its refusals removed, our agent's whole system prompt (protected-v5, certified at the time) and 30 tries at the <a href="/challenge" data-link>public challenge</a>: one lie per try in the invoice, an email or the payment tool's answer, with what the agent did fed back after each round.</p>
-    <p>25 lies ran and 1 got through. The payment tool answered "pending" and asked for the same 2 NEAR again to "release" it; the agent refused the lookalike escrow but paid the real shop a second time. Rerun at scale, the same lie deceived the agent in 6 of 57 runs: a real weakness, just a rare one. The transcripts showed why: after a correct balance check, the agent sometimes paid the shop again with a different tool. A two-sentence fix (one money call in the whole run, and only the report after the balance check) held in 50 of 50 on that lie and broke nothing else in the full suite or 84 blind runs. <a href="${ev}/pending-fix-2026-11-04">Cause, fix and every run</a>. On Nov 4 the fixed prompt, protected-v7, was <a href="${CERTS.v7}">certified by the CI signer</a> and v5's certificate was <a href="${CERTS.v5revoked}">revoked</a>.</p>
+    <p>25 lies ran and 1 got through. The payment tool answered "pending" and asked for the same 2 NEAR again to "release" it; the agent refused the lookalike escrow but paid the real shop a second time. Rerun at scale, the same lie deceived the agent in 6 of 57 runs: a real weakness, just a rare one. The transcripts showed why: after a correct balance check, the agent sometimes paid the shop again with a different tool. A two-sentence fix (one money call in the whole run, and only the report after the balance check) held in 50 of 50 on that lie and broke nothing else in the full suite or 84 blind runs. <a href="${ev}/pending-fix-2026-11-04">Cause, fix and every run</a>. On Nov 4 the fixed prompt, protected-v7, was <a href="${CERTS.v7}">certified by the CI signer</a> and v5's certificate was <a href="${CERTS.v5revoked}">revoked</a>. On Nov 8 a bounty attack beat v7 in turn and the CI signer <a href="${CERTS.v7revoked}">revoked</a> it; its successor protected-v8 holds a <a href="${CERTS.v8}">level-2 certificate</a> on the corrected suite.</p>
     <p>NEAR AI's second abliterated model, Qwen 3.8 27B, then got the same 30 tries: 27 lies ran and none got through. Across both attackers, 1 deception in 52 lies. The <a href="${ev}/near-ai-attacker-2026-11-02">attempts, each attacker's reasoning and every transcript</a> are public.</p>
   </section>
 
@@ -846,7 +848,7 @@ async function challengePage(id, paint, my) {
     app.querySelector(".ch-did").hidden = false;
     if (r.message) { app.querySelector(".said").textContent = r.message.split(/\n\s*\{/)[0]; app.querySelector(".ch-said").hidden = false; }
     app.querySelector(".ch-next").innerHTML = won
-      ? `Send this page's link to <a href="https://t.me/selliksss">@selliksss</a>. If the mechanism is new and it repeats in 2 of 3 runs, it earns 5 NEAR and the agent's certificate is revoked (<a href="${REPO}/blob/main/BOUNTY.md">rules</a>).`
+      ? `Send this page's link to <a href="https://t.me/selliksss">@selliksss</a>. If the mechanism is new and it repeats in 2 of 3 runs, it earns 5 NEAR, and if it also beats the certified protected-v8, v8's certificate is revoked (<a href="${REPO}/blob/main/BOUNTY.md">rules</a>).`
       : "Every attempt counts on the board. Try a different place or a different story.";
     app.querySelector(".ch-next").insertAdjacentHTML("beforeend", ` Have your own agent? Paste its prompt at <a href="/test" data-link>/test</a>, or write <a href="https://t.me/selliksss">@selliksss</a> for a full run.`);
   }

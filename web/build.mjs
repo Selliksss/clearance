@@ -26,9 +26,10 @@ const AGENTS = [
   { id: "elizaos-default", name: "elizaOS default character", source: "elizaOS default character (MIT), on Clearance's payment tools", row: "elizaOS default character, on Clearance's payment tools" },
   { id: "iqai-near-intents", name: "IQAI near-intents-agent", source: "IQAI's published prompt (MIT), on Clearance's payment tools", row: "IQAI near-intents-agent prompt, on Clearance's payment tools" },
   { id: "naive", name: "Naive payment agent", source: "Clearance baseline: one line, pay the invoice", row: null },
-  { id: "protected-v5", name: "Clearance protected-v5", source: "Clearance's prompt until Nov 4, certificate revoked, GLM-5.3-flash", row: null },
-  // v7's runs are the CI signer's public run that certified it (transcripts-ci/), not transcripts/.
-  { id: "protected-v7", name: "Clearance protected-v7", source: "Clearance's certified prompt since Nov 4 (CI signer), GLM-5.3-flash", row: null, dir: "../transcripts-ci/41808941718/protected-v7", level: 2 },
+  { id: "protected-v5", name: "Clearance protected-v5", source: "Clearance's prompt until Nov 4, certificate revoked, GLM-5.3-flash", row: null, revoked: "Nov 4" },
+  // v7's and v8's runs are the CI signer's public runs that certified them (transcripts-ci/), not transcripts/.
+  { id: "protected-v7", name: "Clearance protected-v7", source: "Clearance's prompt certified Nov 4 by the CI signer, revoked Nov 8 on a bounty attack, GLM-5.3-flash", row: null, dir: "../transcripts-ci/41808941718/protected-v7", level: 2, revoked: "Nov 8" },
+  { id: "protected-v8", name: "Clearance protected-v8", source: "Clearance's certified prompt since Nov 8 (CI signer, suite v2), GLM-5.3-flash", row: null, dir: "../transcripts-ci/42487534609/protected-v8", level: 2 },
 ];
 
 function readmeRows() {
@@ -147,7 +148,7 @@ for (const a of AGENTS) {
   }
   runs.sort((x, y) => (x.set === y.set ? 0 : x.set === "main" ? -1 : 1) || String(x.generator ?? "~").localeCompare(String(y.generator ?? "~")) || (x.deceived === y.deceived ? 0 : x.deceived ? -1 : 1));
   const model = main.find((t) => t.agent?.model)?.agent?.model ?? null;
-  const entry = { id: a.id, name: a.name, source: a.source, model, level: a.level ?? level(a.id), summary: s, glm: g, readme: table[a.id] ?? null, config: `agents/${a.id}.json`, dir: a.dir ? a.dir.replace(/^\.\.\//, "") : `transcripts/${a.id}` };
+  const entry = { id: a.id, name: a.name, source: a.source, model, level: a.level ?? level(a.id), revoked: a.revoked ?? null, summary: s, glm: g, readme: table[a.id] ?? null, config: `agents/${a.id}.json`, dir: a.dir ? a.dir.replace(/^\.\.\//, "") : `transcripts/${a.id}` };
   writeFileSync(join(OUT, "agents", `${a.id}.json`), JSON.stringify({ ...entry, runs }));
   board.push(entry);
   totals.runs += runs.length;

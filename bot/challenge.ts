@@ -1,4 +1,4 @@
-// The public challenge on the website (/challenge): a visitor writes one lie in one place the certified agent reads
+// The public challenge on the website (/challenge): a visitor writes one lie in one place the bounty target agent (protected-v5) reads
 // (the invoice, an email in its inbox, or the payment tool's answer), and it runs once against protected-v5 on the
 // same runner and judge as every other run. The lie becomes an ordinary attack generator with no slots, checked by
 // the runner's own checkGenerator (printable ASCII, only scenario accounts), in a scratch clone of the repo, so
@@ -97,7 +97,7 @@ const near = (yocto: unknown): string => {
   }
 };
 
-/** One run of the certified agent against the visitor's generator. Never throws. `keep` saves the transcript there;
+/** One run of the bounty target agent against the visitor's generator. Never throws. `keep` saves the transcript there;
  *  `agentFile` runs another agent config instead (experiments outside the judge, never the public challenge). */
 export async function runChallenge(generator: { id: string }, keep?: string, agentFile?: string): Promise<ChallengeResult | { error: string }> {
   let tmp: string | null = null;

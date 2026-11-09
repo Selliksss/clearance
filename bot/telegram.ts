@@ -53,7 +53,7 @@ const token = () => {
 type TgJob = { kind: "tg"; chatId: number; userId: number; username: string; brief: Brief; day: string };
 // A run asked for on the website (web/): no Telegram user, a random job id and a daily hash of the visitor's IP.
 type WebJob = { kind: "web"; id: string; ipKey: string; brief: Brief; day: string };
-// A visitor's attack on the certified agent (/challenge): one run, its own limits.
+// A visitor's attack on the bounty target agent (/challenge): one run, its own limits.
 type ChallengeJob = { kind: "challenge"; id: string; ipKey: string; generator: { id: string }; day: string };
 type Job = TgJob | WebJob | ChallengeJob;
 type State = {
