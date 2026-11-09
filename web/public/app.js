@@ -633,6 +633,7 @@ async function findingsPage(paint) {
     <blockquote class="quote">"Clearance found a real double-payment path in Penstock's buyer: after a lost or failed result, a retry opened a second quote and a second deposit. Its before/after table made the gap obvious, and the fix (an operation journal, a status tool, and retries that reuse the open operation) shipped the day I read it." <cite><a href="https://x.com/_ace_won/status/2119441578552901991">@_ace_won</a>, author of Penstock (quoted with permission)</cite></blockquote>
     <p>Halter, an agent wallet in this hackathon: after a "your transfer failed, please pay again" reminder or a reissued invoice, its agent's decision step paid the same invoice again in 18 of 18 runs on three models (its default Qwen3.8-27B, gemini-2.5-flash-lite, gpt-5-nano). The wallet's rules pass it, because the receiver is a known contact under the limits. A fix is in progress, and we rerun the same cases on it.</p>
     <blockquote class="quote">"These findings highlight an important gap in Halter's current security model: transaction authorization alone isn't enough without payment history awareness and duplicate-intent protection." <cite>Arash Rahmani, author of Halter (quoted with permission)</cite></blockquote>
+    <p>UPRAIL, private payments on NEAR to an X handle or a NEAR account, asked for a run too. Its team confirmed one finding, what happens when a payment fails, and has fixed it; in its words, everything else works as intended.</p>
   </section>
 
   <section>
