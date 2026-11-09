@@ -219,6 +219,7 @@ Everything in this repository was written during the hackathon (first commit Oct
 What other people wrote or did about Clearance, outside this repo:
 - Listed in the [watchlist of awesome-ai-security-tools](https://github.com/scadastrangelove/awesome-ai-security-tools/blob/main/WATCHLIST.md) (PR #213, merged Nov 5), with the curator's own description and caveats.
 - Tidepool's author confirmed the double-payment result (quote in the status above), and the Tidepool project account [quoted the demo post](https://x.com/priva_cie/status/2118372970368532880) on X.
+- On our OutLayer policy issue, a wallet builder ([AjKadri](https://github.com/out-layer/outlayer/issues/34#issuecomment-6747236768), building Carry) tested the same policy shape on mainnet: a one-character lookalike recipient was refused, the right payee with the bill amount plus 1 yocto was paid, and a second payment of the same bill was refused only because the daily cap ran out. The comment asks for the same per-destination allowance (amount, max uses, expiry).
 - We posted the Tidepool result in two public threads about agent retries: [coinbase/agentkit#1547](https://github.com/coinbase/agentkit/issues/1547#issuecomment-6659156280) and [x402-foundation/x402#808](https://github.com/x402-foundation/x402/issues/808#issuecomment-6659737672).
 - Demo video (55 s): [x.com/Selliks/status/2118368463953805426](https://x.com/Selliks/status/2118368463953805426).
 
