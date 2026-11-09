@@ -66,4 +66,6 @@ signature-recheck:
 
 # For judges: one command, Node only. Add ARGS=--offline to use the saved testnet answers in demo/rpc-cache/.
 demo:
+	@# One step checks the contract sources against the commit that built them; a shallow clone does not have it.
+	@if [ "$$(git rev-parse --is-shallow-repository 2>/dev/null)" = "true" ]; then echo "Shallow clone: fetching the full history for the contract source check..."; git fetch --unshallow --quiet || echo "Could not fetch the full history; use a full clone (git clone without --depth)."; fi
 	cd runner && (test -d node_modules || npm ci --ignore-scripts --silent) && npx tsx src/demo.ts $(ARGS)
