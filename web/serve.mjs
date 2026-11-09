@@ -54,7 +54,7 @@ async function handle(req, res) {
   try { path = normalize(decodeURIComponent(new URL("http://x" + (req.url ?? "/")).pathname)).replace(/^(\.\.[/\\])+/, ""); }
   catch { res.writeHead(400).end(); return; }
   if (API_PROXY && path.startsWith("/api/")) return proxy(req, res);
-  if (path === "/" || path === "/findings" || path === "/test" || path.startsWith("/test/") || path === "/challenge" || path.startsWith("/challenge/") || path.startsWith("/agent/") || path.startsWith("/run/")) {
+  if (path === "/" || path === "/findings" || path === "/mcp" || path === "/test" || path.startsWith("/test/") || path === "/challenge" || path.startsWith("/challenge/") || path.startsWith("/agent/") || path.startsWith("/run/")) {
     if (req.method === "GET") countVisit(req, path);
     path = "/index.html";
   }
