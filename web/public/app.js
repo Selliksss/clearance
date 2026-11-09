@@ -8,6 +8,27 @@ const OFFER = `<div class="offer" data-ui><strong>Full report on your agent: $25
   <p>The quick test runs each attack once. The full report runs five seeds per attack plus the blind set written by other vendors' models, on two models and the wallet tools your agent really has. You get every transcript, wallet limits sized for this agent and a rerun after your fix, within 48 hours.</p>
   <p>Questions about this result, or want help reading it? Write on Telegram or X, free.</p>
   <a class="btn small" href="${CONTACT}">Telegram @selliksss</a> <a class="btn small" href="https://x.com/Selliks">X @Selliks</a></div>`;
+// On a finished quick test the offer opens with this agent's own result: the money it lost, then what the full run adds.
+function offerFor(r) {
+  if (!r || !r.attacks) return OFFER;
+  const full = "five runs per attack plus 31 blind attacks written by other vendors' models, on two models and the wallet tools your agent really has";
+  let head, lead;
+  if (r.lost > 0) {
+    head = `Your agent lost ${r.lost} NEAR in this quick test`;
+    lead = `It was fooled in ${r.fooled} of ${r.attacks} attacks on ${r.model}, one run each. The full report finds every place it leaks: ${full}. You get every transcript, wallet limits sized to stop these losses and a rerun after your fix, within 48 hours, for $250 in USDC.`;
+  } else if (r.fooled > 0) {
+    head = `Your agent was fooled in ${r.fooled} of ${r.attacks} attacks`;
+    lead = `On ${r.model} the vault refused the money this time, so nothing was lost. The full report shows where it would leak on a looser wallet: ${full}. You get every transcript, wallet limits sized for this agent and a rerun after your fix, within 48 hours, for $250 in USDC.`;
+  } else {
+    head = `Your agent held all ${r.attacks} attacks in this quick test`;
+    lead = `One run per attack is a first look. The full report adds ${full}. You get every transcript, wallet limits sized for this agent and a rerun after any fix, within 48 hours, for $250 in USDC.`;
+  }
+  return `<div class="offer" data-ui><strong>${esc(head)}</strong>
+  <p>${esc(lead)}</p>
+  <p>Questions about this result, or want help reading it? Write on Telegram or X, free.</p>
+  <a class="btn small" href="${CONTACT}">Telegram @selliksss</a> <a class="btn small" href="https://x.com/Selliks">X @Selliks</a></div>`;
+}
+
 const ATTACKS = {
   "G1-invoice-inflate": "Padded invoice",
   "G2-lookalike-merchant": "Lookalike payee",
@@ -817,7 +838,18 @@ async function testPage(id, paint, my) {
       const box = app.querySelector(".report");
       if (box.hidden) { box.innerHTML = md(rec.report); box.hidden = false; }
       app.querySelector(".share").innerHTML = `Link to this result, open for seven days: <a href="${esc(location.href)}">${esc(location.href)}</a>`;
-      app.querySelector(".offer-slot").hidden = false;
+      const slotEl = app.querySelector(".offer-slot");
+      if (!slotEl.dataset.filled) {
+        // The lane that lost the most decides the opening line.
+        const lanes = [...app.querySelectorAll(".lane")].map((l) => {
+          const atk = [...l.querySelectorAll(".slot.done")].filter((x) => !x.dataset.k.startsWith("control") && x.dataset.valid === "1");
+          return { model: String(l.dataset.model ?? "").replace(/^.*\//, ""), attacks: atk.length, fooled: atk.filter((x) => x.classList.contains("bad")).length, lost: Math.round(atk.reduce((n, x) => n + Number(x.dataset.loss ?? 0), 0) * 100) / 100 };
+        });
+        const worst = lanes.sort((a, b) => b.lost - a.lost || b.fooled - a.fooled)[0];
+        slotEl.innerHTML = offerFor(worst);
+        slotEl.dataset.filled = "1";
+      }
+      slotEl.hidden = false;
     }
   }
   render();
