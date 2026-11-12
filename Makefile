@@ -30,7 +30,8 @@ test-unit:
 	cd contract && cargo test --lib
 
 lint:
-	cd contract && cargo fmt --check && cargo clippy --all-targets -- -D warnings
+	@# contract/src/lib.rs stays byte-identical to 9818dbf0, the deployed reproducible build (make demo checks it), so rustfmt checks only the tests.
+	cd contract && rustfmt --edition 2024 --check src/tests.rs tests/integration.rs && cargo clippy --all-targets -- -D warnings
 
 # Re-records demo/txs.json on testnet (needs the demo accounts' keys locally).
 demo-testnet:

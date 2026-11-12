@@ -1019,7 +1019,10 @@ fn spent_permit_is_not_revived_for_a_receiver_removed_in_flight() {
     set(&owner(), 1);
     c.set_receivers(id, vec![acc("other.near")]);
     callback_env(PromiseResult::Failed);
-    let p = Permit { max_amount: U128(NEAR), expires_ns: None };
+    let p = Permit {
+        max_amount: U128(NEAR),
+        expires_ns: None,
+    };
     assert!(!c.on_transfer_done(id, owner(), 10 * DAY / H, U128(NEAR), Some((shop(), p))));
     assert!(c.get_permit(id, shop()).is_none());
     set(&owner(), 1);
@@ -1034,11 +1037,24 @@ fn failed_transfer_gives_the_permit_back_over_its_tombstone_only() {
     let balance = c.get_vault(id).unwrap().balance.0;
     set(&agent(), 0);
     let _ = c.spend(id, shop(), U128(NEAR), None);
-    assert_eq!(c.get_vault(id).unwrap().balance.0, balance - NEAR, "the vault moves by exactly the amount");
+    assert_eq!(
+        c.get_vault(id).unwrap().balance.0,
+        balance - NEAR,
+        "the vault moves by exactly the amount"
+    );
     assert!(c.get_permit(id, shop()).is_none());
-    let p = Permit { max_amount: U128(NEAR), expires_ns: None };
+    let p = Permit {
+        max_amount: U128(NEAR),
+        expires_ns: None,
+    };
     callback_env(PromiseResult::Failed);
-    assert!(!c.on_transfer_done(id, owner(), 10 * DAY / H, U128(NEAR), Some((shop(), p.clone()))));
+    assert!(!c.on_transfer_done(
+        id,
+        owner(),
+        10 * DAY / H,
+        U128(NEAR),
+        Some((shop(), p.clone()))
+    ));
     assert_eq!(c.get_permit(id, shop()).unwrap().max_amount.0, NEAR);
 
     // Spent again, then re-granted by the owner while in flight: the newer grant wins.
