@@ -30,7 +30,7 @@ Other reports, the bounty and runs on public agents: [below](#other-reports-and-
 How our own agent got here (v1 to v8, the bounty, suites v1 and v2): [HISTORY.md](HISTORY.md).
 
 ## Check it in one command
-The demo video (55 s): [x.com/Selliks/status/2118368463953805426](https://x.com/Selliks/status/2118368463953805426).
+The demo video (47 s): [x.com/Selliks/status/2120883599327068188](https://x.com/Selliks/status/2120883599327068188).
 
 Node 20+, no keys, no Rust. Any clone works: one step checks the contract sources against the commit that built them, and on a shallow clone `make demo` fetches the history it needs. The offline run is checked on every push to `main` in GitHub Actions on Node 20 and 22 ([`demo.yml`](.github/workflows/demo.yml)); the live run was checked by hand on a fresh clone in `node:20` and `node:22` containers.
 
@@ -75,7 +75,7 @@ The MCP route, how it looks (20 s): [x.com/Selliks/status/2119038937314291914](h
 
 **Proven:** 1,847 transcripts replay to the same verdicts (`make replay`), cut-off runs kept as invalid; `clearance-agent-v7` held a level-2 certificate on testnet signed by GitHub Actions, whose key can only certify and revoke, until the same key revoked it on Nov 8 on a bounty attack ([`CpDn1X6W…`](https://testnet.nearblocks.io/txns/CpDn1X6WETkSjYN5VTVwQAm5Ggg62BYFiL7QR7MDjgzE), [details](evidence/bounty-decaso-2026-11-08/NOTE.md)); its successor `clearance-agent-v8` now holds a level-2 certificate on suite v2 from that key ([`9tTKdbo8…`](https://testnet.nearblocks.io/txns/9tTKdbo8V2s6UwMPVLEzqioPSauCfLds6Pk2eB3heu7F)) (no deception, no false report in the suite); the author's certificates for v3 and v5 were revoked when attacks beat them, and an example gate contract (ours, [`examples/clearance-gate`](examples/clearance-gate)) then refused to pay v5; 13 testnet transactions, refusals included; a live mainnet check of the Agent Connect policy. `make demo` checks all but the mainnet one.
 
-- Every verdict replays: 1,847 transcripts (`make replay`), and `make demo` runs 74 checks in one command, 23 of them live against testnet. Demo video, 55 s: [x.com/Selliks/status/2118368463953805426](https://x.com/Selliks/status/2118368463953805426).
+- Every verdict replays: 1,847 transcripts (`make replay`), and `make demo` runs 74 checks in one command, 23 of them live against testnet. Demo video, 47 s: [x.com/Selliks/status/2120883599327068188](https://x.com/Selliks/status/2120883599327068188).
 
 ## Published agent examples, measured
 
@@ -251,7 +251,7 @@ What other people wrote or did about Clearance, outside this repo:
 - Tidepool's author confirmed the double-payment result ([quote in HISTORY.md](HISTORY.md#status-during-the-hackathon-oct-26-to-nov-8)), and the Tidepool project account [quoted the demo post](https://x.com/priva_cie/status/2118372970368532880) on X.
 - On our OutLayer policy issue, a wallet builder ([AjKadri](https://github.com/out-layer/outlayer/issues/34#issuecomment-6747236768), building Carry) tested the same policy shape on mainnet: a one-character lookalike recipient was refused, the right payee with the bill amount plus 1 yocto was paid, and a second payment of the same bill was refused only because the daily cap ran out. The comment asks for the same per-destination allowance (amount, max uses, expiry).
 - We posted the Tidepool result in two public threads about agent retries: [coinbase/agentkit#1547](https://github.com/coinbase/agentkit/issues/1547#issuecomment-6659156280) and [x402-foundation/x402#808](https://github.com/x402-foundation/x402/issues/808#issuecomment-6659737672).
-- Demo video (55 s): [x.com/Selliks/status/2118368463953805426](https://x.com/Selliks/status/2118368463953805426).
+- Demo video (47 s): [x.com/Selliks/status/2120883599327068188](https://x.com/Selliks/status/2120883599327068188); the earlier one (Nov 5, 55 s), which Tidepool quoted: [x.com/Selliks/status/2118368463953805426](https://x.com/Selliks/status/2118368463953805426).
 
 ## Related work, and a name clash
 - **[Agentic Commerce Bench](https://github.com/BuildWithGordonAI/agentcommercebench)** (Gordon AI, Apache-2.0) is the closest: 20 fraud classes for agents with spend authority, including payee substitution, overcharge and retry farming, the same families as our G2, G1 and G6. Its pipeline is offline on synthetic traffic with no chain and no account. Clearance judges real transfers by the balance that left the vault, adds blind generators by other vendors' models, and issues a revocable certificate on NEAR.
