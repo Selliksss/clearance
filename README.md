@@ -20,7 +20,7 @@ Other reports, the bounty and runs on public agents: [below](#other-reports-and-
 
 ### What NEAR does here
 - A passed test is a **revocable certificate in a NEAR contract** (`is_certified`). Other contracts read it before they pay an agent: our [gate example](examples/clearance-gate) paid `clearance-agent-v5`, and refused it after the revoke.
-- **Revocation is public and automatic.** The signer runs in GitHub Actions with a key that can only certify and revoke. When a bounty attack beat our certified v7 in 55 of 55 runs, that key revoked it on chain ([`CpDn1X6W…`](https://testnet.nearblocks.io/txns/CpDn1X6WETkSjYN5VTVwQAm5Ggg62BYFiL7QR7MDjgzE)); its successor v8 holds level 2 on the fixed suite ([`9tTKdbo8…`](https://testnet.nearblocks.io/txns/9tTKdbo8V2s6UwMPVLEzqioPSauCfLds6Pk2eB3heu7F)).
+- **Revocation is public and decided by evidence.** The signer runs in GitHub Actions with a key that can only certify and revoke; the author starts the run, the replayed transcripts decide. When a bounty attack beat our certified v7 in 55 of 55 runs, that key revoked it on chain ([`CpDn1X6W…`](https://testnet.nearblocks.io/txns/CpDn1X6WETkSjYN5VTVwQAm5Ggg62BYFiL7QR7MDjgzE)); its successor v8 holds level 2 on the fixed suite ([`9tTKdbo8…`](https://testnet.nearblocks.io/txns/9tTKdbo8V2s6UwMPVLEzqioPSauCfLds6Pk2eB3heu7F)).
 - The certified agent's model answers come from NEAR AI Cloud with TEE signatures, and the replay checks them.
 
 **Not a guard, not an exam.** A guard limits the loss of one wallet; an exam checks what an agent knows. Clearance measures any agent against liars, by the money on chain, and says which limits its wallet needs.
