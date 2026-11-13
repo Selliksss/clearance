@@ -248,6 +248,7 @@ Everything in this repository was written during the hackathon (first commit Oct
 
 What other people wrote or did about Clearance, outside this repo:
 - [MultiAgency](https://github.com/MultiAgency/platform) built its own crash test after Clearance: its [`docs/crash-test.md`](https://github.com/MultiAgency/platform/blob/main/docs/crash-test.md) describes `pnpm crash` as made "after Clearance (MIT)", with attacks that name the Clearance generators they follow; its runs are in [`evidence/crash`](https://github.com/MultiAgency/platform/tree/main/evidence/crash).
+- Cadrotsentry, another project of this hackathon, names Clearance in its [`NEXT_STEPS.md`](https://github.com/khyuannn/cardrotsentry-secu/blob/main/NEXT_STEPS.md) (Nov 7): "payment-agent attack testing also exists (Clearance)".
 - AgentGuard's author [replied on X](https://x.com/Jibsonfta/status/2120919138897997845): "I appreciate you taking the time to test AgentGuard and share your findings."
 - Listed in the [watchlist of awesome-ai-security-tools](https://github.com/scadastrangelove/awesome-ai-security-tools/blob/main/WATCHLIST.md) (PR #213, merged Nov 5), with the curator's own description and caveats.
 - Tidepool's author confirmed the double-payment result ([quote in HISTORY.md](HISTORY.md#status-during-the-hackathon-oct-26-to-nov-8)), and the Tidepool project account [quoted the demo post](https://x.com/priva_cie/status/2118372970368532880) on X.
