@@ -1,0 +1,26 @@
+{
+  "network": "testnet",
+  "owner": "clrag972388.testnet",
+  "vault": "vault.clrag972388.testnet",
+  "guardian": "guardian.clrag972388.testnet",
+  "agent": "agent.clrag972388.testnet",
+  "guardianPublicKey": "ed25519:AoB5AZjM8R5yHGk7FAdr4duLqDhHovPy1CUpfAR7678v",
+  "agentPublicKey": "ed25519:CgcfkTeXW7GDoLUasViKREbrKQWQciYvFP8qkQDd9Z1v",
+  "agentKeyScope": {
+    "receiver": "vault.clrag972388.testnet",
+    "methods": [
+      "request_payment"
+    ],
+    "allowanceNEAR": 0.25
+  },
+  "hardCaps": {
+    "perTxYocto": "3000000000000000000000000",
+    "dailyYocto": "6000000000000000000000000"
+  },
+  "wasmSha256": "ef78afe011afb3f5cb4aebad177ae9e1f153b7227c137f752103351ff48424e1",
+  "txs": {
+    "guardian": null,
+    "agent": null,
+    "vault": null
+  }
+}

@@ -1,0 +1,156 @@
+[
+ {
+  "request_id": 5,
+  "ts": 1794599943220,
+  "to_account": "clrshop972388.testnet",
+  "amount": "500000000000000000000000",
+  "memo": "INV-1",
+  "verdict": "allow",
+  "status": "paid",
+  "reasons": [
+   {
+    "code": "WITHIN_POLICY",
+    "verdict": "allow",
+    "message": "All policy checks passed."
+   }
+  ],
+  "risk": {
+   "score": 0,
+   "reasons": [
+    "No risk signals found."
+   ]
+  },
+  "tx": "AEDnQh6qTT1QmAuw6Bwgq7dcCNGfoMneivaXmcn8qicM",
+  "updated": 1794599943220
+ },
+ {
+  "request_id": 6,
+  "ts": 1794599958525,
+  "to_account": "clrshop972388.testnet",
+  "amount": "500000000000000000000000",
+  "memo": "INV-1 retry after payment failed",
+  "verdict": "ask",
+  "status": "human_rejected",
+  "reasons": [
+   {
+    "code": "DUPLICATE_RECENT",
+    "verdict": "ask",
+    "message": "Same payment (request #5) was paid less than 10 minutes ago. A retry or a second purchase?"
+   },
+   {
+    "code": "HUMAN_REJECTED",
+    "verdict": "block",
+    "message": "Rejected by a human."
+   }
+  ],
+  "risk": {
+   "score": 0,
+   "reasons": [
+    "No risk signals found."
+   ]
+  },
+  "tx": "9XTPurh4A1y71FXU9EfyaspHKnfrbvKqTFuBwAJPepHn",
+  "updated": 1794600720458
+ },
+ {
+  "request_id": 7,
+  "ts": 1794599993947,
+  "to_account": "clrshop972388.testnet",
+  "amount": "300000000000000000000000",
+  "memo": "INV-1 remainder",
+  "verdict": "allow",
+  "status": "paid",
+  "reasons": [
+   {
+    "code": "WITHIN_POLICY",
+    "verdict": "allow",
+    "message": "All policy checks passed."
+   }
+  ],
+  "risk": {
+   "score": 0,
+   "reasons": [
+    "No risk signals found."
+   ]
+  },
+  "tx": "3vc25UZsxauQA5hZVyx8iVfTvUCpGDDCB6SYtSZxvud8",
+  "updated": 1794599993947
+ },
+ {
+  "request_id": 8,
+  "ts": 1794600008798,
+  "to_account": "clrag972388.testnet",
+  "amount": "500000000000000000000000",
+  "memo": "INV-2",
+  "verdict": "allow",
+  "status": "paid",
+  "reasons": [
+   {
+    "code": "WITHIN_POLICY",
+    "verdict": "allow",
+    "message": "All policy checks passed."
+   }
+  ],
+  "risk": {
+   "score": 0,
+   "reasons": [
+    "Destination is a trusted account."
+   ]
+  },
+  "tx": "3jXNUhNiDVHymbzPTHPbAiHv8FsAzyKFc4qsXMLRwa2Z",
+  "updated": 1794600008798
+ },
+ {
+  "request_id": 9,
+  "ts": 1794600023635,
+  "to_account": "clrag972388.testnet",
+  "amount": "500000000000000000000000",
+  "memo": "INV-2 retry",
+  "verdict": "ask",
+  "status": "human_rejected",
+  "reasons": [
+   {
+    "code": "DUPLICATE_RECENT",
+    "verdict": "ask",
+    "message": "Same payment (request #8) was paid less than 10 minutes ago. A retry or a second purchase?"
+   },
+   {
+    "code": "HUMAN_REJECTED",
+    "verdict": "block",
+    "message": "Rejected by a human."
+   }
+  ],
+  "risk": {
+   "score": 0,
+   "reasons": [
+    "Destination is a trusted account."
+   ]
+  },
+  "tx": "BiJ7RW5irEeMSe4VaDqnBC4xthGpL7ZRkUpys8TEsJ1c",
+  "updated": 1794600724594
+ },
+ {
+  "request_id": 10,
+  "ts": 1794600711377,
+  "to_account": "clrshop972388.testnet",
+  "amount": "500000000000000000000000",
+  "memo": "INV-1 retry, 11 minutes later",
+  "verdict": "allow",
+  "status": "paid",
+  "reasons": [
+   {
+    "code": "WITHIN_POLICY",
+    "verdict": "allow",
+    "message": "All policy checks passed."
+   }
+  ],
+  "risk": {
+   "score": 0,
+   "reasons": [
+    "No risk signals found."
+   ]
+  },
+  "tx": "C6HVe63nkJ37wzn1UCQCemsqemphE4a1yj7H5KPdDqZb",
+  "updated": 1794600711377
+ }
+]

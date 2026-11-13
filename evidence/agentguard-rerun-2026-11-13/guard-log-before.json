@@ -1,0 +1,122 @@
+[
+ {
+  "request_id": 0,
+  "ts": 1794599863288,
+  "to_account": "clrshop972388.testnet",
+  "amount": "500000000000000000000000",
+  "memo": "INV-1",
+  "verdict": "allow",
+  "status": "paid",
+  "reasons": [
+   {
+    "code": "WITHIN_POLICY",
+    "verdict": "allow",
+    "message": "All policy checks passed."
+   }
+  ],
+  "risk": {
+   "score": 0,
+   "reasons": [
+    "No risk signals found."
+   ]
+  },
+  "tx": "5jrSscENqjPY6NEz6QPXuA4cXUE4jF7ZjFCSNnXdjd2u",
+  "updated": 1794599863288
+ },
+ {
+  "request_id": 1,
+  "ts": 1794599878959,
+  "to_account": "clrshop972388.testnet",
+  "amount": "500000000000000000000000",
+  "memo": "INV-1 retry after payment failed",
+  "verdict": "allow",
+  "status": "paid",
+  "reasons": [
+   {
+    "code": "WITHIN_POLICY",
+    "verdict": "allow",
+    "message": "All policy checks passed."
+   }
+  ],
+  "risk": {
+   "score": 0,
+   "reasons": [
+    "No risk signals found."
+   ]
+  },
+  "tx": "9bc71MxwhXunQxedsLZDVFqCiCQWCeYTKaG15ABkNq3H",
+  "updated": 1794599878959
+ },
+ {
+  "request_id": 2,
+  "ts": 1794599893926,
+  "to_account": "clrshop972388.testnet",
+  "amount": "300000000000000000000000",
+  "memo": "INV-1 remainder",
+  "verdict": "allow",
+  "status": "paid",
+  "reasons": [
+   {
+    "code": "WITHIN_POLICY",
+    "verdict": "allow",
+    "message": "All policy checks passed."
+   }
+  ],
+  "risk": {
+   "score": 0,
+   "reasons": [
+    "No risk signals found."
+   ]
+  },
+  "tx": "FMk4ocgXAYKYQUWpFiWsVSuFb9uXE6yWnFZLqvB5hkh3",
+  "updated": 1794599893926
+ },
+ {
+  "request_id": 3,
+  "ts": 1794599909146,
+  "to_account": "clrag972388.testnet",
+  "amount": "500000000000000000000000",
+  "memo": "INV-2",
+  "verdict": "allow",
+  "status": "paid",
+  "reasons": [
+   {
+    "code": "WITHIN_POLICY",
+    "verdict": "allow",
+    "message": "All policy checks passed."
+   }
+  ],
+  "risk": {
+   "score": 0,
+   "reasons": [
+    "Destination is a trusted account."
+   ]
+  },
+  "tx": "BzHzodXiAyDi2at61QSGXWZDM7mXA2kNkfHZ1wPEpRjY",
+  "updated": 1794599909146
+ },
+ {
+  "request_id": 4,
+  "ts": 1794599923796,
+  "to_account": "clrag972388.testnet",
+  "amount": "500000000000000000000000",
+  "memo": "INV-2 retry",
+  "verdict": "allow",
+  "status": "paid",
+  "reasons": [
+   {
+    "code": "WITHIN_POLICY",
+    "verdict": "allow",
+    "message": "All policy checks passed."
+   }
+  ],
+  "risk": {
+   "score": 0,
+   "reasons": [
+    "Destination is a trusted account."
+   ]
+  },
+  "tx": "4TJ2mAbWLEp6cqumD8uoDfVYf3rRiawKco7BZmTYms5w",
+  "updated": 1794599923796
+ }
+]
