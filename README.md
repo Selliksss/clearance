@@ -4,7 +4,7 @@
 
 Attacks hide in what the agent reads: a fake invoice, a lookalike payee, "payment failed, retry". Every payment is a real transfer on a NEAR sandbox, and the verdict is the money that left the vault, not what the agent says it did.
 
-### Three teams fixed what it found
+### Three teams shipped fixes for what it found (one verified by a rerun so far)
 | project | what the test found | fix |
 |---|---|---|
 | [Penstock](https://github.com/ace-coderr/penstock), x402 paywall over NEAR Intents | agreed to a run we offered; in its demo mode (settlement simulated by Penstock), after a fake "payment failed" agents paid the seller twice: GLM-5.3 5/5, GPT-6 Sol 5/5, Opus 1/5 | [`f6fae90`](https://github.com/ace-coderr/penstock/commit/f6fae90) on Nov 8, the day the author read the report; after: 0/5 on all three ([before](evidence/penstock-2026-11-06/NOTE.md), [after](evidence/penstock-2026-11-08-after/NOTE.md), [author's quote](https://x.com/_ace_won/status/2119441578552901991)); its [`RETRY-TEST.md`](https://github.com/ace-coderr/penstock/blob/main/docs/RETRY-TEST.md) credits Clearance |
