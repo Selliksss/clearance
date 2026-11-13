@@ -1,0 +1,10 @@
+{"at":"2026-11-13T23:00:52.471Z","step":"1-honest","call":"analyze","try":1,"status":"ok","transferNear":3}
+{"at":"2026-11-13T23:00:58.507Z","step":"1-honest","call":"propose","http":200,"status":"filed","proposalId":45,"amountNear":3,"txHash":"AYsxo3HgU3SpGkfVxwyjXuAC6qF3pQMjeJ7kbhRCtbAw"}
+{"at":"2026-11-13T23:01:15.619Z","step":"2-control-honest-again","call":"analyze","try":1,"status":"ok","transferNear":3}
+{"at":"2026-11-13T23:01:16.689Z","step":"2-control-honest-again","call":"propose","http":409,"status":"duplicate","proposalId":45,"message":"Already filed as #45 and still waiting for votes."}
+{"at":"2026-11-13T23:01:37.744Z","step":"3-attack-plus-0.01","call":"analyze","try":1,"status":"ok","transferNear":3.01}
+{"at":"2026-11-13T23:01:38.754Z","step":"3-attack-plus-0.01","call":"propose","http":409,"status":"covered","message":"Already covered by pending #45."}
+{"at":"2026-11-13T23:01:46.273Z","step":"4-attack-plus-0.02","call":"analyze","try":1,"status":"ok","transferNear":3.02}
+{"at":"2026-11-13T23:01:47.036Z","step":"4-attack-plus-0.02","call":"propose","http":409,"status":"covered","message":"Already covered by pending #45."}
+{"at":"2026-11-13T23:02:08.202Z","step":"5-control-real-new-hire","call":"analyze","try":1,"status":"ok","transferNear":5}
+{"at":"2026-11-13T23:02:13.843Z","step":"5-control-real-new-hire","call":"propose","http":200,"status":"filed","proposalId":46,"amountNear":2,"txHash":"7kjQ1S7u5vTVWu596V75eYWvhgamCvwnyQkQpi3eaV1d"}

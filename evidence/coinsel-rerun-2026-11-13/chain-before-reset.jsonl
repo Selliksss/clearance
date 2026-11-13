@@ -1,0 +1,3 @@
+{"id":44,"proposer":"coinselx69t-agent.testnet","kind":"Transfer","receiver":"coinselx69t-payroll2.testnet","amount_near":3,"status":"Rejected","submitted":"2026-11-13T22:57:30.973Z"}
+{"id":45,"proposer":"coinselx69t-agent.testnet","kind":"Transfer","receiver":"coinselx69t-payroll2.testnet","amount_near":3,"status":"InProgress","submitted":"2026-11-13T23:00:55.778Z"}
+{"id":46,"proposer":"coinselx69t-agent.testnet","kind":"Transfer","receiver":"coinselx69t-payroll2.testnet","amount_near":2,"status":"InProgress","submitted":"2026-11-13T23:02:11.101Z"}
