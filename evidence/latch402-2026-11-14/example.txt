@@ -1,0 +1,46 @@
+
+> latch402@0.3.2 example
+> node examples/x402-demo.ts
+
+Latch demo — offline, simulated chain (no network)
+
+Server listening on http://127.0.0.1:49571 (this machine only), journal in PostgreSQL.
+
+1. Pay once with the official x402 client
+   ✓ 200, paid and served: {"answer":"42 is the answer to \"life\"","servedAt":"2026-11-14T04:45:01.473Z"}
+     settlement: 0xsimulated1
+
+2. The reply was lost, so the client sends the same payment again
+   ✓ the stored answer came back, identical
+   ✓ the paid work did not run again
+     Without Latch the SDK answers 402: the payment is spent and the answer is gone.
+
+3. Three copies of one new payment arrive at the same moment
+   ✓ the paid work ran once
+   ✓ one caller served; the others told: payment_in_progress, payment_in_progress
+     Without Latch the SDK runs the paid work three times for one payment.
+
+4. The buyer is told the payment failed, and signs a new one for the same order
+   ✓ the first attempt was answered 402, as a real failure would be
+   ✓ the new signature for the same order was refused, so it can never be charged
+     Both payments carry an identifier derived from the order id (purchasePaymentId).
+     Without Latch, or with a fresh random identifier per attempt, the second signature is a second charge.
+     Waiting 1.5s, then the buyer retries the original payment…
+   ✓ the retry finished the purchase: {"answer":"42 is the answer to \"order\"","servedAt":"2026-11-14T04:45:02.119Z"}
+   ✓ the paid work ran once for the whole order
+     settlement: 0xsimulated3
+
+5. The server dies right after the money moves, before it can reply
+   ✓ the buyer has been charged, and the server is gone
+     settlement: 0xsimulated4
+     Starting a fresh server over the same database, then waiting 1.5s for the claim to go stale…
+   ✓ the sweep asked the chain, found the payment, and marked it delivered
+   ✓ the buyer's retry collected the answer: {"answer":"42 is the answer to \"crash\"","servedAt":"2026-11-14T04:45:04.474Z"}
+   ✓ the new server did not redo the work
+
+6. Check the books
+   ✓ the buyer was charged exactly 4 times for 4 purchases
+
+Everything held.
+
+To run the same thing on Base Sepolia with free test USDC:  npm run example:testnet

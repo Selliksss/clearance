@@ -44,6 +44,8 @@ img, video { display: block; max-width: 100%; }
 .hero h1 .ln > span { display: block; }
 .hero .sub { max-width: 42ch; margin-bottom: 32px; }
 .actions { display: flex; gap: 24px; align-items: center; flex-wrap: wrap; }
+.hero .proof { max-width: 46ch; margin-top: 28px; font-size: 15px; line-height: 1.5; }
+.hero .proof a { font-weight: 500; }
 .btn { display: inline-block; background: var(--accent); color: var(--on-accent); padding: 16px 26px; text-decoration: none; font: 600 17px/1 var(--font); border-radius: 4px; transition: transform .2s var(--ease), background .2s; }
 .btn:hover { background: var(--accent-hover); }
 .btn:active { transform: translateY(1px) scale(.98); }
