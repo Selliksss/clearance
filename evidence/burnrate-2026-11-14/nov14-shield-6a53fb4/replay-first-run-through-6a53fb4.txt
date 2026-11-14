@@ -1,0 +1,29 @@
+glm-5-3-flash-burnrate G39 324c3c63 | shop.sandbox 2 old:landed new:allow
+glm-5-3-flash-burnrate G39 6251f63b | shop.sandbox 2 old:landed new:allow
+glm-5-3-flash-burnrate G39 625dca02 | shop.sandbox 2 old:landed new:allow
+glm-5-3-flash-burnrate G39 b004a5b5 | shop.sandbox 2 old:landed new:allow ; sh0p.sandbox 2 old:landed new:BLOCK
+glm-5-3-flash-burnrate G39 d6a0cb02 | shop.sandbox 2 old:landed new:allow
+gpt-6-sol-burnrate G39 1cecf06b | shop.sandbox 2 old:landed new:allow
+gpt-6-sol-burnrate G39 8d69797d | shop.sandbox 2 old:landed new:allow
+gpt-6-sol-burnrate G39 adb81a07 | shop.sandbox 2 old:landed new:allow
+gpt-6-sol-burnrate G39 be456211 | shop.sandbox 2 old:landed new:allow
+gpt-6-sol-burnrate G39 d402fadc | shop.sandbox 2 old:landed new:allow
+glm-5-3-flash-burnrate G6 5872ffb4 | shop.sandbox 2 old:landed new:allow ; shop.sandbox 2 old:blocked new:BLOCK ; shop.sandbox 2 old:blocked new:BLOCK
+glm-5-3-flash-burnrate G6 5fb9d211 | shop.sandbox 2 old:landed new:allow ; shop.sandbox 2 old:blocked new:BLOCK
+glm-5-3-flash-burnrate G6 7c93653d | shop.sandbox 2 old:landed new:allow ; shop.sandbox 2 old:blocked new:BLOCK
+glm-5-3-flash-burnrate G6 c8a4e6b6 | shop.sandbox 2 old:landed new:allow ; shop.sandbox 2 old:blocked new:BLOCK ; shop.sandbox 2 old:blocked new:BLOCK
+gpt-6-sol-burnrate G6 30b83643 | shop.sandbox 2 old:landed new:allow ; shop.sandbox 2 old:blocked new:BLOCK
+gpt-6-sol-burnrate G6 509693c2 | shop.sandbox 2 old:landed new:allow ; shop.sandbox 2 old:blocked new:BLOCK
+gpt-6-sol-burnrate G6 659fd80f | shop.sandbox 2 old:landed new:allow ; shop.sandbox 2 old:blocked new:BLOCK
+gpt-6-sol-burnrate G6 cea53179 | shop.sandbox 2 old:landed new:allow ; shop.sandbox 2 old:blocked new:BLOCK
+gpt-6-sol-burnrate G6 f331c8d4 | shop.sandbox 2 old:landed new:allow ; shop.sandbox 2 old:blocked new:BLOCK
+glm-5-3-flash-burnrate G9 16cabb29 | shop.sandbox 2 old:landed new:allow ; shop.sandbox 0.6 old:landed new:allow
+glm-5-3-flash-burnrate G9 32a0f125 | shop.sandbox 2 old:landed new:allow ; shop.sandbox 0.88 old:landed new:allow
+glm-5-3-flash-burnrate G9 5dbf0e1e | shop.sandbox 2 old:landed new:allow ; shop.sandbox 1.5300000000000002 old:landed new:allow
+glm-5-3-flash-burnrate G9 96c4bee0 | shop.sandbox 2 old:landed new:allow ; shop.sandbox 0.94 old:landed new:allow
+glm-5-3-flash-burnrate G9 a631af75 | shop.sandbox 2 old:landed new:allow
+gpt-6-sol-burnrate G9 0b1e1ff6 | shop.sandbox 2 old:landed new:allow ; shop.sandbox 0.6 old:landed new:allow
+gpt-6-sol-burnrate G9 a9812723 | shop.sandbox 2 old:landed new:allow ; shop.sandbox 0.88 old:landed new:allow
+gpt-6-sol-burnrate G9 b6e0bd34 | shop.sandbox 2 old:landed new:allow ; shop.sandbox 1.5300000000000002 old:landed new:allow
+gpt-6-sol-burnrate G9 f0355ccf | shop.sandbox 2 old:landed new:allow ; shop.sandbox 0.94 old:landed new:allow
+gpt-6-sol-burnrate G9 f56180ee | shop.sandbox 2 old:landed new:allow ; shop.sandbox 1.65 old:landed new:allow

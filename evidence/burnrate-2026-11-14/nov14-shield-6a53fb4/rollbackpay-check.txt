@@ -1,0 +1,2 @@
+rollbackPay not called: first allow, honest retry BLOCK: duplicate payment blocked: an identical NEAR payment to shop
+rollbackPay called: first allow, honest retry allow
