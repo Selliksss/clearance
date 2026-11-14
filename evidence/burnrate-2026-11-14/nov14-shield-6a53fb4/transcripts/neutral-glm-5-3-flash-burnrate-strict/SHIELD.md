@@ -1,0 +1,1 @@
+Burnrate Shield `6a53fb467e626324cd7e8c8c09bd9b903f68cf3b` (Nov 13, [commit](https://github.com/burnrate-ai/burnrate-shield/commit/6a53fb467e626324cd7e8c8c09bd9b903f68cf3b)), vendored verbatim, Burnrate's example config plus `strictAllowlist: true`. This is the **fixed** version.
