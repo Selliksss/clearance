@@ -24,6 +24,7 @@ Other reports, the bounty and runs on public agents: [below](#other-reports-and-
 - A passed test is a **revocable certificate in a NEAR contract** (`is_certified`). A contract can read it before it pays an agent; the one that does today is our own [gate example](examples/clearance-gate), which paid `clearance-agent-v5` and refused it after the revoke.
 - **Revocation is public and decided by evidence.** The signer runs in GitHub Actions with a key that can only certify and revoke; the author starts the run, the replayed transcripts decide. When a bounty attack beat our certified v7 in 55 of 55 runs, that key revoked it on chain ([`CpDn1X6W…`](https://testnet.nearblocks.io/txns/CpDn1X6WETkSjYN5VTVwQAm5Ggg62BYFiL7QR7MDjgzE)); its successor v8 holds level 2 on the fixed suite ([`9tTKdbo8…`](https://testnet.nearblocks.io/txns/9tTKdbo8V2s6UwMPVLEzqioPSauCfLds6Pk2eB3heu7F)).
 - The certified agent's model answers come from NEAR AI Cloud with TEE signatures, and the replay checks them.
+- **The registry cannot be changed.** The contract account holds no keys since Nov 14 ([`6h3aesyd…`](https://testnet.nearblocks.io/txns/6h3aesyddYvZ99ryViADUTRBAsJKA6b9GoNgdcyS3H2X)), so nobody can replace the code that stores and checks certificates.
 
 **Not a guard, not an exam.** A guard limits the loss of one wallet; an exam checks what an agent knows. Clearance measures any agent against liars, by the money on chain, and says which limits its wallet needs.
 
@@ -220,7 +221,7 @@ This is the rule the wallet policies lack: a count of payments per payee, set by
   - The runner writes the transcripts, so offline checks cannot show that unfavourable runs were not discarded, or that a tool result matches the chain. Runs cut off mid-way are kept. The CI signer below takes the author's machine out of that loop. It does not take out the author: the code that judges a CI run is whatever the author committed (see the judge hash below).
   - The runner signs certificates with a function-call key limited to `certify`/`revoke` on the contract; that limits the runner process, not the author, whose runner account also holds a full-access key (a second function-call key on it, `CebzmHhj…`, is limited to the old spike contract and cannot call this one).
   - A certificate records the tested configuration (`config_hash`: model, prompt, temperature, tools), but nothing on chain ties the agent that is actually running to that hash. A contract that reads `is_certified` trusts whoever operates the agent to run the certified configuration; it should keep its own hard limits as well.
-  - The contract account still holds a full-access key, so its code could be replaced; it is kept so the contract can still be fixed during the hackathon and is to be deleted on Nov 14 (the bounty closed on Nov 12) (the contract has no admin or upgrade method, so nothing depends on it). Until then, check the code hash: `make demo` compares it with `deploy/contract.json`.
+  - The contract account has no keys since Nov 14: its last full-access key was deleted in [`6h3aesyd…`](https://testnet.nearblocks.io/txns/6h3aesyddYvZ99ryViADUTRBAsJKA6b9GoNgdcyS3H2X), so nobody, the author included, can replace its code or act as the contract (it has no admin or upgrade method). Check with `view_access_key_list` for `clearance-dev.testnet` (an empty list); `make demo` still compares the code hash with `deploy/contract.json`.
 
 [^build]: Its `build_command` reads `cargo near build non-reproducible-wasm --locked` because that is the command `reproducible-wasm` runs inside the pinned image; cargo-near records it that way.
 
@@ -283,7 +284,7 @@ make verify-build   # Docker: rebuild the deployed commit in a clean clone; comp
 `make crash AGENT=naive ARGS="--gens G1 --seeds 1"` makes real model calls and needs your own NEAR AI key. Runs use the contract code deployed on testnet (fetched and checked against `deploy/contract.json`); `--local-wasm` runs on a local build instead, for contract development.
 
 ## Contract (`contract/`)
-Vault + certificate registry (Rust, near-sdk 5.29), deployed as [`clearance-dev.testnet`](https://testnet.nearblocks.io/address/clearance-dev.testnet) (its full-access key is to be deleted on Nov 14, see [What is proven and what is trusted](#what-is-proven-and-what-is-trusted)):
+Vault + certificate registry (Rust, near-sdk 5.29), deployed as [`clearance-dev.testnet`](https://testnet.nearblocks.io/address/clearance-dev.testnet) (no access keys since Nov 14, [`6h3aesyd…`](https://testnet.nearblocks.io/txns/6h3aesyddYvZ99ryViADUTRBAsJKA6b9GoNgdcyS3H2X); see [What is proven and what is trusted](#what-is-proven-and-what-is-trusted)):
 - An agent spends only while the signers the owner trusts hold a live certificate (policy `All`: every signer, lowest level counts; `Any`: best certificate counts); the agent can never certify itself.
 - Spending is capped at `min(owner cap, level cap)` over 24 hourly buckets: at most the cap within any 23 hours.
 - One-time permits per receiver, described above.
