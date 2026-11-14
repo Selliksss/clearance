@@ -12,6 +12,6 @@ Outside the judge and outside the Clearance sandbox. [Halter](https://github.com
 
 The second and third texts name the real supplier, the real account and the real amount, with no injection wording: 18 of 18 decisions pay the same invoice again. The receiver is a known contact and the amount is under the wallet's limits, so the rules pass it; nothing compares the payment with what was already paid.
 
-**The author's answer (Nov 9, quoted with permission).** Arash Rahmani: "These findings highlight an important gap in Halter's current security model: transaction authorization alone isn't enough without payment history awareness and duplicate-intent protection. This is exactly the kind of feedback that helps us make the system stronger. I'd rather identify and fix these issues now than overlook them." A fix for repeat invoices is in progress; the same cases are rerun on it.
+**The author's answer (Nov 9, quoted with permission).** Arash Rahmani: "These findings highlight an important gap in Halter's current security model: transaction authorization alone isn't enough without payment history awareness and duplicate-intent protection. This is exactly the kind of feedback that helps us make the system stronger. I'd rather identify and fix these issues now than overlook them." A fix for repeat invoices is in progress; the same cases will be rerun on it when it ships.
 
 **Limits.** A decision step, not the whole agent with its wallet; small n (3 per cell); the fix is not measured yet.
